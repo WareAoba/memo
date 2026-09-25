@@ -1,0 +1,233 @@
+@layer features {
+  .preset-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+  .preset-switch {
+    display: flex;
+    padding: var(--space-1);
+    background: var(--surface-soft);
+    border-radius: var(--radius-control);
+    gap: var(--space-1);
+  }
+  .preset-switch a {
+    padding: var(--space-2) var(--space-5);
+    border-radius: var(--radius-control);
+    color: inherit;
+    text-decoration: none;
+  }
+  .preset-switch a[aria-current] {
+    background: var(--surface);
+    color: var(--success);
+    box-shadow: var(--shadow-hover);
+    font-weight: 700;
+  }
+  .compact-presets {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+  }
+  .compact-presets .work-card {
+    padding: 14px var(--space-4);
+    min-height: 0;
+    text-align: left;
+    width: 100%;
+    color: inherit;
+  }
+  .compact-presets .work-card h2 {
+    font-size: 16px;
+    margin: 0 0 6px;
+    overflow-wrap: anywhere;
+  }
+  .compact-presets .work-description {
+    font-size: 13px;
+    margin: var(--space-1) 0 var(--space-2);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .compact-presets .tags {
+    gap: var(--space-1);
+    margin-top: 6px;
+  }
+  .compact-presets .tag {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  .task-group {
+    grid-column: 1/-1;
+  }
+  .task-group > h2 {
+    font-size: 14px;
+    color: var(--muted);
+    margin: var(--space-3) 0 var(--space-2);
+  }
+  .task-group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-2);
+  }
+  .task-group-grid .work-card h2 {
+    margin: 0;
+  }
+  /* Dialog chrome stays fixed; only its content scrolls. */
+  .preset-modal {
+    width: min(760px, 92vw);
+    max-width: calc(100vw - 24px);
+    max-height: 90dvh;
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--canvas);
+    color: var(--ink);
+    box-shadow: var(--shadow-hover);
+    overflow: hidden;
+  }
+  .preset-modal[open] {
+    display: flex;
+    flex-direction: column;
+  }
+  .preset-modal::backdrop {
+    background: var(--backdrop);
+  }
+  .preset-modal-schedule {
+    width: min(1080px, 92vw);
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding: 14px var(--space-5);
+    border-bottom: 1px solid var(--line);
+    background: var(--accent-soft);
+  }
+  .modal-header strong {
+    font-size: 14px;
+  }
+  .modal-close {
+    margin: 0;
+  }
+  .modal-body {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+    padding: var(--space-5) var(--space-6);
+  }
+  .modal-footer {
+    flex-shrink: 0;
+    padding: var(--space-3) var(--page-padding) max(var(--space-3), env(safe-area-inset-bottom));
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .modal-footer button[type='submit'] {
+    order: 2;
+  }
+  .modal-footer:empty {
+    display: none;
+  }
+  .modal-footer .actions,
+  .modal-footer .schedule-save {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+  }
+  .modal-footer .schedule-save > span {
+    margin-right: auto;
+  }
+  .preset-modal .page-heading {
+    margin: 0 0 var(--space-4);
+    gap: var(--space-3);
+  }
+  .preset-modal .page-heading h1 {
+    font-size: 23px;
+    margin: var(--space-1) 0;
+  }
+  .preset-modal .page-heading p {
+    font-size: 13px;
+  }
+  .preset-modal .detail-section {
+    padding: var(--space-5) 0;
+    margin-bottom: var(--space-3);
+  }
+  .preset-modal .detail-section h2 {
+    font-size: 16px;
+  }
+  .preset-modal .optional-fields {
+    margin: var(--space-3) 0;
+  }
+  .preset-modal .archive-section {
+    margin-top: var(--space-4);
+    padding: var(--space-3) 0 0;
+  }
+  .preset-modal .archive-section p {
+    font-size: 12px;
+  }
+  .preset-modal .editor fieldset {
+    padding: var(--space-5) 0;
+  }
+  .preset-modal .schedule-heading {
+    margin: 0 0 var(--space-4);
+  }
+  .preset-modal .schedule-heading h1 {
+    font-size: 24px;
+  }
+  .preset-modal .schedule-compose {
+    gap: var(--space-5);
+  }
+  .preset-modal .schedule-time-panel {
+    padding: var(--space-4);
+    border-radius: var(--radius-card);
+  }
+  .preset-modal .schedule-content-panel {
+    padding: var(--space-4) 0;
+  }
+  .preset-modal .time-dial {
+    max-width: 260px;
+  }
+  .preset-modal .schedule-editor {
+    padding-top: 0;
+  }
+  .preset-modal .time-dial-control {
+    margin: var(--space-3) -10px 10px;
+  }
+  .preset-modal .time-endpoints button {
+    padding: var(--space-2) var(--space-3);
+  }
+  .preset-modal .time-endpoints strong {
+    font-size: 22px;
+  }
+  .preset-modal .schedule-save {
+    position: static;
+    background: var(--canvas);
+    padding: var(--space-3) 0;
+    margin-top: auto;
+    z-index: 2;
+    gap: var(--space-3);
+  }
+  @media (max-width: 600px) {
+    .preset-modal {
+      width: calc(100vw - 24px);
+      max-height: calc(100dvh - 24px);
+    }
+    .modal-body {
+      padding: var(--space-4);
+    }
+    .preset-modal .schedule-compose {
+      grid-template-columns: 1fr;
+    }
+    .preset-heading-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+}

@@ -1,0 +1,174 @@
+@layer base, features, components;
+/* Design reference: change values here, never in a feature stylesheet. */
+:root {
+  --schedule-red: #ff3030;
+  --schedule-orange: #ff8500;
+  --schedule-yellow: #f5cf00;
+  --schedule-green: #00ba45;
+  --schedule-blue: #0085ff;
+  --schedule-indigo: #5145ff;
+  --schedule-violet: #bd24ff;
+  --canvas: #f7f4ef;
+  --surface: #fffcf8;
+  --surface-soft: #eeebe5;
+  --surface-hover: #e7e1db;
+  --ink: #36323d;
+  --muted: #726b77;
+  --subtle: #938b98;
+  --accent: #716087;
+  --accent-hover: #5c4a71;
+  --accent-soft: #eee7f4;
+  --line: #e1dbe6;
+  --on-accent: #ffffff;
+  --success: #3d7050;
+  --success-soft: #dfecdf;
+  --warning: #795b24;
+  --warning-soft: #f3e6c4;
+  --danger: #993f45;
+  --danger-soft: #f7e1dd;
+  --info: #426485;
+  --info-soft: #e0e9f5;
+  --peach: #f4dfcc;
+  --rose: #efdee4;
+  --status-upcoming: #ffffff;
+  --status-current: #f4dfa0;
+  --status-overdue: #edb3af;
+  --status-cancelled: #dedbd8;
+  --heat-low: hsl(4 78% 76%);
+  --heat-low-end: hsl(4 78% 90%);
+  --heat-high: hsl(145 58% 79%);
+  --heat-high-end: hsl(85 58% 70%);
+  --scrollbar-thumb: #c1b5cc;
+  --scrollbar-thumb-hover: #9581aa;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --radius-small: 8px;
+  --radius-control: 12px;
+  --radius-card: 20px;
+  --radius-pill: 999px;
+  --control-height: 44px;
+  --icon-size: 20px;
+  --page-padding: 24px;
+  --page-gap: 24px;
+  --shadow-popover: 0 8px 24px rgb(54 50 61 / 14%);
+  --shadow-dialog: 0 24px 80px rgb(54 50 61 / 20%);
+  --shadow-hover: 0 4px 14px rgb(54 50 61 / 8%);
+  --backdrop: rgb(36 30 43 / 38%);
+  --ease-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-fast: 160ms;
+  --motion-medium: 280ms;
+  /* Clock illustration and schedule progress have their own semantic palette. */
+  --dial-night: #c0b0de;
+  --dial-dawn: #d9c3e3;
+  --dial-sunrise: #f4c9b2;
+  --dial-morning: #f9d8af;
+  --dial-noon: #f9e6bf;
+  --dial-afternoon: #f6cead;
+  --dial-sunset: #eab9be;
+  --dial-evening: #cbb6dc;
+  --dial-end: #b77862;
+  --dial-shadow: rgb(89 76 105 / 18%);
+  --dial-highlight: rgb(255 255 255 / 65%);
+}
+@media (max-width: 700px) {
+  :root {
+    --page-padding: 16px;
+    --page-gap: 16px;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: #19171d;
+  --surface: #24212a;
+  --surface-soft: #302c36;
+  --surface-hover: #3b3543;
+  --ink: #f0eaf5;
+  --muted: #bcb2c6;
+  --subtle: #a398ad;
+  --line: #484050;
+  --accent: #b9a2d3;
+  --accent-hover: #d5bced;
+  --accent-soft: #3b3049;
+  --on-accent: #201827;
+  --success: #9bccaa;
+  --success-soft: #293e31;
+  --warning: #e0c17c;
+  --warning-soft: #493b23;
+  --danger: #f0a0a5;
+  --danger-soft: #492b31;
+  --info: #9dbfe2;
+  --info-soft: #29394c;
+  --peach: #49372d;
+  --rose: #452f3a;
+  --status-upcoming: #302c36;
+  --status-current: #655028;
+  --status-overdue: #ffffff;
+  --status-cancelled: #3a3740;
+  --heat-low: hsl(4 35% 32%);
+  --heat-low-end: hsl(4 35% 22%);
+  --heat-high: hsl(145 30% 30%);
+  --heat-high-end: hsl(85 30% 28%);
+  --scrollbar-thumb: #665673;
+  --scrollbar-thumb-hover: #927ea5;
+  --dial-night: #30253e;
+  --dial-dawn: #443049;
+  --dial-sunrise: #694437;
+  --dial-morning: #755432;
+  --dial-noon: #80623a;
+  --dial-afternoon: #715036;
+  --dial-sunset: #613b43;
+  --dial-evening: #423048;
+  --dial-end: #d89d83;
+  --dial-highlight: rgb(255 255 255 / 12%);
+  --progress-mix: 35%;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-accent='blue'] {
+  --accent: #426485;
+  --accent-hover: #304e70;
+  --accent-soft: #e0e9f5;
+}
+:root[data-accent='green'] {
+  --accent: #3d7050;
+  --accent-hover: #2e593f;
+  --accent-soft: #dfecdf;
+}
+:root[data-accent='rose'] {
+  --accent: #925068;
+  --accent-hover: #783d53;
+  --accent-soft: #f3e0e8;
+}
+:root[data-accent='orange'] {
+  --accent: #91562d;
+  --accent-hover: #734322;
+  --accent-soft: #f4e2cf;
+}
+:root[data-theme='dark'][data-accent='blue'] {
+  --accent: #9dbfe2;
+  --accent-hover: #bfdcff;
+  --accent-soft: #29394c;
+}
+:root[data-theme='dark'][data-accent='green'] {
+  --accent: #9bccaa;
+  --accent-hover: #b8e3c4;
+  --accent-soft: #293e31;
+}
+:root[data-theme='dark'][data-accent='rose'] {
+  --accent: #e6a9c1;
+  --accent-hover: #f4c4d7;
+  --accent-soft: #452f3a;
+}
+:root[data-theme='dark'][data-accent='orange'] {
+  --accent: #e0b08c;
+  --accent-hover: #f4cbac;
+  --accent-soft: #49372d;
+}

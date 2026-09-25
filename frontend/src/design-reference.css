@@ -1,0 +1,37 @@
+@layer features {
+  .design-reference {
+    max-width: 1120px;
+    margin: auto;
+    padding: var(--page-padding);
+    display: grid;
+    gap: var(--page-gap);
+  }
+  .design-reference h2 {
+    margin-top: 0;
+  }
+  .reference-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-block: var(--space-4);
+  }
+  .reference-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+  }
+  .reference-colors {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: var(--space-4);
+  }
+  .reference-colors p {
+    font-size: 12px;
+  }
+  .reference-swatch {
+    height: 64px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    margin-bottom: var(--space-2);
+  }
+}

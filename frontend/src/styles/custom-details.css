@@ -1,0 +1,69 @@
+@layer features {
+  .custom-detail-card {
+    position: relative;
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    margin: 0 0 var(--space-3);
+  }
+  .custom-detail-card label {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .custom-detail-heading {
+    display: flex;
+    justify-content: flex-end;
+  }
+  .editor .custom-detail-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    justify-self: center;
+    margin-inline: auto;
+  }
+  .custom-detail-add span {
+    font-size: 18px;
+  }
+  .detail-kind {
+    min-width: 0;
+  }
+  .detail-kind-control {
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+    background: var(--surface-soft);
+    border-radius: var(--radius-control);
+  }
+  .detail-kind-control input {
+    flex: 1;
+    width: 0;
+    min-width: 0;
+    background: transparent;
+  }
+  .detail-kind-control input::placeholder {
+    color: var(--subtle);
+    opacity: 1;
+  }
+  .detail-kind-control input[readonly] {
+    cursor: pointer;
+    caret-color: transparent;
+  }
+  .detail-kind-control .detail-kind-toggle {
+    flex: 0 0 40px;
+  }
+  .detail-kind-options {
+    position: fixed;
+    inset: auto;
+    z-index: 100;
+    box-sizing: border-box;
+    display: grid;
+    max-height: 180px;
+    overflow-y: auto;
+    margin: 0;
+  }
+  .detail-kind-options > .hint {
+    margin: var(--space-1) 0 0;
+    padding: var(--space-2) var(--space-3);
+  }
+}

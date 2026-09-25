@@ -1,0 +1,93 @@
+@layer features {
+  /* Task preset definitions share the existing mobile form layout. */
+  .checklist-editor {
+    display: grid;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  .checklist-definition {
+    min-width: 0;
+  }
+  .checklist-definition .section-heading {
+    flex-wrap: wrap;
+    margin-top: 0;
+    gap: var(--space-2);
+  }
+  .checklist-definition h3 {
+    margin: 0;
+  }
+  .item-actions {
+    display: flex;
+    gap: 6px;
+  }
+  .checklist-definition .checks {
+    margin: var(--space-3) 0 0;
+  }
+  .preset-definitions {
+    padding-left: var(--space-6);
+  }
+  .preset-definitions li {
+    padding: var(--space-3) 0;
+    overflow-wrap: anywhere;
+  }
+  .preset-definitions .tags {
+    margin-top: var(--space-2);
+  }
+  .work-task-editor > label {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .form-grid > .error-box {
+    grid-column: 1 / -1;
+  }
+  .work-task-editor {
+    border: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .work-task-list {
+    padding-left: 1.5rem;
+  }
+  .work-task-list li {
+    margin: 0.75rem 0;
+    overflow-wrap: anywhere;
+  }
+  .work-task-list li > button {
+    margin-left: 0.75rem;
+  }
+  .work-task-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 0.5rem 0;
+  }
+
+  .schedule-form {
+    display: grid;
+    gap: 1rem;
+    border: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .schedule-form label {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .schedule-times {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .schedule-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .preserve-lines {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}

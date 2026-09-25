@@ -1,0 +1,400 @@
+@layer features {
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .header-actions .push-settings-button {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .header-actions .language-select {
+    width: auto;
+    min-width: 90px;
+    max-width: 128px;
+  }
+  @media (max-width: 420px) {
+    .push-settings-label {
+      display: none;
+    }
+    .header-actions {
+      gap: 4px;
+    }
+    .header-actions .push-settings-button {
+      font-size: 0;
+      gap: 0;
+      width: 44px;
+      padding: 0;
+    }
+  }
+  /* Flat, warm surfaces shared throughout the app. */
+  :root {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    font-weight: 400;
+  }
+
+  /* Surface refinements are shared by all three destinations. */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+  }
+  a {
+    color: inherit;
+  }
+  input[type='checkbox'] {
+    width: 22px;
+    height: 22px;
+    min-height: 22px;
+  }
+  .app-shell {
+    margin: auto;
+  }
+  .site-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    border-bottom: 0;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 750;
+    text-decoration: none;
+    min-height: 44px;
+  }
+  .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    color: var(--surface);
+  }
+  .environment-label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  main {
+    min-height: 75vh;
+    padding-bottom: var(--space-10);
+  }
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    font-size: 14px;
+  }
+  .breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .eyebrow {
+    color: var(--muted);
+  }
+  h1 {
+    font-size: clamp(27px, 4vw, 38px);
+    letter-spacing: -0.05em;
+    margin: var(--space-2) 0 var(--space-3);
+    overflow-wrap: anywhere;
+  }
+  h2 {
+    font-size: 20px;
+    letter-spacing: -0.025em;
+    margin: var(--space-3) 0;
+  }
+  p {
+    line-height: 1.7;
+    color: var(--muted);
+    margin: 10px 0;
+  }
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    border: 0;
+    border-radius: var(--radius-control);
+  }
+  .toolbar form {
+    display: flex;
+    gap: var(--space-2);
+    flex: 1;
+  }
+  .toolbar form input {
+    min-width: 0;
+  }
+  .toolbar button {
+    white-space: nowrap;
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+  }
+  .tabs button {
+    border-color: transparent;
+  }
+  .tabs button[aria-pressed='true'] {
+    border-color: var(--line);
+  }
+  .result-count {
+    font-size: 14px;
+    margin: var(--space-6) 0 var(--space-3);
+  }
+  .work-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-4);
+  }
+  .work-card {
+    display: block;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .work-card:hover {
+    border-color: var(--success);
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-2);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .work-card p {
+    font-size: 14px;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .tag,
+  .requirement {
+    display: inline-block;
+    padding: 5px 9px;
+    font-size: 12px;
+    background: var(--success-soft);
+    color: var(--muted);
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  .requirement {
+    background: var(--warning-soft);
+    color: var(--warning);
+    font-weight: 650;
+  }
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-5);
+    margin-top: 28px;
+    font-size: 14px;
+  }
+  .empty {
+    text-align: center;
+  }
+  .error-box {
+    margin: var(--space-4) 0;
+    overflow-wrap: anywhere;
+  }
+  .error-box p {
+    color: var(--danger);
+  }
+  .editor {
+    max-width: 800px;
+  }
+  .editor fieldset,
+  .detail-section {
+    margin: 0 0 var(--space-6);
+    min-width: 0;
+  }
+  .editor legend {
+    font-weight: 700;
+    font-size: 18px;
+  }
+  /* Keep visible section titles inside their surface, not on the fieldset edge. */
+  .editor legend:not(.sr-only) {
+    float: left;
+    width: 100%;
+    padding: 0;
+    margin-bottom: var(--space-4);
+  }
+  .editor legend + * {
+    clear: both;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+  }
+  .form-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    min-width: 0;
+  }
+  .editor fieldset fieldset {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: var(--radius-control);
+  }
+  .form-grid label:has(> input[type='checkbox']) {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .editor .form-grid + .work-task-actions {
+    margin: var(--space-4) 0 0;
+  }
+  .wide {
+    grid-column: 1/-1;
+  }
+  .checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-5);
+    margin: 0 0 18px;
+  }
+  .checks label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+  }
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .actions {
+    display: flex;
+    gap: var(--space-3);
+  }
+  .detail-section dl {
+    margin: 0;
+  }
+  .detail-section dl > div {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: var(--space-5);
+    padding: 18px 0;
+    border-bottom: 0;
+  }
+  .detail-section dl > div:last-child {
+    border: 0;
+  }
+  .detail-section dt {
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .detail-section dd {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    min-width: 0;
+    line-height: 1.7;
+  }
+  .detail-section dd .tags {
+    margin: 0;
+  }
+  .archive-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    padding: 0 var(--space-1);
+  }
+  .archive-section p {
+    font-size: 14px;
+  }
+  .archive-section button {
+    white-space: nowrap;
+  }
+  footer {
+    padding: 25px 0;
+    border-top: 0;
+    font-size: 12px;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  @media (max-width: 650px) {
+    .app-shell {
+      padding: 0 18px;
+    }
+    .site-header {
+      min-height: 76px;
+    }
+    .environment-label {
+      max-width: 110px;
+      text-align: right;
+    }
+    .page-heading {
+      padding-top: 10px;
+    }
+    .page-heading > .button {
+      width: 100%;
+    }
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      padding: var(--space-3);
+      gap: var(--space-3);
+    }
+    .tabs button {
+      flex: 1;
+    }
+    .work-list {
+      grid-template-columns: 1fr;
+    }
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    .detail-section dl > div {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .archive-section {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .pagination {
+      gap: var(--space-3);
+    }
+    .actions {
+      position: sticky;
+      bottom: 0;
+      background: var(--canvas);
+      padding: var(--space-3) 0;
+    }
+    .actions button {
+      flex: 1;
+    }
+  }
+}

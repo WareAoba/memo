@@ -1,0 +1,187 @@
+@layer features {
+  /* Search results are one large selection target, with a matching excerpt beneath. */
+  .work-task-list .picker-result,
+  .schedule-content-panel .work-task-list .picker-result {
+    padding: 0;
+    list-style: none;
+  }
+  .work-task-list .picker-result > .picker-choice {
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    text-align: left;
+  }
+  .picker-choice > span {
+    flex: 1;
+    min-width: 0;
+  }
+  .picker-choice:hover {
+    background: var(--accent-soft);
+  }
+  .picker-match {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+    font-weight: 400;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .preset-modal-schedule {
+    height: 90dvh;
+  }
+  .preset-modal-schedule .schedule-editor {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .preset-modal-schedule .schedule-editor > form,
+  .preset-modal-schedule .schedule-form {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .schedule-time-panel {
+    min-height: 0;
+    perspective: 1000px;
+  }
+  .task-group-browser {
+    min-width: 0;
+  }
+  .task-group-options {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .schedule-time-panel .task-group-options > button {
+    justify-content: space-between;
+    text-align: left;
+    gap: var(--space-3);
+  }
+  .task-group-options > button > span {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .schedule-content-panel .work-task-list .schedule-todo-remove {
+    display: flex;
+    flex: 1;
+    text-align: left;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .schedule-todo-remove:hover {
+    color: var(--danger);
+  }
+  .schedule-content-panel .schedule-task-toggle {
+    gap: 6px;
+  }
+  @media (max-width: 600px) {
+    .preset-modal-schedule {
+      height: calc(100dvh - 24px);
+    }
+  }
+  /* The two faces share one grid track; the dialog owns scrolling. */
+  .schedule-time-panel.schedule-card-stage,
+  .preset-modal .schedule-time-panel.schedule-card-stage {
+    padding: 0;
+    background: transparent;
+    perspective: 1200px;
+  }
+  .schedule-flip-card {
+    display: grid;
+    transform-style: preserve-3d;
+    transition: transform 520ms cubic-bezier(0.22, 0.7, 0.25, 1);
+  }
+  .schedule-flip-card.is-flipped {
+    transform: rotateY(180deg);
+  }
+  .schedule-card-face {
+    grid-area: 1 / 1;
+    min-width: 0;
+    min-height: 0;
+    padding: var(--space-4) 0;
+    background: transparent;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .schedule-card-back {
+    transform: rotateY(180deg);
+  }
+  .task-group-accordion {
+    display: grid;
+    gap: 10px;
+  }
+  .task-group-section {
+    overflow: hidden;
+  }
+  .schedule-time-panel .task-group-heading {
+    display: flex;
+    justify-content: space-between;
+    text-align: left;
+  }
+  .task-group-expansion {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 240ms ease;
+  }
+  .task-group-expansion.is-open {
+    grid-template-rows: 1fr;
+  }
+  .task-group-expansion > div {
+    overflow: hidden;
+    min-height: 0;
+  }
+  .task-group-contents {
+    padding: 6px 10px 10px;
+  }
+  .task-group-contents .task-group-options {
+    gap: 2px;
+  }
+  .schedule-time-panel .task-group-contents .task-group-options > button:hover:not(:disabled) {
+    background: var(--accent-soft);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .schedule-flip-card,
+    .task-group-expansion {
+      transition: none;
+    }
+  }
+  /* Small screens keep the clock visible and reveal a separate task card below it. */
+  @media (max-width: 700px) {
+    .schedule-flip-card,
+    .schedule-flip-card.is-flipped {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      transform: none;
+      transition: none;
+    }
+    .schedule-card-front {
+      order: 0;
+    }
+    .schedule-card-back {
+      display: none;
+      order: 1;
+      transform: none;
+      min-height: 0;
+      scroll-margin-block: 12px;
+    }
+    .schedule-flip-card.is-flipped .schedule-card-back {
+      display: block;
+    }
+    .schedule-card-back .task-group-browser {
+      max-height: none;
+      overflow: visible;
+    }
+  }
+  .schedule-content-panel .mobile-task-selection {
+    margin-top: var(--space-3);
+    min-height: 0;
+    padding: var(--space-4);
+    border-radius: var(--radius-card);
+  }
+  .mobile-task-selection .task-group-browser {
+    max-height: none;
+    overflow: visible;
+  }
+}

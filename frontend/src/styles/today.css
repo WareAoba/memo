@@ -1,0 +1,249 @@
+@layer features {
+  /* Today: time and work completion above editable task cards. */
+  .add-work-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+  .today-overview {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 30px;
+    min-height: 0;
+    flex: 0 0 auto;
+    padding: 0 var(--space-2) var(--space-4);
+  }
+  .today-overview .today-schedule-dial {
+    width: min(380px, 37dvh);
+  }
+  .today-work-arc {
+    filter: drop-shadow(0 2px 2px var(--dial-shadow));
+  }
+  .dial-status-legend {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    padding: 0;
+    margin: 2px 0 6px;
+    list-style: none;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .dial-status-legend li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dial-status-legend i,
+  .work-state-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    flex-shrink: 0;
+  }
+  .today-schedule-list {
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3) 0 0;
+  }
+  .today-schedule-list .section-heading {
+    margin: 0 0 var(--space-1);
+  }
+  .schedule-completion-list {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+  .schedule-completion-row {
+    text-align: left;
+    width: 100%;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    padding: 14px;
+    border-radius: 0;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    flex-shrink: 0;
+  }
+  .schedule-completion-row:disabled {
+    opacity: 0.8;
+  }
+  .schedule-completion-check {
+    width: 24px;
+    height: 24px;
+    border: 1.5px solid var(--subtle);
+    border-radius: var(--radius-small);
+    flex-shrink: 0;
+    color: var(--success);
+    display: grid;
+    place-items: center;
+  }
+  .schedule-completion-description {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .schedule-completion-description strong {
+    overflow-wrap: anywhere;
+    font-size: 15px;
+  }
+  .schedule-completion-description > span,
+  .schedule-completion-count {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .today-progress {
+    margin: 14px 0 0;
+    flex-shrink: 0;
+  }
+  .today-progress > span {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .today-detail-scroll > .section-heading {
+    margin: 10px 0 var(--space-4);
+  }
+  .today-schedule-cards {
+    display: grid;
+    gap: 18px;
+  }
+  .today-schedule-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .today-work-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+  .today-work-heading > div {
+    min-width: 0;
+  }
+  .today-work-heading > .ui-check {
+    margin-top: var(--space-3);
+  }
+  .today-work-select {
+    text-align: left;
+    min-height: var(--control-height);
+    font: inherit;
+    overflow-wrap: anywhere;
+  }
+  .today-card-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    min-height: var(--control-height);
+    padding: 0;
+    margin-top: var(--space-3);
+  }
+  .today-task-cards:empty,
+  .today-schedule-card > .tags:empty {
+    display: none;
+  }
+  .today-schedule-card > .section-heading {
+    margin: 0 0 var(--space-2);
+    align-items: flex-start;
+  }
+  .today-schedule-card > .section-heading p {
+    font-size: 12px;
+    margin: var(--space-1) 0;
+  }
+  .today-task-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    margin-top: var(--space-4);
+    align-items: start;
+  }
+  .today-task-card {
+    border-top: 1px solid var(--line);
+    padding: 0;
+    min-width: 0;
+  }
+  .today-task-card.is-complete {
+    border-top-color: var(--success);
+  }
+  .today-task-card:has(.execution-fields) {
+    grid-column: 1 / -1;
+  }
+  .today-task-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .today-task-heading label {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+  }
+  .today-task-heading strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .today-task-card.is-complete strong {
+    text-decoration: line-through;
+  }
+  .today-task-heading input {
+    flex-shrink: 0;
+  }
+  .today-task-heading button {
+    min-height: 36px;
+    padding: var(--space-2) var(--space-3);
+    font-size: 12px;
+  }
+  .today-task-card .detail-section {
+    padding: var(--space-4) 0;
+    margin: 10px 0 0;
+  }
+  .today-task-card .execution-fields form {
+    margin-bottom: var(--space-4);
+  }
+  .today-task-card .execution-fields input:not([type='checkbox']) {
+    margin: var(--space-2) 0;
+    background: var(--canvas);
+  }
+  @media (max-width: 850px) {
+    .today-overview {
+      gap: var(--space-3);
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 700px) {
+    .today-overview {
+      grid-template-columns: 1fr;
+      padding: 0 0 var(--space-4);
+    }
+    .today-overview .today-schedule-dial {
+      width: min(100%, 340px);
+    }
+    .today-schedule-list {
+      max-height: none;
+    }
+    .schedule-completion-list {
+      overflow: visible;
+    }
+    .today-schedule-card > .section-heading {
+      flex-wrap: wrap;
+    }
+    .today-task-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+}

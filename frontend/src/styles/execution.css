@@ -1,0 +1,22 @@
+@layer features {
+  .execution-fields {
+    border: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .execution-item {
+    display: grid;
+    gap: 0.65rem;
+    margin: 1rem 0 1.5rem;
+  }
+  .execution-fields textarea {
+    display: block;
+    width: 100%;
+    min-height: 6rem;
+    margin: 0.65rem 0;
+  }
+  .execution-item input[type='checkbox'] {
+    width: 44px;
+    height: 44px;
+  }
+}

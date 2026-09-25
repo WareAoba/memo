@@ -1,0 +1,28 @@
+@layer features {
+  .app-shell > main {
+    zoom: var(--content-scale, 1);
+    width: 100%;
+    justify-self: center;
+  }
+  :root[data-content-width='compact'] .app-shell > main {
+    max-width: 900px;
+  }
+  :root[data-content-width='standard'] .app-shell > main {
+    max-width: 1200px;
+  }
+  :root[data-motion='reduced'] *,
+  :root[data-motion='reduced'] *::before,
+  :root[data-motion='reduced'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  :root[data-motion='none'] *,
+  :root[data-motion='none'] *::before,
+  :root[data-motion='none'] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

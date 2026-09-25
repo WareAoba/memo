@@ -1,0 +1,455 @@
+@layer features {
+  /* Schedule composition and the 24-hour daylight dial. */
+  .schedule-editor {
+    padding-top: var(--space-2);
+  }
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 13px;
+    text-decoration: none;
+    color: var(--muted);
+  }
+  .schedule-heading h1 {
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 700;
+  }
+  .schedule-heading > p:last-child {
+    margin-top: 10px;
+    font-size: 14px;
+  }
+  .schedule-compose {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 36px;
+    align-items: start;
+  }
+  .schedule-time-panel,
+  .schedule-content-panel {
+    min-width: 0;
+  }
+  .schedule-time-panel {
+    padding: 26px 0;
+  }
+  .schedule-content-panel {
+    padding: 26px 0;
+  }
+  .schedule-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-5);
+  }
+  .schedule-panel-heading h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 650;
+  }
+  .schedule-panel-heading > span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .schedule-form {
+    gap: var(--space-6);
+  }
+  .schedule-form label {
+    font-size: 13px;
+    font-weight: 550;
+  }
+  .schedule-form input,
+  .schedule-form textarea {
+    margin-top: var(--space-1);
+  }
+  .schedule-form label .hint {
+    display: inline;
+  }
+  .time-dial-control {
+    margin: var(--space-6) -10px 18px;
+  }
+  .time-endpoints {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .time-endpoints > span {
+    color: var(--muted);
+  }
+  .time-endpoints button {
+    background: transparent;
+    display: grid;
+    grid-template-columns: 8px auto;
+    column-gap: var(--space-2);
+    row-gap: 3px;
+    padding: var(--space-3) var(--space-5);
+    font-size: 12px;
+    color: var(--muted);
+    border-radius: var(--radius-card);
+  }
+  .time-endpoints button[aria-pressed='true'] {
+    background: var(--surface);
+  }
+  .time-endpoints strong {
+    grid-column: 1/-1;
+    color: var(--ink);
+    font-size: 26px;
+    letter-spacing: -0.04em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .endpoint-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .start-dot {
+    background: var(--accent);
+  }
+  .end-dot {
+    background: var(--danger);
+  }
+  .time-dial {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 1;
+    margin: var(--space-2) auto;
+    touch-action: none;
+    user-select: none;
+    isolation: isolate;
+  }
+  .dial-daylight {
+    position: absolute;
+    /* Ring radius 138 ± 11; selection radius 138 ± 16; ticks stop at 116. */
+    inset: 8.611111%;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      var(--dial-night) 0deg,
+      var(--dial-dawn) 45deg,
+      var(--dial-sunrise) 90deg,
+      var(--dial-morning) 135deg,
+      var(--dial-noon) 180deg,
+      var(--dial-afternoon) 225deg,
+      var(--dial-sunset) 270deg,
+      var(--dial-evening) 315deg,
+      var(--dial-night) 360deg
+    );
+  }
+  .dial-daylight::after {
+    content: '';
+    position: absolute;
+    inset: 7.38255%;
+    background: var(--surface);
+    border-radius: 50%;
+  }
+  .time-dial svg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .time-dial svg text {
+    font-size: 12px;
+    fill: var(--accent-hover);
+    font-weight: 600;
+  }
+  .minor-tick {
+    stroke: var(--subtle);
+    stroke-width: 1;
+  }
+  .dial-selection-raised {
+    filter: drop-shadow(2px 3px 3px var(--dial-shadow))
+      drop-shadow(-1px -2px 2px var(--dial-highlight));
+  }
+  .dial-selection {
+    fill: none;
+    stroke: var(--surface);
+    stroke-width: 32;
+    stroke-linecap: round;
+    opacity: 1;
+  }
+  .dial-center {
+    position: absolute;
+    left: 25%;
+    top: 42%;
+    width: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: center;
+    pointer-events: none;
+  }
+  .dial-center span {
+    font-size: 10px;
+  }
+  .dial-center strong {
+    letter-spacing: -0.04em;
+    color: var(--accent-hover);
+  }
+  .dial-handle {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    touch-action: none;
+  }
+  /* Visual endpoints live in the SVG so the arc and caps scale together.
+   Transparent HTML buttons retain a 44px touch target on small screens. */
+  .dial-handle.start,
+  .dial-handle.start:hover,
+  .dial-handle.end,
+  .dial-handle.end:hover {
+    background: transparent;
+  }
+  .time-dial svg .dial-endpoint-label {
+    fill: var(--surface);
+    font-size: 10px;
+  }
+  .dial-handle:active {
+    cursor: grabbing;
+  }
+  .dial-handle span {
+    font-size: 12px;
+  }
+  .daylight-legend {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+  .dial-hint {
+    font-size: 11px;
+    text-align: center;
+    line-height: 1.8;
+    margin: var(--space-4) 0 0;
+  }
+  .schedule-form .multi-day-toggle {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    padding: 14px var(--space-2) 0;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .multi-day-toggle input {
+    margin: 0;
+    flex-shrink: 0;
+  }
+  .multi-day-toggle small {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+  .manual-time-range {
+    display: grid;
+    gap: 18px;
+    margin: var(--space-5) 0;
+  }
+  .selected-work {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .selected-work strong {
+    overflow-wrap: anywhere;
+  }
+  .selected-work button {
+    background: var(--accent-soft);
+    font-size: 12px;
+  }
+  .schedule-tasks {
+    margin-top: var(--space-6);
+  }
+  .schedule-tasks h3 {
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .schedule-tasks h3 > span {
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .schedule-content-panel .work-task-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-3) 0;
+  }
+  .schedule-content-panel .work-task-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-2) 0;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .schedule-content-panel .work-task-list li > span {
+    flex: 1;
+    min-width: 0;
+  }
+  .schedule-content-panel .work-task-actions {
+    gap: 2px;
+    flex-wrap: nowrap;
+    margin: 0;
+  }
+  .schedule-content-panel .work-task-actions button:hover {
+    background: var(--surface-soft);
+  }
+  .schedule-content-panel .work-task-editor legend {
+    font-size: 13px;
+    margin-bottom: var(--space-3);
+  }
+  .schedule-add-tasks {
+    margin: 14px 0 var(--space-6);
+  }
+  .schedule-add-tasks summary {
+    cursor: pointer;
+    min-height: 44px;
+    padding: var(--space-3) var(--space-1);
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .schedule-notes {
+    display: grid;
+    gap: 22px;
+    margin-top: 30px;
+  }
+  .schedule-save {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-5);
+    padding: var(--space-6) var(--space-1);
+  }
+  .schedule-save > span {
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .schedule-save strong {
+    display: block;
+    color: var(--ink);
+    font-size: 19px;
+    margin-top: var(--space-1);
+    font-variant-numeric: tabular-nums;
+  }
+  .schedule-save button {
+    gap: 30px;
+  }
+  @media (max-width: 700px) {
+    .schedule-compose {
+      grid-template-columns: 1fr;
+      gap: var(--space-2);
+    }
+    .schedule-time-panel {
+      padding: 22px 18px;
+      border-radius: var(--radius-card);
+    }
+    .schedule-content-panel {
+      padding: var(--space-6) var(--space-1);
+    }
+    .schedule-save {
+      padding: var(--space-2) 0 var(--space-6);
+      gap: var(--space-3);
+    }
+    .schedule-save button {
+      gap: 14px;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .time-endpoints button {
+      transition: background 0.15s ease;
+    }
+  }
+
+  .time-dial svg .dial-hour-label {
+    fill: var(--subtle);
+    font-size: 10px;
+    font-weight: 400;
+  }
+  .dial-day-symbol {
+    color: var(--accent);
+  }
+  .dial-day-symbol.sunrise,
+  .dial-day-symbol.sunset {
+    color: var(--warning);
+  }
+  .dial-day-symbol.noon {
+    color: var(--warning);
+  }
+  .time-dial svg .dial-day-label {
+    fill: var(--muted);
+    font-size: 9px;
+    font-weight: 500;
+  }
+  .dial-center strong {
+    font-size: 22px;
+    font-weight: 550;
+  }
+  .dial-center span {
+    color: var(--subtle);
+  }
+  .minor-tick {
+    opacity: 0.3;
+  }
+  .hour-tick {
+    stroke: var(--subtle);
+    stroke-width: 1.2;
+  }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: var(--space-4);
+  }
+  .photo-grid figure {
+    margin: 0;
+    min-width: 0;
+  }
+  .photo-grid img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: var(--radius-control);
+    background: var(--surface-soft);
+  }
+  .photo-grid figcaption {
+    overflow-wrap: anywhere;
+    margin: var(--space-2) 0;
+  }
+  .photo-upload {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+  }
+  .photo-upload label {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .photo-upload input {
+    max-width: 100%;
+  }
+  .photo-section summary {
+    min-height: 44px;
+    cursor: pointer;
+    align-content: center;
+    font-weight: 600;
+  }
+}

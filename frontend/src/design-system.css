@@ -1,0 +1,571 @@
+@layer base {
+  .ui-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink);
+    border: 0;
+    background: transparent;
+    border-radius: var(--radius-control);
+  }
+}
+@layer components {
+  [data-schedule-color='none'] {
+    --schedule-color: var(--subtle);
+  }
+  [data-schedule-color='red'] {
+    --schedule-color: var(--schedule-red);
+  }
+  [data-schedule-color='orange'] {
+    --schedule-color: var(--schedule-orange);
+  }
+  [data-schedule-color='yellow'] {
+    --schedule-color: var(--schedule-yellow);
+  }
+  [data-schedule-color='green'] {
+    --schedule-color: var(--schedule-green);
+  }
+  [data-schedule-color='blue'] {
+    --schedule-color: var(--schedule-blue);
+  }
+  [data-schedule-color='indigo'] {
+    --schedule-color: var(--schedule-indigo);
+  }
+  [data-schedule-color='violet'] {
+    --schedule-color: var(--schedule-violet);
+  }
+  .schedule-card:is(.today-schedule-card, .work-block)[data-schedule-color] {
+    border-top: 4px solid var(--schedule-color, var(--subtle));
+  }
+  .schedule-color-picker {
+    border: 0;
+    margin: var(--space-4) 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .schedule-color-options {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .schedule-color-options label {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 32px;
+    cursor: pointer;
+    position: relative;
+  }
+  .schedule-color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--schedule-color);
+    border: 1px solid var(--line);
+  }
+  .schedule-color-dot[data-schedule-color='none'] {
+    background: linear-gradient(135deg, transparent 46%, var(--subtle) 47% 53%, transparent 54%);
+  }
+  .schedule-color-options input:checked + .schedule-color-dot {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+  }
+  .schedule-color-options input:focus-visible + .schedule-color-dot {
+    outline: 3px double var(--ink);
+    outline-offset: 4px;
+  }
+  .schedule-color-options input:disabled + .schedule-color-dot {
+    opacity: 0.5;
+  }
+  .ui-check.task-check {
+    min-height: 18px;
+    flex-shrink: 0;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    border: 1.5px solid var(--subtle);
+    border-radius: 50%;
+    padding: 3px;
+    background: transparent;
+    background-clip: content-box;
+  }
+  .ui-check.task-check:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .schedule-completion-check {
+    border-radius: 3px;
+  }
+  .task-hover-actions {
+    opacity: 0;
+    pointer-events: none;
+    display: flex;
+    gap: var(--space-1);
+  }
+  .today-task-card:hover .task-hover-actions,
+  .task-block:hover > .task-hover-actions,
+  .task-hover-actions:focus-within,
+  .task-hover-actions:has([aria-expanded='true']) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .swipe-delete {
+    min-width: 0;
+    position: relative;
+  }
+  .swipe-delete-content {
+    min-width: 0;
+  }
+  .swipe-delete-reveal {
+    display: none;
+  }
+  @media (max-width: 700px) {
+    .swipe-delete {
+      touch-action: pan-y;
+    }
+    .swipe-delete[data-open='true'] {
+      padding-right: 64px;
+    }
+    .swipe-delete-reveal {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      padding: var(--space-2);
+      background: var(--danger-soft);
+      border-radius: var(--radius-control);
+    }
+    .task-hover-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .task-hover-actions > .icon-button[data-variant='danger'] {
+      display: none;
+    }
+  }
+  /* Component reference. Features own placement; these classes own visual states. */
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+  button,
+  .button {
+    cursor: pointer;
+    text-decoration: none;
+  }
+  button:disabled,
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  :is(button, a, input, textarea, select, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .ui-button:not([data-variant='plain']) {
+    min-height: var(--control-height);
+    padding: var(--space-2) var(--space-4);
+    background: var(--surface-soft);
+    color: var(--ink);
+    border: 1px solid transparent;
+    border-radius: var(--radius-control);
+    box-shadow: none;
+  }
+  .ui-button:not([data-variant='plain']):not(:disabled):hover {
+    background: var(--surface-hover);
+  }
+  .ui-button[data-variant='primary'] {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .ui-button[data-variant='primary']:not(:disabled):hover {
+    background: var(--accent-hover);
+  }
+  .ui-button[data-variant='ghost'] {
+    background: transparent;
+    color: var(--accent);
+  }
+  .ui-button[data-variant='ghost']:not(:disabled):hover {
+    background: var(--accent-soft);
+  }
+  .ui-button[data-variant='danger'] {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+  .ui-button[data-variant='danger']:not(:disabled):hover {
+    background: var(--danger);
+    color: var(--on-accent);
+  }
+  .ui-button.ui-icon-button {
+    width: var(--control-height);
+    height: var(--control-height);
+    min-width: var(--control-height);
+    min-height: var(--control-height);
+    padding: 0;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .action-icon {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
+  .ui-button[aria-pressed='true']:not([data-variant='plain']) {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+  }
+  .ui-input {
+    width: 100%;
+    min-width: 0;
+    min-height: var(--control-height);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 20px;
+  }
+  .ui-input:hover:not(:disabled) {
+    border-color: var(--subtle);
+  }
+  .ui-input:focus-visible {
+    border-color: var(--accent);
+  }
+  .ui-input[aria-invalid='true'] {
+    border-color: var(--danger);
+  }
+  .ui-input::placeholder {
+    color: var(--muted);
+    opacity: 1;
+  }
+  textarea.ui-input {
+    resize: vertical;
+  }
+  .ui-select {
+    cursor: pointer;
+  }
+  .ui-dropdown {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .ui-dropdown-trigger {
+    justify-content: space-between;
+    text-align: left;
+    font-weight: 400;
+  }
+  .ui-dropdown-trigger > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ui-dropdown-menu {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    z-index: 100;
+  }
+  .ui-dropdown-menu .ui-menu-option[data-active='true'] {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+  }
+  .ui-check {
+    width: 22px;
+    height: 22px;
+    min-height: 22px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+  .ui-surface {
+    min-width: 0;
+    padding: var(--surface-padding, var(--page-padding));
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: none;
+  }
+  .ui-surface[data-tone='soft'] {
+    background: var(--surface-soft);
+  }
+  .ui-surface[data-tone='accent'] {
+    background: var(--accent-soft);
+  }
+  .ui-surface[data-tone='danger'] {
+    background: var(--danger-soft);
+    border-color: transparent;
+  }
+  .ui-surface[data-padding='none'] {
+    padding: 0;
+  }
+  .ui-surface[data-padding='compact'] {
+    padding: var(--space-4);
+  }
+  /* Content sections use spacing and rules, not nested card surfaces. */
+  .ui-surface:is(.detail-section, .today-schedule-card, .checklist-definition, .custom-detail-card),
+  .editor fieldset.ui-surface {
+    padding: var(--space-5) 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+  }
+  .ui-surface .ui-surface.detail-section {
+    border: 0;
+  }
+  .ui-surface.today-schedule-card {
+    padding-inline: var(--space-4);
+    border-radius: var(--radius-card);
+  }
+  .ui-surface.today-schedule-card[data-selected='true'] {
+    background: var(--accent-soft);
+  }
+  :is(.detail-section, .editor fieldset) > :is(h2, legend),
+  .today-schedule-card > .section-heading h2 {
+    font-size: 18px;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+  }
+  .editor legend {
+    padding: 0 var(--space-3) 0 0;
+  }
+  .ui-card-button {
+    display: block;
+    width: 100%;
+    padding: var(--space-4);
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .ui-card-button:not(:disabled):hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .ui-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-shrink: 0;
+    padding: 0;
+    margin: 0 0 var(--page-gap);
+  }
+  .ui-page-header h1 {
+    margin: var(--space-1) 0;
+    font-size: clamp(26px, 3vw, 32px);
+    line-height: 1.3;
+    letter-spacing: -0.04em;
+  }
+  .ui-page-header p {
+    margin: var(--space-1) 0;
+  }
+  .preset-modal .ui-page-header h1 {
+    font-size: 24px;
+  }
+  .ui-menu {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+    box-shadow: var(--shadow-popover);
+    color: var(--ink);
+  }
+  .ui-button[data-variant='option'] {
+    width: 100%;
+    justify-content: space-between;
+    text-align: left;
+    background: transparent;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .ui-button[data-variant='option']:not(:disabled):hover,
+  .ui-button[data-variant='option'][aria-selected='true'] {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+  }
+  .detail-kind-control {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-control);
+    background: var(--surface);
+  }
+  .detail-kind-control:focus-within {
+    border-color: var(--accent);
+  }
+  .detail-kind-control .ui-input {
+    border: 0;
+    background: transparent;
+  }
+  .preset-switch {
+    background: transparent;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    padding: 0;
+  }
+  .preset-switch a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--control-height);
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+  }
+  .preset-switch a[aria-current] {
+    color: var(--accent-hover);
+    background: transparent;
+    border-bottom-color: var(--accent);
+    box-shadow: none;
+  }
+  .brand-mark {
+    color: var(--on-accent);
+    background: var(--accent);
+  }
+  .tag {
+    color: var(--muted);
+    background: transparent;
+    border-radius: 0;
+    padding-inline: 0;
+  }
+  .tag + .tag::before {
+    content: '·';
+    margin-right: var(--space-2);
+  }
+  .requirement {
+    color: var(--warning);
+    background: var(--warning-soft);
+  }
+  .error-box p {
+    color: var(--danger);
+  }
+  .preset-modal {
+    --surface-padding: var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    box-shadow: var(--shadow-dialog);
+  }
+  .preset-modal::backdrop {
+    background: var(--backdrop);
+    backdrop-filter: blur(4px);
+  }
+  .modal-header {
+    padding: var(--space-4) var(--page-padding) var(--space-2);
+    border: 0;
+    background: transparent;
+  }
+  .modal-header strong {
+    font-size: 18px;
+    letter-spacing: -0.025em;
+  }
+  .modal-body {
+    padding: var(--space-4) var(--page-padding);
+  }
+  .preset-modal .modal-footer .schedule-save {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .preset-modal .editor > .actions {
+    position: static;
+    padding: 0;
+    justify-content: flex-end;
+    margin-top: var(--space-5);
+  }
+  .app-shell > main {
+    padding: var(--page-padding);
+  }
+  @media (max-width: 700px) {
+    .ui-page-header {
+      flex-wrap: wrap;
+    }
+    .ui-page-header > .ui-icon-button {
+      width: var(--control-height);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-button,
+    .ui-input,
+    .ui-card-button,
+    .preset-switch a {
+      transition:
+        var(--control-layout-transition, padding-right 0s),
+        background-color var(--motion-fast) ease,
+        color var(--motion-fast) ease,
+        border-color var(--motion-fast) ease,
+        box-shadow var(--motion-medium) ease;
+    }
+    .route-content,
+    .preset-modal[open],
+    .ui-menu,
+    .error-box {
+      animation: content-enter var(--motion-medium) var(--ease-settle) both;
+    }
+    .preset-modal[open]::backdrop {
+      animation: veil-enter var(--motion-fast) ease both;
+    }
+    .ui-button[aria-busy='true'] .action-icon {
+      animation: saving-breathe 850ms ease-in-out infinite alternate;
+    }
+    .schedule-completion-check,
+    .work-state-dot,
+    .today-work-arc {
+      transition:
+        background-color var(--motion-medium) ease,
+        fill var(--motion-medium) ease,
+        stroke var(--motion-medium) ease;
+    }
+  }
+  @keyframes content-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes veil-enter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes saving-breathe {
+    from {
+      opacity: 0.45;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

@@ -1,0 +1,275 @@
+@layer features {
+  .memo-trigger {
+    position: relative;
+    flex-shrink: 0;
+    color: var(--accent);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .memo-dot {
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .preview-actions,
+  .completion-preview,
+  .picker-result.memo-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .completion-preview > .schedule-completion-row,
+  .picker-result.memo-preview > button:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  .preset-preview {
+    position: relative;
+    min-width: 0;
+  }
+  .search-preview {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .search-preview > a {
+    flex: 1;
+    min-width: 0;
+  }
+  .preset-preview > .work-card {
+    width: 100%;
+    height: 100%;
+    padding-right: 56px;
+  }
+  .preset-preview > .memo-trigger {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+  }
+  .work-task-list > .compose-task {
+    flex-wrap: wrap;
+  }
+  .compose-task > .task-parameters {
+    flex-basis: 100%;
+  }
+  .task-parameters {
+    min-width: 0;
+    display: grid;
+    gap: var(--space-2);
+  }
+  .parameter-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .parameter-inputs label {
+    display: grid;
+    gap: var(--space-1);
+    flex: 1 1 100px;
+    min-width: 0;
+  }
+  .parameter-inputs input {
+    width: 100%;
+  }
+  .parameter-preview {
+    color: var(--accent);
+    overflow-wrap: anywhere;
+    margin: 0;
+  }
+  .task-group-options .picker-result > button:first-child {
+    justify-content: space-between;
+    text-align: left;
+    gap: var(--space-3);
+  }
+  .task-group-options .picker-result > button:first-child > span {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .memo-editor {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .memo-editor label {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .memo-editor textarea {
+    width: 100%;
+    resize: vertical;
+  }
+  .memo-editor .actions {
+    flex-wrap: wrap;
+  }
+  .memo-popover {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    box-sizing: border-box;
+    width: 360px;
+    padding: var(--space-4);
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow-popover);
+    z-index: 100;
+    animation: memo-unfold var(--motion-medium) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  .memo-popover::backdrop {
+    background: transparent;
+  }
+  .memo-popover[data-corner='top-right'] {
+    border-top-right-radius: 0;
+    transform-origin: top right;
+  }
+  .memo-popover[data-corner='top-left'] {
+    border-top-left-radius: 0;
+    transform-origin: top left;
+  }
+  .memo-popover[data-corner='bottom-right'] {
+    border-bottom-right-radius: 0;
+    transform-origin: bottom right;
+  }
+  .memo-popover[data-corner='bottom-left'] {
+    border-bottom-left-radius: 0;
+    transform-origin: bottom left;
+  }
+  .memo-popover-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+  .memo-popover-heading strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .memo-popover .hint,
+  .memo-inline .hint,
+  .memo-discard p {
+    margin: 0;
+  }
+  .memo-popover textarea {
+    min-height: 100px;
+  }
+  .memo-discard {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .memo-inline {
+    margin-block: var(--space-3);
+  }
+  .memo-inline > label {
+    font-weight: 600;
+  }
+  @keyframes memo-unfold {
+    from {
+      transform: scale(0.02);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .memo-popover {
+      animation: none;
+    }
+  }
+  .schedule-card {
+    position: relative;
+    --schedule-actions-space: 0px;
+  }
+  .schedule-hover-actions {
+    position: absolute;
+    right: var(--space-4);
+    top: var(--space-4);
+    display: flex;
+    gap: var(--space-1);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-medium) var(--ease-settle);
+  }
+  .schedule-card > header {
+    padding-right: var(--schedule-actions-space);
+    transition: padding-right var(--motion-medium) var(--ease-settle);
+  }
+  .completion-preview > .schedule-completion-row {
+    padding-right: calc(14px + var(--schedule-actions-space));
+    --control-layout-transition: padding-right var(--motion-medium) var(--ease-settle);
+  }
+  .completion-preview > .schedule-hover-actions {
+    top: 50%;
+    transform: translateY(-50%);
+    right: 8px;
+  }
+  .search-preview > a {
+    padding-right: calc(var(--space-4) + var(--schedule-actions-space));
+    transition: padding-right var(--motion-medium) var(--ease-settle);
+  }
+  .memo-preview:focus-within > .memo-trigger,
+  .memo-trigger:focus-visible,
+  .memo-trigger[aria-expanded='true'],
+  .schedule-hover-actions:focus-within,
+  .schedule-hover-actions:has([aria-expanded='true']) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .schedule-hover-actions .memo-trigger {
+    opacity: 1;
+    pointer-events: inherit;
+  }
+  @media (min-width: 701px) {
+    .schedule-card:has(.schedule-hover-actions:focus-within),
+    .schedule-card:has(.schedule-hover-actions [aria-expanded='true']) {
+      --schedule-actions-space: 145px;
+    }
+  }
+  @media (max-width: 700px) {
+    .memo-trigger,
+    .schedule-hover-actions,
+    .memo-popover {
+      display: none !important;
+    }
+    .preset-preview > .work-card {
+      padding-right: var(--space-4);
+    }
+    .schedule-card > header {
+      padding-right: 0;
+    }
+    .completion-preview > .schedule-completion-row {
+      padding-right: 14px;
+    }
+    .search-preview > a {
+      padding-right: var(--space-4);
+    }
+  }
+  @media (min-width: 701px) and (hover: hover) and (pointer: fine) {
+    .schedule-card:hover:not(:has(.memo-preview:hover)) {
+      --schedule-actions-space: 145px;
+    }
+    .schedule-card:hover:not(:has(.memo-preview:hover)) .schedule-hover-actions,
+    .memo-preview:hover > .memo-trigger,
+    .memo-preview:focus-within > .memo-trigger,
+    .memo-preview:hover > .preview-actions > .memo-trigger,
+    .memo-preview:focus-within > .preview-actions > .memo-trigger,
+    .today-task-card:hover .memo-trigger,
+    .today-task-card:focus-within .memo-trigger,
+    .task-block:hover .memo-trigger,
+    .task-block:focus-within .memo-trigger,
+    .memo-trigger[aria-expanded='true'],
+    .memo-trigger:focus-visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}

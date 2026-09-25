@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Preset — Works and tasks",
+  "short_name": "Preset",
+  "lang": "en",
+  "start_url": "/#/today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f4ef",
+  "theme_color": "#716087",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

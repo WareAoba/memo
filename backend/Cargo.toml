@@ -1,0 +1,33 @@
+[package]
+name = "preset-execution-api"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+web-push-native = "0.4"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+base64 = "0.22"
+p256 = { version = "0.13", features = ["ecdh"] }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono-tz = "0.10"
+chrono = { version = "0.4", default-features = false, features = ["std"] }
+axum = "0.8"
+http-body-util = "0.1"
+dotenvy = "0.15"
+serde = { version = "1", features = ["derive"] }
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "sqlite", "migrate", "macros", "json"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal", "time", "fs"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util"] }
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+serde_json = "1"
+tempfile = "3"
+tower = { version = "0.5", features = ["util"] }
+

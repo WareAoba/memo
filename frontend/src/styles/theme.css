@@ -1,0 +1,168 @@
+@layer features {
+  /* Design tokens: quiet backgrounds, soft corners and visible focus. */
+  :root {
+    color: var(--ink);
+    background: var(--canvas);
+  }
+  input[type='checkbox'] {
+    accent-color: var(--accent);
+  }
+  .site-header,
+  .preset-navigation,
+  .preview-notice,
+  .day-summary {
+    border: 0;
+  }
+  .brand-mark {
+    background: var(--accent);
+    border-radius: var(--radius-control);
+  }
+  .environment-label,
+  .eyebrow,
+  p,
+  .hint {
+    color: var(--muted);
+  }
+  .main-navigation {
+    background: var(--surface-soft);
+    border-radius: var(--radius-card);
+    box-shadow: none;
+  }
+  .main-navigation a {
+    color: var(--muted);
+    border-radius: var(--radius-card);
+  }
+  .main-navigation a[aria-current='page'] {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+    box-shadow: none;
+  }
+  .preset-navigation {
+    gap: var(--space-2);
+  }
+  .preset-navigation a {
+    border: 0;
+    border-radius: var(--radius-card);
+    min-width: 90px;
+    color: var(--muted);
+  }
+  .preset-navigation a[aria-current='page'] {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+  }
+  .toolbar {
+    background: transparent;
+    padding: 0;
+  }
+  .tabs button[aria-pressed='true'] {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+  }
+  .work-card,
+  .detail-section,
+  .editor fieldset,
+  .work-block,
+  .calendar-panel,
+  .empty,
+  .preset-task-card {
+    background: var(--surface);
+    border-radius: var(--radius-card);
+    box-shadow: none;
+  }
+  .work-card:hover {
+    background: var(--surface-soft);
+  }
+  .checklist-definition,
+  .optional-fields {
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: transparent;
+    border-radius: 0;
+    padding-inline: 0;
+  }
+  .task-block,
+  .task-block.is-complete {
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    --task-ink: var(--muted);
+    box-shadow: none;
+  }
+  .task-block.is-complete {
+    --task-ink: var(--success);
+  }
+  .task-block {
+    min-height: var(--control-height);
+    padding-block: 0;
+  }
+  .task-block .task-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .work-block {
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    padding-inline: 0;
+  }
+  .task-mint {
+    --task-fill: var(--success-soft);
+  }
+  .task-blue {
+    --task-fill: var(--info-soft);
+  }
+  .task-violet {
+    --task-fill: var(--accent-soft);
+  }
+  .task-peach {
+    --task-fill: var(--peach);
+  }
+  .task-yellow {
+    --task-fill: var(--warning-soft);
+  }
+  .task-rose {
+    --task-fill: var(--rose);
+  }
+  .calendar-day {
+    background: var(--surface-soft);
+    border-radius: var(--radius-control);
+  }
+  .calendar-day.selected {
+    background: var(--accent-soft);
+    box-shadow: none;
+  }
+  .calendar-day.is-today .day-number {
+    background: var(--accent);
+  }
+  .tag,
+  .requirement {
+    border-radius: var(--radius-control);
+  }
+  .tag {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+  }
+  .preview-notice {
+    margin-top: 18px;
+  }
+  .actions {
+    background: transparent;
+  }
+  @media (max-width: 650px) {
+    .main-navigation {
+      background: var(--surface-soft);
+      border: 0;
+      box-shadow: none;
+      border-radius: var(--radius-card);
+    }
+    .work-block {
+      border-top: 1px solid var(--line);
+      border-radius: 0;
+    }
+  }
+}

@@ -1,0 +1,48 @@
+@layer features {
+  .calendar-heading-actions,
+  .schedule-search-pages {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .schedule-search {
+    display: grid;
+    gap: 1rem;
+  }
+  .schedule-search label {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .schedule-search-results {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .schedule-search-results a {
+    display: grid;
+    gap: 0.3rem;
+    padding: 1rem;
+    border-radius: 1rem;
+    background: var(--surface-soft);
+    color: inherit;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+  }
+  .schedule-search-results a:hover {
+    background: var(--surface-soft);
+  }
+  .schedule-search-results span {
+    font-size: 0.85rem;
+  }
+  .schedule-search-notes {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .schedule-search-pages {
+    justify-content: space-between;
+  }
+}

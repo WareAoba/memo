@@ -1,0 +1,128 @@
+@layer features {
+  .settings-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    border: 0;
+    padding: 0;
+    margin: var(--space-5) 0 0;
+    min-width: 0;
+  }
+  .settings-fields > .ui-dropdown {
+    max-width: 480px;
+  }
+  .settings-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .settings-reset-list {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .settings-reset-row {
+    padding-block: var(--space-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .settings-reset-row h3 {
+    margin-top: 0;
+    font-size: 16px;
+  }
+  .settings-reset-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+  }
+  .workspace-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+  .workspace-sidebar > .sidebar-navigation {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .sidebar-settings {
+    flex-shrink: 0;
+    margin-top: var(--space-4);
+  }
+  .app-shell > main[hidden] {
+    display: none;
+  }
+  .app-shell > .settings-main {
+    display: flex;
+    overflow: hidden;
+  }
+  .settings-workspace {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+  }
+  .settings-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-shrink: 0;
+    padding-bottom: var(--space-4);
+  }
+  .settings-heading h1 {
+    margin: 0;
+    font-size: 26px;
+  }
+  .settings-body {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
+    gap: var(--space-5);
+  }
+  .settings-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    overflow-y: auto;
+  }
+  .settings-tabs > button {
+    flex-shrink: 0;
+  }
+  .settings-panel {
+    min-width: 0;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    padding: var(--space-2);
+  }
+  .settings-panel h2 {
+    margin: 0 0 var(--space-5);
+    font-size: 20px;
+  }
+  @media (max-width: 700px) {
+    .workspace-sidebar,
+    .workspace-sidebar.is-expanded {
+      flex-direction: row;
+      align-items: center;
+    }
+    .workspace-sidebar > .sidebar-navigation {
+      overflow: visible;
+    }
+    .sidebar-settings {
+      order: -1;
+      margin: 0 var(--space-1) 0 0;
+      width: 44px;
+      padding: 0;
+    }
+    .sidebar-settings .sidebar-label {
+      display: none;
+    }
+    .settings-body {
+      grid-template-columns: 88px minmax(0, 1fr);
+      gap: var(--space-2);
+    }
+    .settings-tabs > button {
+      padding-inline: var(--space-2);
+    }
+  }
+}
