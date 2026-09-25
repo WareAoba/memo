@@ -33,7 +33,7 @@ function DesktopMemoButton({
   value,
   onSave,
   load,
-  scope = tr('MemoButton.savedOnlyToThisSchedule'),
+  scope = '',
   disabled = false,
   onOpenChange,
   corner = 'top-right',

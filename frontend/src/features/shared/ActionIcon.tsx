@@ -9,7 +9,6 @@ export function ActionIcon({
     | 'trash'
     | 'edit'
     | 'open'
-    | 'refresh'
     | 'plus'
     | 'check'
     | 'search'
@@ -25,9 +24,11 @@ export function ActionIcon({
     | 'calendar'
     | 'calendar-add'
     | 'menu'
+    | 'presets'
     | 'settings';
 }) {
   const paths = {
+    presets: 'M4 3h12v14H4V3Zm4 4h4M8 11h4m-4 10h12V7',
     memo: 'M4 3h16v14l-4 4H4V3Zm4 5h8M8 12h8M8 16h4m4 5v-4h4',
     menu: 'M4 6h16M4 12h16M4 18h16',
     settings: 'M4 7h3m4 0h9M4 17h10m4 0h2M7 4h4v6H7V4Zm7 10h4v6h-4v-6Z',
@@ -47,7 +48,6 @@ export function ActionIcon({
     trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',
     edit: 'M15 4l5 5M4 20l5-1L21 7l-5-5L4 14v6Z',
     open: 'M14 3h7v7m0-7L10 14M10 3H3v18h18v-7',
-    refresh: 'M20 7V3m0 4h-4M20 7a8 8 0 1 0 0 10',
     plus: 'M12 5v14M5 12h14',
     check: 'M4 12l5 5L20 6',
   };

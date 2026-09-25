@@ -5,7 +5,6 @@ import { type ComponentProps } from 'react';
 import { MemoButton } from './MemoButton';
 import { useMobileMemoLayout } from './useMobileMemoLayout';
 import { ButtonLink } from './ui';
-import { ActionIcon } from './ActionIcon';
 
 export function ScheduleCardActions({
   id,
@@ -20,7 +19,6 @@ export function ScheduleCardActions({
       {onDelete && <DeleteButton label={memo.label} disabled={memo.disabled} onDelete={onDelete} />}
       <MemoButton {...memo} draftKey={'schedule:' + id} />
       <ButtonLink
-        iconOnly
         variant="ghost"
         href={`#/schedules/${id}/edit`}
         aria-label={tr('ScheduleEditor.editSchedule')}
@@ -31,7 +29,7 @@ export function ScheduleCardActions({
         }}
         aria-disabled={memo.disabled || undefined}
       >
-        <ActionIcon name="edit" />
+        {tr('App.edit')}
       </ButtonLink>
     </div>
   );

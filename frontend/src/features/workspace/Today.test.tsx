@@ -18,10 +18,71 @@ vi.mock('../../api/schedules');
 vi.mock('../../api/taskPresets');
 vi.mock('../schedules/Photos', () => ({ Photos: () => null }));
 afterEach(() => vi.resetAllMocks());
+it('preserves item drafts after midnight despite memo events and revision refreshes', async () => {
+  const original: ScheduleDetail = {
+    ...schedule,
+    scheduled_date: '2026-09-24',
+    end_date: '2026-09-24',
+    tasks: [
+      {
+        ...schedule.tasks[2]!,
+        items: [
+          {
+            id: 'item',
+            definition: {
+              position: 0,
+              label: '기록',
+              item_type: 'text',
+              required: false,
+              unit: '',
+              default_value: null,
+            },
+            value_text: null,
+            value_boolean: null,
+            value_number: null,
+            completed: false,
+          },
+        ],
+      },
+    ],
+  };
+  vi.mocked(getDaySchedules).mockImplementation(async (date) =>
+    date === '2026-09-24' ? [original] : [],
+  );
+  vi.mocked(updateTask).mockImplementation(async (_id, patch) => {
+    window.dispatchEvent(new Event('schedules-changed'));
+    return {
+      ...original,
+      tasks: original.tasks.map((task) => ({
+        ...task,
+        execution_notes: patch.execution_notes ?? '',
+      })),
+    };
+  });
+  const view = render(<Today today="2026-09-24" timeZone="Asia/Tokyo" />);
+  fireEvent.click(await screen.findByRole('button', { name: '태스크 2 수정' }));
+  fireEvent.change(screen.getByRole('textbox', { name: '기록' }), {
+    target: { value: '미저장 실행 초안' },
+  });
+  view.rerender(<Today today="2026-09-25" timeZone="Asia/Tokyo" />);
+  fireEvent.change(screen.getByLabelText('실행 메모'), { target: { value: '별도 메모' } });
+  fireEvent.blur(screen.getByLabelText('실행 메모'));
+  await screen.findByText('메모를 저장했습니다.');
+  fireEvent(window, new Event('focus'));
+  view.rerender(<Today today="2026-09-25" timeZone="Asia/Tokyo" revision={1} />);
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(getDaySchedules).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('textbox', { name: '기록' })).toHaveValue('미저장 실행 초안');
+  fireEvent.click(screen.getByRole('button', { name: '태스크 2 수정' }));
+  await screen.findByText('오늘 저장된 일정이 없습니다.');
+  expect(getDaySchedules).toHaveBeenLastCalledWith('2026-09-25', expect.any(AbortSignal));
+});
 const schedule: ScheduleDetail = {
   id: 's',
   entity_id: 'e',
-  title: '스케줄',
+  title: '일정',
   scheduled_date: '2026-09-23',
   end_date: '2026-09-25',
   start_time: '09:00',
@@ -56,8 +117,8 @@ it('selects one work, reveals a labeled footer action and omits empty explanatio
   const card = await screen.findByRole('article', { name: '저장된 워크' });
   expect(card).toHaveAttribute('data-schedule-color', 'red');
   expect(screen.getByRole('heading', { name: '요약' })).toBeVisible();
-  expect(screen.getByRole('heading', { name: '오늘의 스케줄' })).toBeVisible();
-  expect(screen.queryByText('이번 스케줄에 저장됩니다')).not.toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: '오늘의 일정' })).toBeVisible();
+  expect(screen.queryByText('이번 일정에 저장됩니다')).not.toBeInTheDocument();
   expect(
     screen.queryByText('태스크를 추가해 이 워크의 할 일을 준비하세요.'),
   ).not.toBeInTheDocument();
@@ -115,7 +176,7 @@ it('waits for user timezone and retries errors without examples', async () => {
   view.rerender(<Today today="2026-09-24" timeZone="Asia/Tokyo" />);
   expect(await screen.findByText('조회 실패')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-  expect(await screen.findByText('오늘 저장된 스케줄이 없습니다.')).toBeVisible();
+  expect(await screen.findByText('오늘 저장된 일정이 없습니다.')).toBeVisible();
 });
 it('ignores an old date request after rollover', async () => {
   let resolve!: (items: ScheduleDetail[]) => void;
@@ -129,7 +190,7 @@ it('ignores an old date request after rollover', async () => {
     .mockResolvedValue([]);
   const view = render(<Today today="2026-09-24" timeZone="Asia/Tokyo" />);
   view.rerender(<Today today="2026-09-25" timeZone="Asia/Tokyo" />);
-  expect(await screen.findByText('오늘 저장된 스케줄이 없습니다.')).toBeVisible();
+  expect(await screen.findByText('오늘 저장된 일정이 없습니다.')).toBeVisible();
   resolve([schedule]);
   await waitFor(() => expect(screen.queryByText('저장된 워크')).not.toBeInTheDocument());
 });
@@ -151,10 +212,7 @@ it('updates saved progress after a successful check and preserves it on failed u
   fireEvent.click(screen.getByRole('checkbox', { name: '태스크 2 완료' }));
   expect(await screen.findByText('저장 실패')).toBeVisible();
   expect(screen.getByRole('checkbox', { name: '태스크 2 완료' })).toBeChecked();
-  expect(screen.getByRole('link', { name: '세부 항목 입력하기' })).toHaveAttribute(
-    'href',
-    '#/schedules/s',
-  );
+  expect(screen.getByRole('link', { name: '상세 보기' })).toHaveAttribute('href', '#/schedules/s');
 });
 
 it('completes a work atomically and updates every task and progress', async () => {
@@ -174,10 +232,7 @@ it('completes a work atomically and updates every task and progress', async () =
     screen.getAllByRole('checkbox').every((input) => (input as HTMLInputElement).checked),
   ).toBe(true);
   expect(screen.queryByRole('button', { name: '새로고침' })).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: '스케줄 추가' })).toHaveAttribute(
-    'href',
-    '#/schedules/new?date=2026-09-24',
-  );
+  expect(screen.queryByRole('link', { name: '일정 추가' })).not.toBeInTheDocument();
 });
 it('keeps tasks unchanged when bulk completion fails', async () => {
   vi.mocked(getDaySchedules).mockResolvedValue([schedule]);
@@ -209,10 +264,13 @@ it('edits a task in place and adds only a task to its existing schedule', async 
   fireEvent.click(screen.getByRole('button', { name: '수정된 태스크 수정' }));
   fireEvent.click(screen.getByRole('button', { name: '저장된 워크' }));
   fireEvent.click(screen.getByRole('button', { name: '+ 태스크 추가' }));
+  fireEvent.change(screen.getByRole('textbox', { name: '태스크 이름' }), {
+    target: { value: '추가할' },
+  });
   fireEvent.click(await screen.findByRole('button', { name: '추가할 태스크 선택' }));
   await waitFor(() => expect(addScheduleTask).toHaveBeenCalledWith('s', 'preset'));
   await waitFor(() =>
-    expect(screen.queryByRole('searchbox', { name: '태스크 검색' })).not.toBeInTheDocument(),
+    expect(screen.queryByRole('textbox', { name: '태스크 이름' })).not.toBeInTheDocument(),
   );
 });
 
@@ -241,7 +299,7 @@ it('keeps yesterday edits through rollover and failed save, then loads today aft
   expect(screen.queryByRole('button', { name: '메모 저장' })).not.toBeInTheDocument();
   expect(updateTask).toHaveBeenLastCalledWith('2', { execution_notes: '자정 메모' });
   fireEvent.click(screen.getByRole('button', { name: '태스크 2 수정' }));
-  await screen.findByText('오늘 저장된 스케줄이 없습니다.');
+  await screen.findByText('오늘 저장된 일정이 없습니다.');
   expect(getDaySchedules).toHaveBeenLastCalledWith('2026-09-25', expect.any(AbortSignal));
   expect(screen.queryByText(/날짜가 바뀌었습니다/)).not.toBeInTheDocument();
 });
@@ -263,7 +321,7 @@ it('waits for a pending mutation at rollover then fetches the new day immediatel
   await act(async () => {
     resolve({ ...schedule, status: 'completed' });
   });
-  await screen.findByText('오늘 저장된 스케줄이 없습니다.');
+  await screen.findByText('오늘 저장된 일정이 없습니다.');
   expect(getDaySchedules).toHaveBeenLastCalledWith('2026-09-25', expect.any(AbortSignal));
 });
 
@@ -279,11 +337,14 @@ it('keeps the task picker across rollover and switches days after adding', async
   const view = render(<Today today="2026-09-24" timeZone="Asia/Tokyo" />);
   fireEvent.click(await screen.findByRole('button', { name: '저장된 워크' }));
   fireEvent.click(screen.getByRole('button', { name: '+ 태스크 추가' }));
+  fireEvent.change(screen.getByRole('textbox', { name: '태스크 이름' }), {
+    target: { value: '추가할' },
+  });
   await screen.findByRole('button', { name: '추가할 태스크 선택' });
   view.rerender(<Today today="2026-09-25" timeZone="Asia/Tokyo" />);
   expect(getDaySchedules).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole('button', { name: '추가할 태스크 선택' }));
-  await screen.findByText('오늘 저장된 스케줄이 없습니다.');
+  await screen.findByText('오늘 저장된 일정이 없습니다.');
   expect(addScheduleTask).toHaveBeenCalledWith('s', 'preset');
   expect(getDaySchedules).toHaveBeenLastCalledWith('2026-09-25', expect.any(AbortSignal));
 });

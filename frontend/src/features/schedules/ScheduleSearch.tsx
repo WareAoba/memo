@@ -13,9 +13,15 @@ import { message } from '../shared/form';
 import { statusLabel } from '../workspace/progress';
 import './search.css';
 
-export function ScheduleSearch({ onClose }: { onClose: () => void }) {
+export function ScheduleSearch({
+  onClose,
+  initialQuery = '',
+}: {
+  onClose: () => void;
+  initialQuery?: string;
+}) {
   useTranslation();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<Page<Schedule>>();
   const [error, setError] = useState('');

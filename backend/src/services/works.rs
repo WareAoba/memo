@@ -181,22 +181,39 @@ fn input(value: Value, previous: Option<&Work>) -> Result<(Fields, Vec<String>)>
 }
 pub async fn create(pool: &SqlitePool, value: Value) -> Result<Value> {
     let (fields, tags) = input(value, None)?;
-    let mut tx = pool.begin().await.map_err(database)?;
-    let id = Uuid::new_v4().to_string();
-    sqlx::query("INSERT INTO entities(id,user_id,name) VALUES(?,?,?)")
-        .bind(&id)
-        .bind(current_user_id())
-        .bind(&fields.name)
-        .execute(&mut *tx)
-        .await
-        .map_err(database)?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
+    let existing = super::unmanaged_presets::matching(&mut tx, "work", &fields.name).await?;
+    let promoted = existing.is_some();
+    let id = existing.unwrap_or_else(|| Uuid::new_v4().to_string());
+    if !promoted {
+        sqlx::query("INSERT INTO entities(id,user_id,name) VALUES(?,?,?)")
+            .bind(&id)
+            .bind(current_user_id())
+            .bind(&fields.name)
+            .execute(&mut *tx)
+            .await
+            .map_err(database)?;
+    }
     write(&mut tx, &id, &fields, &tags).await?;
     let work = read(&mut tx, &id).await?;
+    if promoted {
+        super::unmanaged_presets::promote(&mut tx, "work", &id, &json!(work)).await?;
+    }
     tx.commit().await.map_err(database)?;
     Ok(json!(work))
 }
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Value> {
     let id = identifier(id)?;
+    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM entities WHERE id=? AND user_id=?")
+        .bind(&id)
+        .bind(current_user_id())
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?
+        .unwrap_or(false)
+    {
+        return Err(ApiError::WorkNotFound);
+    }
     let mut tx = pool.begin().await.map_err(database)?;
     let work = read(&mut tx, &id).await?;
     tx.commit().await.map_err(database)?;
@@ -204,6 +221,16 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Value> {
 }
 pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     let id = identifier(id)?;
+    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM entities WHERE id=? AND user_id=?")
+        .bind(&id)
+        .bind(current_user_id())
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?
+        .unwrap_or(false)
+    {
+        return Err(ApiError::WorkNotFound);
+    }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     let previous = read(&mut tx, &id).await?;
     let (fields, tags) = input(value, Some(&previous))?;
@@ -214,6 +241,16 @@ pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
 }
 pub async fn archive(pool: &SqlitePool, id: &str) -> Result<()> {
     let id = identifier(id)?;
+    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM entities WHERE id=? AND user_id=?")
+        .bind(&id)
+        .bind(current_user_id())
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?
+        .unwrap_or(false)
+    {
+        return Err(ApiError::WorkNotFound);
+    }
     let result = sqlx::query("UPDATE entities SET archived=1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
         .bind(id).bind(current_user_id()).execute(pool).await.map_err(database)?;
     if result.rows_affected() == 0 {
@@ -225,9 +262,9 @@ pub async fn list(pool: &SqlitePool, q: ListQuery) -> Result<Value> {
     let limit = q.limit.unwrap_or(20);
     let search = q.search()?;
     let mut tx = pool.begin().await.map_err(database)?;
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM entities WHERE user_id=? AND archived=? AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!'))")
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM entities WHERE user_id=? AND unmanaged=0 AND archived=? AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!'))")
         .bind(current_user_id()).bind(q.archived).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).fetch_one(&mut *tx).await.map_err(database)?;
-    let mut items = sqlx::query_as::<_,Work>("SELECT * FROM entities WHERE user_id=? AND archived=? AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!')) ORDER BY name,id LIMIT ? OFFSET ?")
+    let mut items = sqlx::query_as::<_,Work>("SELECT * FROM entities WHERE user_id=? AND unmanaged=0 AND archived=? AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!')) ORDER BY name,id LIMIT ? OFFSET ?")
         .bind(current_user_id()).bind(q.archived).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(limit).bind(q.offset).fetch_all(&mut *tx).await.map_err(database)?;
     for work in &mut items {
         work.tags = read_tags(&mut tx, &work.id).await?;

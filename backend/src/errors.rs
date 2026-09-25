@@ -7,6 +7,8 @@ use serde::Serialize;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    #[error("Authentication required")]
+    Unauthorized,
     #[error("Request origin is not allowed")]
     Forbidden,
     #[error("Upload capacity exceeded")]
@@ -57,6 +59,11 @@ struct ErrorBody {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, code, message) = match self {
+            Self::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "Authentication required",
+            ),
             Self::Forbidden => (
                 StatusCode::FORBIDDEN,
                 "FORBIDDEN",

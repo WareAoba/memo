@@ -38,7 +38,7 @@ it('hides disclosures in the rail and closes only on outside click completes or 
   fireEvent.keyDown(document, { key: 'Escape' });
   expect(screen.queryByRole('button', { name: '캘린더 보기 메뉴' })).not.toBeInTheDocument();
 });
-it('opens submenus from mobile dock icons and closes after choosing a destination', () => {
+it('navigates from the mobile dock without opening duplicate view menus', () => {
   vi.stubGlobal('matchMedia', () => ({
     matches: true,
     addEventListener: vi.fn(),
@@ -46,12 +46,13 @@ it('opens submenus from mobile dock icons and closes after choosing a destinatio
   }));
   render(<Harness />);
   fireEvent.click(screen.getByRole('link', { name: '전체 캘린더' }));
-  expect(screen.getByRole('navigation', { name: '캘린더 보기' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('link', { name: '일간 상세 보기' }));
+  expect(screen.getByRole('link', { name: '전체 캘린더' })).toHaveAttribute('href', '#/calendar');
   expect(screen.queryByRole('navigation', { name: '캘린더 보기' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('link', { name: '프리셋 설정' }));
-  expect(screen.getByRole('navigation', { name: '프리셋 종류' })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('link', { name: '태스크' }));
+  expect(screen.getByRole('link', { name: '프리셋 설정' })).toHaveAttribute(
+    'href',
+    '#/presets/works',
+  );
   expect(screen.queryByRole('navigation', { name: '프리셋 종류' })).not.toBeInTheDocument();
 });
 

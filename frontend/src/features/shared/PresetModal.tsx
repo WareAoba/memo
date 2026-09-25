@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { Button } from './/ui';
+import { Button } from './ui';
 import { ActionIcon } from './ActionIcon';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -24,6 +24,11 @@ export function PresetModal({
 }) {
   useTranslation();
   const ref = useRef<HTMLDialogElement>(null);
+  const exitAnimation = useRef<Animation | null>(null);
+  const closeCallback = useRef(onClose);
+  useEffect(() => {
+    closeCallback.current = onClose;
+  }, [onClose]);
   const [footer, setFooter] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     const dialog = ref.current!;
@@ -32,11 +37,50 @@ export function PresetModal({
     const overflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
+      exitAnimation.current?.cancel();
       dialog.close();
       document.body.style.overflow = overflow;
       trigger?.focus();
     };
   }, []);
+  function requestClose() {
+    const dialog = ref.current;
+    if (!dialog || exitAnimation.current) return;
+    const motion = document.documentElement.dataset.motion;
+    if (
+      !dialog.animate ||
+      motion === 'none' ||
+      motion === 'reduced' ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
+      closeCallback.current();
+      return;
+    }
+    dialog.dataset.closing = 'true';
+    const style = getComputedStyle(dialog);
+    const animation = dialog.animate(
+      [
+        { opacity: style.opacity, transform: style.transform },
+        { opacity: 0, transform: 'translateY(12px) scale(0.98)' },
+      ],
+      {
+        duration: parseFloat(style.getPropertyValue('--motion-exit')) || 260,
+        easing: style.getPropertyValue('--ease-exit').trim() || 'ease-in-out',
+        fill: 'forwards',
+      },
+    );
+    exitAnimation.current = animation;
+    void animation.finished.then(
+      () => {
+        exitAnimation.current = null;
+        delete dialog.dataset.closing;
+        onClose();
+      },
+      () => {
+        exitAnimation.current = null;
+      },
+    );
+  }
   return (
     <dialog
       ref={ref}
@@ -45,7 +89,7 @@ export function PresetModal({
       onCancel={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        onClose();
+        requestClose();
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
@@ -56,7 +100,7 @@ export function PresetModal({
             e.clientY < r.top ||
             e.clientY > r.bottom
           )
-            onClose();
+            requestClose();
         }
       }}
     >
@@ -66,7 +110,7 @@ export function PresetModal({
           iconOnly
           variant="ghost"
           className="modal-close"
-          onClick={onClose}
+          onClick={requestClose}
           aria-label={closeLabel}
           title={tr('ScheduleEditor.close')}
         >

@@ -1,3 +1,4 @@
+import { UnmanagedSuggestions } from '../shared/UnmanagedSuggestions';
 import { ModalActions } from '../shared/PresetModal';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
@@ -104,6 +105,13 @@ export function WorkEditor({
                 placeholder={tr('WorkEditor.eGEnglishFitnessClientA')}
               />
             </label>
+            {!id && (
+              <UnmanagedSuggestions
+                kind="work"
+                name={fields.name}
+                onSelect={(name) => set('name', name)}
+              />
+            )}
             {!hideMemo && (
               <label className="wide">
                 {tr('fields.descriptionAndNotes')}
@@ -179,9 +187,16 @@ export function WorkEditor({
         {error && <ErrorBox error={error} />}
         <ModalActions>
           <div className="actions">
-            <IconButton variant="primary" icon="save" form={formId} type="submit" disabled={saving}>
+            <Button
+              variant="primary"
+              form={formId}
+              type="submit"
+              disabled={saving}
+              aria-busy={saving || undefined}
+            >
+              <ActionIcon name="save" />
               {saving ? tr('Photos.saving') : tr('WorkEditor.saveWork')}
-            </IconButton>
+            </Button>
           </div>
         </ModalActions>
       </form>

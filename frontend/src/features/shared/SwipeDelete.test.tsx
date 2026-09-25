@@ -16,7 +16,7 @@ it('reveals only the swiped row and never deletes on the gesture itself', async 
   const remove = vi.fn().mockResolvedValue(undefined);
   const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
   render(
-    <SwipeDelete label="스케줄" onDelete={remove}>
+    <SwipeDelete label="일정" onDelete={remove}>
       <SwipeDelete label="태스크" onDelete={remove}>
         <span>태스크 행</span>
       </SwipeDelete>
@@ -30,7 +30,7 @@ it('reveals only the swiped row and never deletes on the gesture itself', async 
   fireEvent.pointerUp(row, { clientX: 80, clientY: 42 });
   fireEvent.click(row);
   expect(remove).not.toHaveBeenCalled();
-  expect(screen.queryByRole('button', { name: '스케줄 삭제' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '일정 삭제' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '태스크 삭제' }));
   await waitFor(() => expect(remove).toHaveBeenCalledTimes(1));
   expect(confirm).toHaveBeenCalledTimes(1);

@@ -250,13 +250,12 @@ pub async fn create(pool: &SqlitePool, mut value: Value) -> Result<Value> {
         return Err(invalid());
     }
     let obj = value.as_object_mut().ok_or_else(invalid)?;
-    let entity_id = identifier(
-        obj.remove("entity_id")
-            .and_then(|v| v.as_str().map(str::to_owned))
-            .as_deref()
-            .ok_or_else(invalid)?,
-    )?;
-    let ids: Vec<String> =
+    let work_input = match (obj.remove("entity_id"), obj.remove("entity_name")) {
+        (Some(id), None) => id,
+        (None, Some(name)) => json!({"name":name}),
+        _ => return Err(invalid()),
+    };
+    let ids: Vec<Value> =
         serde_json::from_value(obj.remove("task_preset_ids").ok_or_else(invalid)?)
             .map_err(|_| invalid())?;
     let customizations: HashMap<String, super::task_parameters::Customization> =
@@ -265,7 +264,14 @@ pub async fn create(pool: &SqlitePool, mut value: Value) -> Result<Value> {
                 .unwrap_or_else(|| json!({})),
         )
         .map_err(|_| invalid())?;
-    if customizations.keys().any(|id| !ids.contains(id)) {
+    if customizations.keys().any(|id| {
+        !ids.iter().any(|v| {
+            v.as_str() == Some(id.as_str())
+                || v.get("name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|n| format!("name:{n}") == *id)
+        })
+    }) {
         return Err(invalid());
     }
     if ids.len() > 100 {
@@ -276,15 +282,20 @@ pub async fn create(pool: &SqlitePool, mut value: Value) -> Result<Value> {
         f.end_date = f.scheduled_date.clone();
     }
     validate(&mut f)?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
+    let entity_id = super::unmanaged_presets::resolve(&mut tx, "work", &work_input).await?;
     let mut unique = std::collections::HashSet::new();
     let mut selected = vec![];
-    for id in ids {
-        let id = identifier(&id)?;
+    for value in ids {
+        let key = value
+            .as_str()
+            .map(str::to_owned)
+            .unwrap_or_else(|| format!("name:{}", value["name"].as_str().unwrap_or_default()));
+        let id = super::unmanaged_presets::resolve(&mut tx, "task", &value).await?;
         if unique.insert(id.clone()) {
-            selected.push(id);
+            selected.push((id, key));
         }
     }
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     let work = super::works::snapshot(&mut tx, &entity_id).await?;
     if work["archived"] == true {
         return Err(invalid());
@@ -302,13 +313,13 @@ pub async fn create(pool: &SqlitePool, mut value: Value) -> Result<Value> {
         .execute(&mut *tx)
         .await
         .map_err(database)?;
-    for (position, source) in selected.iter().enumerate() {
+    for (position, (source, key)) in selected.iter().enumerate() {
         append_preset(
             &mut tx,
             &id,
             source,
             position as i64,
-            customizations.get(source),
+            customizations.get(key),
         )
         .await?;
     }

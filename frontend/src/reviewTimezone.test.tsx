@@ -1,3 +1,6 @@
+vi.mock('./api/auth', () => ({
+  getAccount: vi.fn(async () => ({ id: 'local', display_name: '가상 계정', email: null })),
+}));
 import { bootstrapSettings, defaultSettings } from './api/settings';
 vi.mock('./api/settings', async (original) => ({
   ...(await original<typeof import('./api/settings')>()),
@@ -32,7 +35,7 @@ it('REVIEW: calendar initially selects the saved-zone date', async () => {
     render(<App />);
   });
   fireEvent.click(screen.getByRole('button', { current: 'date' }));
-  expect(screen.getByRole('link', { name: '이 날짜에 스케줄 만들기' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: '일정 추가' })).toHaveAttribute(
     'href',
     '#/schedules/new?date=' + expected,
   );

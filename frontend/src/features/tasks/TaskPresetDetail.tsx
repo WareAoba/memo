@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { Surface } from '../shared/ui';
-import { IconButton } from '../shared/IconButton';
+import { Surface, Button } from '../shared/ui';
+import { ActionIcon } from '../shared/ActionIcon';
 import { MemoEditor } from '../shared/MemoEditor';
 import { useEffect, useState } from 'react';
 import { archiveTaskPreset, getTaskPreset, saveTaskPreset } from '../../api/taskPresets';
@@ -117,13 +117,14 @@ export function TaskPresetDetail({
       </Surface>
       {error && <ErrorBox error={error} />}
       <div className="actions">
-        <IconButton icon="archive" disabled={busy} onClick={archive}>
+        <Button variant="ghost" disabled={busy} onClick={archive}>
+          <ActionIcon name="archive" />
           {busy
             ? tr('PushSettings.processing')
             : value.archived
               ? tr('TaskPresetDetail.restoreTask')
               : tr('TaskPresetDetail.archiveTask')}
-        </IconButton>
+        </Button>
       </div>
     </>
   );

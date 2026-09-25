@@ -64,6 +64,7 @@ async fn fixture() -> (tempfile::TempDir, SqlitePool, String, String) {
     let installation = uuid::Uuid::new_v4().to_string();
     push::register(
         &pool,
+        "00000000-0000-4000-8000-000000000001",
         push::Registration {
             installation_id: installation.clone(),
             subscription: subscription().1,
@@ -157,6 +158,7 @@ async fn retries_and_recovers_expired_leases_without_overwriting_receipts() {
     assert_eq!(transport.calls.load(Ordering::SeqCst), 0);
     push::presence(
         &pool,
+        "00000000-0000-4000-8000-000000000001",
         push::Presence {
             tab_id: "test".into(),
             installation_id: installation,
@@ -202,6 +204,7 @@ async fn foreground_expiry_unsubscribe_and_expired_endpoint() {
     let (_dir, pool, _, installation) = fixture().await;
     push::presence(
         &pool,
+        "00000000-0000-4000-8000-000000000001",
         push::Presence {
             tab_id: "test".into(),
             installation_id: installation.clone(),
@@ -214,6 +217,7 @@ async fn foreground_expiry_unsubscribe_and_expired_endpoint() {
     assert!(claim(&pool).await.unwrap().is_empty());
     push::presence(
         &pool,
+        "00000000-0000-4000-8000-000000000001",
         push::Presence {
             tab_id: "test".into(),
             installation_id: installation.clone(),
@@ -233,7 +237,9 @@ async fn foreground_expiry_unsubscribe_and_expired_endpoint() {
         .unwrap();
     assert!(!enabled);
     assert!(claim(&pool).await.unwrap().is_empty());
-    push::unregister(&pool, &installation).await.unwrap();
+    push::unregister(&pool, "00000000-0000-4000-8000-000000000001", &installation)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -370,6 +376,7 @@ async fn visible_tabs_are_independent_and_retries_are_bounded() {
     for (tab, visible) in [("one", true), ("two", true), ("one", false)] {
         push::presence(
             &pool,
+            "00000000-0000-4000-8000-000000000001",
             push::Presence {
                 installation_id: installation.clone(),
                 tab_id: tab.into(),
@@ -383,6 +390,7 @@ async fn visible_tabs_are_independent_and_retries_are_bounded() {
     assert!(claim(&pool).await.unwrap().is_empty());
     push::presence(
         &pool,
+        "00000000-0000-4000-8000-000000000001",
         push::Presence {
             installation_id: installation,
             tab_id: "two".into(),
@@ -437,4 +445,71 @@ async fn account_push_setting_pauses_claimed_jobs_and_resumes_without_duplicate_
     assert_eq!(transport.calls.load(Ordering::SeqCst), 1);
     assert!(claim(&pool).await.unwrap().is_empty());
     pool.close().await;
+}
+#[tokio::test]
+async fn reopening_restores_unsent_reminders_without_reviving_sent_deliveries() {
+    let (_dir, pool, schedule, _) = fixture().await;
+    let stale = claim(&pool).await.unwrap().pop().unwrap();
+    request(
+        &pool,
+        &format!("/api/schedules/{schedule}/complete"),
+        json!({}),
+    )
+    .await;
+    assert!(claim(&pool).await.unwrap().is_empty());
+    request(
+        &pool,
+        &format!("/api/schedules/{schedule}/reopen"),
+        json!({}),
+    )
+    .await;
+    let restored = claim(&pool)
+        .await
+        .unwrap()
+        .pop()
+        .expect("unsent reminder restored");
+    assert_eq!(stale.id, restored.id);
+    assert_ne!(stale.token, restored.token);
+    let transport = fake(DeliveryResult::Accepted);
+    deliver(&pool, &transport, stale).await.unwrap();
+    assert_eq!(transport.calls.load(Ordering::SeqCst), 0);
+    deliver(&pool, &transport, restored).await.unwrap();
+    assert_eq!(transport.calls.load(Ordering::SeqCst), 1);
+    request(
+        &pool,
+        &format!("/api/schedules/{schedule}/complete"),
+        json!({}),
+    )
+    .await;
+    assert!(claim(&pool).await.unwrap().is_empty());
+    request(
+        &pool,
+        &format!("/api/schedules/{schedule}/reopen"),
+        json!({}),
+    )
+    .await;
+    assert!(claim(&pool).await.unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn restored_reminders_preserve_backoff_and_attempt_limit() {
+    let (_dir, pool, _, _) = fixture().await;
+    let job = claim(&pool).await.unwrap().pop().unwrap();
+    sqlx::query("UPDATE push_deliveries SET status='cancelled',attempts=4,available_at=unixepoch()+3600,lease_token=NULL,lease_until=NULL WHERE id=?")
+        .bind(&job.id).execute(&pool).await.unwrap();
+    assert!(claim(&pool).await.unwrap().is_empty());
+    let attempts: i64 = sqlx::query_scalar("SELECT attempts FROM push_deliveries WHERE id=?")
+        .bind(&job.id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(attempts, 4);
+    sqlx::query("UPDATE push_deliveries SET available_at=0 WHERE id=?")
+        .bind(&job.id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(claim(&pool).await.unwrap().len(), 1);
+    sqlx::query("UPDATE push_deliveries SET status='cancelled',lease_token=NULL,lease_until=NULL WHERE id=?").bind(&job.id).execute(&pool).await.unwrap();
+    assert!(claim(&pool).await.unwrap().is_empty());
 }

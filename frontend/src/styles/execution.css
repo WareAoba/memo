@@ -9,6 +9,9 @@
     gap: 0.65rem;
     margin: 1rem 0 1.5rem;
   }
+  .execution-item > button {
+    justify-self: end;
+  }
   .execution-fields textarea {
     display: block;
     width: 100%;

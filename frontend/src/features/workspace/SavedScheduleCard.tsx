@@ -3,8 +3,9 @@ import { ScheduleCardActions } from '../shared/ScheduleCardActions';
 import { LocalizedError } from '../../i18n/errors';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { Input, ButtonLink } from '../shared/ui';
-import { ActionIcon } from '../shared/ActionIcon';
+import { Input, Button, ButtonLink } from '../shared/ui';
+import { PresetModal } from '../shared/PresetModal';
+import { TaskExecution } from '../schedules/TaskExecution';
 import { useRef, useState } from 'react';
 import {
   updateTask,
@@ -34,6 +35,8 @@ export function SavedScheduleCard({
   useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState<string>();
+  const task = value.tasks.find((item) => item.id === editing);
   const lock = useRef(false);
   async function toggle(id: string, completed: boolean) {
     if (lock.current) return;
@@ -70,6 +73,11 @@ export function SavedScheduleCard({
     change(async () => {
       onChange?.(await deleteScheduleTask(id));
     });
+  async function mutate(operation: () => Promise<ScheduleDetail>) {
+    await change(async () => {
+      onChange?.(await operation());
+    });
+  }
   const count = progressOf([value]);
   return (
     <SwipeDelete label={value.entity_snapshot.name} onDelete={remove} disabled={busy || !onDelete}>
@@ -77,6 +85,30 @@ export function SavedScheduleCard({
         className="work-block memo-preview schedule-card"
         data-schedule-color={value.color ?? 'none'}
       >
+        {task && (
+          <PresetModal
+            label={tr('MemoEditor.editValue', { v1: task.name_snapshot })}
+            onClose={() => {
+              if (!busy) setEditing(undefined);
+            }}
+          >
+            <TaskExecution
+              task={task}
+              locked={!onChange || value.status === 'cancelled'}
+              busy={busy}
+              mutate={mutate}
+              allowRename
+              onDelete={
+                onChange
+                  ? async () => {
+                      await removeTask(task.id);
+                      setEditing(undefined);
+                    }
+                  : undefined
+              }
+            />
+          </PresetModal>
+        )}
         <header className="work-block-heading">
           <Input
             type="checkbox"
@@ -166,9 +198,14 @@ export function SavedScheduleCard({
                   disabled={!onChange || busy || value.status === 'cancelled'}
                   onChange={() => void toggle(task.id, task.status === 'completed')}
                 />
-                <a href={'#/schedules/' + value.id} className="task-name">
+                <Button
+                  variant="plain"
+                  className="task-name task-detail-trigger"
+                  aria-haspopup="dialog"
+                  onClick={() => setEditing(task.id)}
+                >
                   {task.name_snapshot}
-                </a>
+                </Button>
                 <div className="task-hover-actions">
                   <DeleteButton
                     label={task.name_snapshot}
@@ -203,13 +240,12 @@ export function SavedScheduleCard({
           <>
             <ErrorBox error={error} />
             <ButtonLink
-              iconOnly
               title={tr('SavedScheduleCard.enterItemDetails')}
               aria-label={tr('SavedScheduleCard.enterItemDetails')}
               className="button"
               href={'#/schedules/' + value.id}
             >
-              <ActionIcon name="edit" />
+              {tr('SavedScheduleCard.enterItemDetails')}
             </ButtonLink>
           </>
         )}

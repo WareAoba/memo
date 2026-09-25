@@ -97,6 +97,7 @@ export function DesignReference() {
               'calendar',
               'menu',
               'settings',
+              'presets',
             ] as const
           ).map((icon) => (
             <IconButton key={icon} icon={icon} aria-label={icon} />

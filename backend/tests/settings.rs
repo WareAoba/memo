@@ -294,6 +294,17 @@ async fn migration_preserves_populated_snapshot_graph_and_revision_triggers() {
     .execute(&pool)
     .await
     .unwrap();
+    // The fixture uses current preset APIs. These columns live on source tables,
+    // which the historical settings migration does not rebuild.
+    sqlx::raw_sql("ALTER TABLE entities ADD COLUMN unmanaged INTEGER NOT NULL DEFAULT 0; ALTER TABLE task_presets ADD COLUMN unmanaged INTEGER NOT NULL DEFAULT 0;")
+        .execute(&pool).await.unwrap();
+    // Current API fixtures also require the identity table, untouched by settings migration.
+    sqlx::raw_sql(include_str!(
+        "../migrations/202609260002_virtual_account.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
     let root = tempfile::tempdir().unwrap();
     let before = fixtures(&pool, root.path()).await;
     sqlx::query("ALTER TABLE schedules DROP COLUMN color")

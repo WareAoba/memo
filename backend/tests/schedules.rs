@@ -1155,3 +1155,335 @@ async fn reminders_save_validate_reschedule_and_filter() {
         .unwrap();
     assert_eq!(due, None);
 }
+
+#[tokio::test]
+async fn unmanaged_names_are_private_reused_and_promoted_atomically() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("unmanaged.sqlite3"))
+        .await
+        .unwrap();
+    let input = json!({"entity_name":" Loose Work ","task_preset_ids":[{"name":"Loose Task"}],"scheduled_date":"2028-02-29","start_time":"09:00","end_time":"10:00","time_zone":"Asia/Tokyo","notes":"schedule memo","task_customizations":{"name:Loose Task":{"execution_notes":"task memo"}}});
+    let (status, first) = request(&pool, "POST", "/api/schedules", input.clone()).await;
+    assert_eq!(status, 201, "{first}");
+    let (status, second) = request(&pool, "POST", "/api/schedules", input.clone()).await;
+    assert_eq!(status, 201);
+    assert_eq!(first["entity_id"], second["entity_id"]);
+    assert_eq!(
+        first["tasks"][0]["source_task_preset_id"],
+        second["tasks"][0]["source_task_preset_id"]
+    );
+    for url in ["/api/entities?q=Loose", "/api/task-presets?q=Loose"] {
+        assert_eq!(request(&pool, "GET", url, Value::Null).await.1["total"], 0);
+    }
+    let suggestions = request(
+        &pool,
+        "GET",
+        "/api/unmanaged-presets/work?q=Loose",
+        Value::Null,
+    )
+    .await
+    .1;
+    assert_eq!(suggestions.as_array().unwrap().len(), 1);
+    let task_id = first["tasks"][0]["id"].as_str().unwrap();
+    assert_eq!(
+        request(
+            &pool,
+            "POST",
+            &format!("/api/schedule-tasks/{task_id}/complete"),
+            json!({})
+        )
+        .await
+        .0,
+        200
+    );
+    let (status, work)=request(&pool,"POST","/api/entities",json!({"name":"loose work","custom_fields":[{"name":"Site","value":"New address"}],"general_notes":"new work details"})).await;
+    assert_eq!(status, 201, "{work}");
+    assert_eq!(work["id"], first["entity_id"]);
+    let (status, task)=request(&pool,"POST","/api/task-presets",json!({"name":"Loose Task","default_notes":"new task details","items":[{"position":0,"label":"Check","item_type":"checkbox","default_value":true}]})).await;
+    assert_eq!(status, 201, "{task}");
+    assert_eq!(task["id"], first["tasks"][0]["source_task_preset_id"]);
+    for original in [&first, &second] {
+        let url = format!("/api/schedules/{}", original["id"].as_str().unwrap());
+        let updated = request(&pool, "GET", &url, Value::Null).await.1;
+        assert_eq!(
+            updated["entity_snapshot"]["general_notes"],
+            "new work details"
+        );
+        assert_eq!(
+            updated["entity_snapshot"]["custom_fields"][0]["value"],
+            "New address"
+        );
+        assert_eq!(updated["notes"], "schedule memo");
+        assert_eq!(updated["tasks"][0]["id"], original["tasks"][0]["id"]);
+        assert_eq!(updated["tasks"][0]["execution_notes"], "task memo");
+        assert_eq!(
+            updated["tasks"][0]["default_notes_snapshot"],
+            "new task details"
+        );
+        assert_eq!(updated["tasks"][0]["items"][0]["completed"], true);
+        assert_eq!(
+            updated["tasks"][0]["status"],
+            if original == &first {
+                "completed"
+            } else {
+                "pending"
+            }
+        );
+        let item_id = updated["tasks"][0]["items"][0]["id"].as_str().unwrap();
+        assert_eq!(
+            request(
+                &pool,
+                "PATCH",
+                &format!("/api/schedule-task-items/{item_id}"),
+                json!({"value":false})
+            )
+            .await
+            .0,
+            200
+        );
+    }
+    assert_eq!(
+        request(&pool, "GET", "/api/entities?q=Loose", Value::Null)
+            .await
+            .1["total"],
+        1
+    );
+    assert_eq!(
+        request(
+            &pool,
+            "GET",
+            "/api/unmanaged-presets/work?q=Loose",
+            Value::Null
+        )
+        .await
+        .1,
+        json!([])
+    );
+    let (_, third) = request(&pool, "POST", "/api/schedules", input).await;
+    assert_ne!(third["entity_id"], work["id"]);
+    assert_ne!(
+        third["tasks"][0]["source_task_preset_id"],
+        first["tasks"][0]["source_task_preset_id"]
+    );
+    assert_eq!(third["entity_snapshot"]["general_notes"], "");
+    assert_eq!(third["tasks"][0]["default_notes_snapshot"], "");
+    let (_, selected) = request(&pool, "POST", "/api/schedules", json!({
+        "entity_id": work["id"],
+        "task_preset_ids": [first["tasks"][0]["source_task_preset_id"]],
+        "scheduled_date": "2028-02-29", "start_time": "09:00", "end_time": "10:00", "time_zone": "Asia/Tokyo"
+    })).await;
+    assert_eq!(selected["entity_id"], work["id"]);
+    assert_eq!(
+        selected["entity_snapshot"]["general_notes"],
+        "new work details"
+    );
+    assert_eq!(
+        selected["tasks"][0]["default_notes_snapshot"],
+        "new task details"
+    );
+    let work_url = format!("/api/entities/{}", work["id"].as_str().unwrap());
+    request(
+        &pool,
+        "PATCH",
+        &work_url,
+        json!({"general_notes":"later change"}),
+    )
+    .await;
+    let url = format!("/api/schedules/{}", first["id"].as_str().unwrap());
+    assert_eq!(
+        request(&pool, "GET", &url, Value::Null).await.1["entity_snapshot"]["general_notes"],
+        "new work details"
+    );
+    let mut failed = json!({"entity_name":"Rollback Work","task_preset_ids":[{"name":"Rollback Task"},"bad-id"],"scheduled_date":"2028-02-29","start_time":"09:00","end_time":"10:00","time_zone":"Asia/Tokyo"});
+    assert_eq!(
+        request(&pool, "POST", "/api/schedules", failed.clone())
+            .await
+            .0,
+        400
+    );
+    for kind in ["work", "task"] {
+        assert_eq!(
+            request(
+                &pool,
+                "GET",
+                &format!("/api/unmanaged-presets/{kind}?q=Rollback"),
+                Value::Null
+            )
+            .await
+            .1,
+            json!([])
+        );
+    }
+    failed["task_preset_ids"] = json!([]);
+    let (_, schedule) = request(&pool, "POST", "/api/schedules", failed).await;
+    let url = format!("/api/schedules/{}/tasks", schedule["id"].as_str().unwrap());
+    assert_eq!(
+        request(
+            &pool,
+            "POST",
+            &url,
+            json!({"task_preset_id":{"name":"Added later"}})
+        )
+        .await
+        .0,
+        200
+    );
+}
+
+#[tokio::test]
+async fn unmanaged_promotion_rolls_back_and_name_queries_are_indexed_and_owner_scoped() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("unmanaged-atomic.sqlite3"))
+        .await
+        .unwrap();
+    let owner = "00000000-0000-4000-8000-000000000001";
+    let other = "00000000-0000-4000-8000-000000000002";
+    sqlx::query("INSERT INTO users(id,display_name) VALUES(?,'Other')")
+        .bind(other)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO entities(id,user_id,name,unmanaged) VALUES('foreign',?,'Foreign secret',1)",
+    )
+    .bind(other)
+    .execute(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        request(
+            &pool,
+            "GET",
+            "/api/unmanaged-presets/work?q=Foreign",
+            Value::Null
+        )
+        .await
+        .1,
+        json!([])
+    );
+    let (_, schedule)=request(&pool,"POST","/api/schedules",json!({"entity_name":"100%_!","task_preset_ids":[{"name":"Atomic"}],"scheduled_date":"2028-02-29","start_time":"09:00","end_time":"10:00","time_zone":"Asia/Tokyo"})).await;
+    let hidden = schedule["tasks"][0]["source_task_preset_id"]
+        .as_str()
+        .unwrap();
+    assert_eq!(
+        request(
+            &pool,
+            "GET",
+            &format!("/api/task-presets/{hidden}"),
+            Value::Null
+        )
+        .await
+        .0,
+        404
+    );
+    assert_eq!(
+        request(
+            &pool,
+            "PATCH",
+            &format!("/api/task-presets/{hidden}"),
+            json!({"name":"changed"})
+        )
+        .await
+        .0,
+        404
+    );
+    assert_eq!(
+        request(
+            &pool,
+            "GET",
+            "/api/unmanaged-presets/work?q=100%25_!",
+            Value::Null
+        )
+        .await
+        .1
+        .as_array()
+        .unwrap()
+        .len(),
+        1
+    );
+    sqlx::query("CREATE TRIGGER reject_promoted_item BEFORE INSERT ON schedule_task_items BEGIN SELECT RAISE(ABORT,'test'); END").execute(&pool).await.unwrap();
+    let (status,_)=request(&pool,"POST","/api/task-presets",json!({"name":"Atomic","items":[{"position":0,"label":"Required","item_type":"text","required":true}]})).await;
+    assert_eq!(status, 503);
+    assert_eq!(
+        request(&pool, "GET", "/api/task-presets?q=Atomic", Value::Null)
+            .await
+            .1["total"],
+        0
+    );
+    let uri = format!("/api/schedules/{}", schedule["id"].as_str().unwrap());
+    assert_eq!(request(&pool, "GET", &uri, Value::Null).await.1, schedule);
+    let suggestions = request(
+        &pool,
+        "GET",
+        "/api/unmanaged-presets/task?q=Atomic",
+        Value::Null,
+    )
+    .await
+    .1;
+    assert_eq!(suggestions[0]["id"], hidden);
+    for table in ["entities", "task_presets"] {
+        let plan: Vec<(i64,i64,i64,String)>=sqlx::query_as(&format!("EXPLAIN QUERY PLAN SELECT id,name FROM {table} WHERE user_id=? AND unmanaged=1 AND name LIKE ? ESCAPE '!' ORDER BY name COLLATE NOCASE,id LIMIT 10"))
+            .bind(owner).bind("At%").fetch_all(&pool).await.unwrap();
+        assert!(
+            plan.iter().any(|row| row.3.contains("USING INDEX")
+                && row.3.contains("name>?")
+                && row.3.contains("name<?")),
+            "{plan:?}"
+        );
+    }
+}
+#[tokio::test]
+async fn completed_promoted_task_allows_metadata_edits_without_revalidating_completion() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("app.sqlite3")).await.unwrap();
+    let (code, schedule) = request(&pool, "POST", "/api/schedules", json!({
+        "entity_name":"history work", "task_preset_ids":[{"name":"history task"}],
+        "scheduled_date":"2026-09-26", "start_time":"09:00", "end_time":"10:00", "time_zone":"Asia/Tokyo"
+    })).await;
+    assert_eq!(code, 201);
+    let url = format!(
+        "/api/schedule-tasks/{}",
+        schedule["tasks"][0]["id"].as_str().unwrap()
+    );
+    let (code, _) = request(&pool, "PATCH", &url, json!({"status":"completed"})).await;
+    assert_eq!(code, 200);
+    let task_id = schedule["tasks"][0]["id"].as_str().unwrap();
+    let completed: (String, String) =
+        sqlx::query_as("SELECT started_at,completed_at FROM schedule_tasks WHERE id=?")
+            .bind(task_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(request(&pool, "POST", "/api/task-presets", json!({
+        "name":"history task", "items":[{"label":"new required", "position":0, "item_type":"checkbox", "required":true}]
+    })).await.0, 201);
+    for patch in [
+        json!({"execution_notes":"historical memo"}),
+        json!({"name":"history [count]", "parameters":{"count":"2"}}),
+        json!({"parameters":{"count":"3"}}),
+    ] {
+        let (code, updated) = request(&pool, "PATCH", &url, patch).await;
+        assert_eq!(code, 200, "{updated}");
+        assert_eq!(updated["tasks"][0]["status"], "completed");
+        assert_eq!(updated["tasks"][0]["execution_notes"], "historical memo");
+        let timestamps: (String, String) =
+            sqlx::query_as("SELECT started_at,completed_at FROM schedule_tasks WHERE id=?")
+                .bind(task_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(timestamps, completed);
+    }
+    assert_eq!(
+        request(&pool, "PATCH", &url, json!({"status":"pending"}))
+            .await
+            .0,
+        200
+    );
+    assert_eq!(
+        request(&pool, "PATCH", &url, json!({"status":"completed"}))
+            .await
+            .0,
+        409
+    );
+}

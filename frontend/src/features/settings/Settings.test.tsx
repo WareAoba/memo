@@ -42,16 +42,31 @@ async function open() {
       <TimeDial start="09:00" end="10:00" onChange={clockChange} />
     </SettingsProvider>,
   );
-  await screen.findByText('변경 사항은 자동으로 저장되고 바로 적용됩니다.');
+  await screen.findByText('자동 저장');
   return view;
 }
+it('uses horizontal mobile tabs and arrow keys without changing settings', async () => {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: query === '(max-width: 700px)',
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+  await open();
+  expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'horizontal');
+  const general = screen.getByRole('tab', { name: '일반' });
+  general.focus();
+  fireEvent.keyDown(general, { key: 'ArrowRight' });
+  expect(screen.getByRole('tab', { name: '화면' })).toHaveFocus();
+  expect(screen.getByRole('tabpanel', { name: '화면' })).toBeVisible();
+  expect(patchSettings).not.toHaveBeenCalled();
+});
 it('loads stored preferences, hot-saves changes and restores them on reconnect', async () => {
   saved = { ...saved, theme: 'dark', accent: 'blue', content_scale: 110 };
   const view = await open();
   expect(document.documentElement.dataset.theme).toBe('dark');
   expect(document.documentElement.dataset.accent).toBe('blue');
   fireEvent.click(screen.getByRole('tab', { name: '화면' }));
-  select('컨텐츠 배율', '125%');
+  select('콘텐츠 배율', '125%');
   await waitFor(() => expect(patchSettings).toHaveBeenCalledWith({ content_scale: 125 }));
   await waitFor(() =>
     expect(document.documentElement.style.getPropertyValue('--content-scale')).toBe('1.25'),
@@ -59,7 +74,7 @@ it('loads stored preferences, hot-saves changes and restores them on reconnect',
   view.unmount();
   await open();
   fireEvent.click(screen.getByRole('tab', { name: '화면' }));
-  expect(screen.getByLabelText('컨텐츠 배율')).toHaveValue('125');
+  expect(screen.getByLabelText('콘텐츠 배율')).toHaveValue('125');
 });
 it('serializes quick changes, keeps failed drafts and retries the latest values', async () => {
   let resolve!: (value: UserSettings) => void;
@@ -87,7 +102,7 @@ it('serializes quick changes, keeps failed drafts and retries the latest values'
   await waitFor(() =>
     expect(patchSettings).toHaveBeenLastCalledWith({ theme: 'light', accent: 'green' }),
   );
-  await screen.findByText('변경 사항은 자동으로 저장되고 바로 적용됩니다.');
+  await screen.findByText('자동 저장');
 });
 it('hot-loads remote changes on focus and changes keyboard clock steps', async () => {
   await open();

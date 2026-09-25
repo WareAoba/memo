@@ -8,17 +8,40 @@
     grid-template-rows: 72px minmax(0, 1fr);
     height: 100dvh;
     gap: 0 var(--space-4);
-    transition: grid-template-columns 260ms ease;
+    transition: grid-template-columns var(--motion-medium) var(--ease-settle);
   }
   .app-shell.menu-expanded {
     grid-template-columns: 252px minmax(0, 1fr);
   }
   .site-header {
+    position: relative;
     grid-column: 1 / -1;
     grid-row: 1;
     min-height: 72px;
     margin: 0;
     padding: 0 var(--space-2) 0 0;
+  }
+  .header-add-schedule {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    height: 48px;
+    min-width: 152px;
+    font-size: 16px;
+    white-space: nowrap;
+  }
+  .header-add-schedule svg {
+    width: 28px;
+    height: 28px;
+  }
+  @media (max-width: 480px) {
+    .site-header .brand {
+      font-size: 0;
+      gap: 0;
+    }
+    .site-header .brand-mark {
+      font-size: 19px;
+    }
   }
   .header-brand-group {
     display: flex;
@@ -59,8 +82,7 @@
     min-height: 0;
     width: 100%;
     padding: var(--space-3) var(--space-2);
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: visible;
   }
   .sidebar-navigation {
     display: flex;
@@ -127,10 +149,10 @@
     visibility: hidden;
     transform: translateY(-6px);
     transition:
-      grid-template-rows 260ms ease,
-      opacity 200ms ease,
-      transform 260ms ease,
-      visibility 260ms;
+      grid-template-rows var(--motion-medium) var(--ease-settle),
+      opacity var(--motion-fast) ease,
+      transform var(--motion-medium) var(--ease-settle),
+      visibility var(--motion-medium);
   }
   .sidebar-drawer.is-open {
     margin-block: var(--space-2);
@@ -142,7 +164,7 @@
   .sidebar-disclosure {
     position: absolute;
     right: 4px;
-    transition: transform 260ms ease;
+    transition: transform var(--motion-medium) var(--ease-settle);
     min-height: 44px;
     width: 36px;
     padding: var(--space-1);
@@ -386,8 +408,7 @@
       gap: 0;
     }
     .menu-button-slot {
-      width: 56px;
-      height: 64px;
+      display: none;
     }
     .site-header .text-link {
       font-size: 11px;

@@ -1,6 +1,7 @@
+import { WorkspaceHeader } from '../shared/WorkspaceHeader';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { PageHeader, ButtonLink, Input, Select, Button, Surface, CardButton } from '../shared/ui';
+import { ButtonLink, Input, Select, Button, Surface, CardButton } from '../shared/ui';
 import { ActionIcon } from '../shared/ActionIcon';
 import { PresetMemoButton } from '../shared/PresetMemoButton';
 import { IconButton } from '../shared/IconButton';
@@ -68,12 +69,9 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
           <TaskPresetDetail id={selected} edit={false} modal />
         </PresetModal>
       )}
-      <PageHeader className="page-heading">
-        <div>
-          <h1>{tr('TaskPresetListView.taskPresets')}</h1>
-        </div>
-        <div className="preset-heading-actions">
-          <PresetSwitch kind="tasks" />
+      <WorkspaceHeader
+        title={<h1>{tr('TaskPresetListView.taskPresets')}</h1>}
+        actions={
           <ButtonLink
             iconOnly
             variant="primary"
@@ -85,60 +83,63 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
           >
             <ActionIcon name="plus" />
           </ButtonLink>
-        </div>
-      </PageHeader>
-      <section aria-label={tr('Picker.searchTasks')} className="toolbar">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            update({ ...filter, q: draft, offset: 0 });
-          }}
-        >
-          <label className="sr-only" htmlFor="search">
-            {tr('Picker.searchTasks')}
-          </label>
-          <Input
-            id="search"
-            type="search"
-            maxLength={200}
-            placeholder={tr('TaskPresetListView.searchNamesOrTags')}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <IconButton icon="search" type="submit">
-            {tr('TaskPresetListView.search')}
-          </IconButton>
-        </form>
-        <label>
-          <span className="sr-only">{tr('design-reference.group')}</span>
-          <Select
-            value={filter.group}
-            onChange={(e) => update({ ...filter, group: e.target.value, offset: 0 })}
-          >
-            <option value="*">{tr('TaskPresetListView.allGroups')}</option>
-            <option value="group:">{tr('TaskGroupPicker.ungrouped')}</option>
-            {groups.names.map((name) => (
-              <option key={name} value={`group:${name}`}>
-                {name}
-              </option>
-            ))}
-          </Select>
-        </label>
-        <div className="tabs">
-          <Button
-            aria-pressed={!filter.archived}
-            onClick={() => update({ ...filter, archived: false, offset: 0 })}
-          >
-            {tr('TaskPresetListView.active')}
-          </Button>
-          <Button
-            aria-pressed={filter.archived}
-            onClick={() => update({ ...filter, archived: true, offset: 0 })}
-          >
-            {tr('TaskPresetListView.archive')}
-          </Button>
-        </div>
-      </section>
+        }
+        navigation={<PresetSwitch kind="tasks" />}
+        tools={
+          <section aria-label={tr('Picker.searchTasks')} className="workspace-list-tools">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                update({ ...filter, q: draft, offset: 0 });
+              }}
+            >
+              <label className="sr-only" htmlFor="search">
+                {tr('Picker.searchTasks')}
+              </label>
+              <Input
+                id="search"
+                type="search"
+                maxLength={200}
+                placeholder={tr('TaskPresetListView.searchNamesOrTags')}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+              <IconButton icon="search" type="submit">
+                {tr('TaskPresetListView.search')}
+              </IconButton>
+            </form>
+            <label>
+              <span className="sr-only">{tr('design-reference.group')}</span>
+              <Select
+                value={filter.group}
+                onChange={(e) => update({ ...filter, group: e.target.value, offset: 0 })}
+              >
+                <option value="*">{tr('TaskPresetListView.allGroups')}</option>
+                <option value="group:">{tr('TaskGroupPicker.ungrouped')}</option>
+                {groups.names.map((name) => (
+                  <option key={name} value={`group:${name}`}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <div className="tabs">
+              <Button
+                aria-pressed={!filter.archived}
+                onClick={() => update({ ...filter, archived: false, offset: 0 })}
+              >
+                {tr('TaskPresetListView.active')}
+              </Button>
+              <Button
+                aria-pressed={filter.archived}
+                onClick={() => update({ ...filter, archived: true, offset: 0 })}
+              >
+                {tr('TaskPresetListView.archive')}
+              </Button>
+            </div>
+          </section>
+        }
+      />
       {groups.error && <ErrorBox error={groups.error} />}
       {loading ? (
         <p role="status">{tr('TaskGroupPicker.loadingTasks')}</p>

@@ -152,6 +152,9 @@ export async function searchSchedules(q: string, offset: number, signal?: AbortS
     parseSchedule,
   );
 }
+function presetReference(id: string) {
+  return id.startsWith('name:') ? { name: id.slice(5) } : id;
+}
 export async function saveSchedule(
   fields: Partial<ScheduleFields> & {
     entity_id?: string;
@@ -164,7 +167,15 @@ export async function saveSchedule(
     await requestJson(
       '/api/schedules' + (id ? '/' + encodeURIComponent(id) : ''),
       id ? 'PATCH' : 'POST',
-      fields,
+      id
+        ? fields
+        : {
+            ...fields,
+            ...(fields.entity_id?.startsWith('name:')
+              ? { entity_id: undefined, entity_name: fields.entity_id.slice(5) }
+              : {}),
+            task_preset_ids: fields.task_preset_ids?.map(presetReference),
+          },
     ),
   );
 }
@@ -262,7 +273,7 @@ export async function addScheduleTask(
 ) {
   return detail(
     await requestJson('/api/schedules/' + encodeURIComponent(id) + '/tasks', 'POST', {
-      task_preset_id: taskPresetId,
+      task_preset_id: presetReference(taskPresetId),
       ...customization,
     }),
   );

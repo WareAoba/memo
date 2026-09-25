@@ -2,11 +2,11 @@ import { DeleteButton } from '../shared/SwipeDelete';
 import { LocalizedError } from '../../i18n/errors';
 import { useTranslation } from 'react-i18next';
 import { tr, displayMessage } from '../../i18n';
-import { Surface, Input } from '../shared/ui';
+import { Surface, Input, Button } from '../shared/ui';
 import { MemoEditor } from '../shared/MemoEditor';
 import { TaskParameterInputs } from '../shared/TaskParameterInputs';
 import { parameterDefaults, parametersValid, taskParameters } from '../shared/taskParameters';
-import { IconButton } from '../shared/IconButton';
+import { ActionIcon } from '../shared/ActionIcon';
 import { Photos } from './Photos';
 import { useState } from 'react';
 import {
@@ -149,8 +149,8 @@ export function TaskExecution({
               onChange={(e) => setName(e.target.value)}
             />
             <TaskParameterInputs template={name} values={parameters} onChange={setParameters} />
-            <IconButton
-              icon="save"
+            <Button
+              variant="secondary"
               type="submit"
               disabled={
                 !name.trim() ||
@@ -162,8 +162,9 @@ export function TaskExecution({
                   ))
               }
             >
+              <ActionIcon name="save" />
               {tr('TaskExecution.saveName')}
-            </IconButton>
+            </Button>
           </form>
         )}
         {task.items.map((item) => (
@@ -203,22 +204,28 @@ export function TaskExecution({
                 }}
               />
             )}
-            <IconButton icon="save" type="submit" disabled={draft[item.id] === inputValue(item)}>
+            <Button
+              variant="secondary"
+              type="submit"
+              disabled={draft[item.id] === inputValue(item)}
+            >
+              <ActionIcon name="save" />
               {tr('TaskExecution.saveValue', { v1: item.definition.label })}
-            </IconButton>
+            </Button>
           </form>
         ))}
         {dirty && <p role="status">{tr('TaskExecution.youHaveUnsavedInputSaveEachItemAndMemo')}</p>}
         <div className="work-task-actions">
-          <IconButton
-            icon="play"
+          <Button
+            variant="secondary"
             disabled={dirty || task.status === 'in_progress'}
             onClick={() => void run(() => updateTask(task.id, { status: 'in_progress' }))}
           >
+            <ActionIcon name="play" />
             {tr('TaskExecution.start')}
-          </IconButton>
-          <IconButton
-            icon="check"
+          </Button>
+          <Button
+            variant="secondary"
             disabled={dirty}
             onClick={() =>
               void run(() =>
@@ -228,12 +235,13 @@ export function TaskExecution({
               )
             }
           >
+            <ActionIcon name="check" />
             {task.status === 'completed'
               ? tr('TaskExecution.undoCompletion')
               : tr('TaskExecution.completeTask')}
-          </IconButton>
-          <IconButton
-            icon="skip"
+          </Button>
+          <Button
+            variant="secondary"
             disabled={dirty}
             onClick={() =>
               void run(() =>
@@ -241,8 +249,9 @@ export function TaskExecution({
               )
             }
           >
+            <ActionIcon name="skip" />
             {task.status === 'skipped' ? tr('TaskExecution.undoSkip') : tr('TaskExecution.skip')}
-          </IconButton>
+          </Button>
         </div>
       </fieldset>
       <MemoEditor

@@ -10,7 +10,7 @@ import {
   reopenSchedule,
 } from '../../api/schedules';
 import { PageHeader, Button, Surface } from '../shared/ui';
-import { IconButton } from '../shared/IconButton';
+import { ActionIcon } from '../shared/ActionIcon';
 import { PresetModal } from '../shared/PresetModal';
 import { Photos } from './Photos';
 import { TaskExecution } from './TaskExecution';
@@ -106,6 +106,36 @@ export function ScheduleView({
               <h1>{value.title || tr('Schedules.untitledSchedule')}</h1>
             </PageHeader>
           )}
+          <section className="work-stack execution-task-list" aria-label={tr('UI.executionTasks')}>
+            <h2>{tr('UI.executionTasks')}</h2>
+            {value.tasks.map((task) => (
+              <div key={task.id}>
+                <Button variant="option" onClick={() => setTaskEditor(task.id)}>
+                  {task.name_snapshot}
+                </Button>
+                {taskEditor === task.id && (
+                  <PresetModal
+                    label={tr('MemoEditor.editValue', { v1: task.name_snapshot })}
+                    onClose={() => {
+                      if (!busy) setTaskEditor(undefined);
+                    }}
+                  >
+                    <TaskExecution
+                      allowRename
+                      onDelete={async () => {
+                        await mutate(() => deleteScheduleTask(task.id));
+                        setTaskEditor(undefined);
+                      }}
+                      task={task}
+                      locked={value.status === 'cancelled'}
+                      busy={busy}
+                      mutate={mutate}
+                    />
+                  </PresetModal>
+                )}
+              </div>
+            ))}
+          </section>
           <ScheduleEditor
             initial={value}
             embedded={modal}
@@ -145,37 +175,39 @@ export function ScheduleView({
               label={tr('Schedules.workMemo')}
               value={value.notes}
               disabled={busy}
-              scope={tr('Schedules.savedOnlyToTheWorkInThisSchedule')}
               onSave={async (notes) => {
                 await mutate(() => saveSchedule({ notes }, id));
               }}
             />
-            <Requirements value={value.entity_snapshot} />
-            <dl>
-              {(value.entity_snapshot.custom_fields ?? []).map((field, index) => (
-                <div key={index}>
-                  <dt>{field.name || tr('Schedules.content')}</dt>
-                  <dd className="preserve-lines">{field.value}</dd>
-                </div>
-              ))}
-              {textFields()
-                .filter(
-                  ([key]) =>
-                    key !== 'name' && key !== 'general_notes' && value.entity_snapshot[key],
-                )
-                .map(([key, label]) => (
-                  <div key={key}>
-                    <dt>{label}</dt>
-                    <dd className="preserve-lines">{value.entity_snapshot[key]}</dd>
+            <details className="optional-fields">
+              <summary>{tr('UI.workDetails')}</summary>
+              <Requirements value={value.entity_snapshot} />
+              <dl>
+                {(value.entity_snapshot.custom_fields ?? []).map((field, index) => (
+                  <div key={index}>
+                    <dt>{field.name || tr('Schedules.content')}</dt>
+                    <dd className="preserve-lines">{field.value}</dd>
                   </div>
                 ))}
-            </dl>
-            <p className="preserve-lines">{value.entity_snapshot.general_notes}</p>
-            <p>{tr('Schedules.workAndTasksAsSavedWhenTheScheduleWas')}</p>
+                {textFields()
+                  .filter(
+                    ([key]) =>
+                      key !== 'name' && key !== 'general_notes' && value.entity_snapshot[key],
+                  )
+                  .map(([key, label]) => (
+                    <div key={key}>
+                      <dt>{label}</dt>
+                      <dd className="preserve-lines">{value.entity_snapshot[key]}</dd>
+                    </div>
+                  ))}
+              </dl>
+              <p className="preserve-lines">{value.entity_snapshot.general_notes}</p>
+              <p>{tr('Schedules.workAndTasksAsSavedWhenTheScheduleWas')}</p>
+            </details>
           </Surface>
           <div className="work-task-actions">
-            <IconButton
-              icon="check"
+            <Button
+              variant="ghost"
               disabled={busy || value.status === 'cancelled'}
               onClick={() => {
                 if (value.status === 'completed')
@@ -183,52 +215,25 @@ export function ScheduleView({
                 else void changeStatus('completed');
               }}
             >
+              <ActionIcon name="check" />
               {value.status === 'completed'
                 ? tr('Delete.reopen', { name: value.entity_snapshot.name })
                 : tr('Schedules.completeSchedule')}
-            </IconButton>
-            <IconButton
-              icon={value.status === 'cancelled' ? 'play' : 'close'}
+            </Button>
+            <Button
+              variant="ghost"
               disabled={busy}
               onClick={() =>
                 void changeStatus(value.status === 'cancelled' ? 'planned' : 'cancelled')
               }
             >
+              <ActionIcon name={value.status === 'cancelled' ? 'play' : 'close'} />
               {value.status === 'cancelled'
                 ? tr('Schedules.resumeSchedule')
                 : tr('Schedules.cancelSchedule')}
-            </IconButton>
+            </Button>
           </div>
           <Photos target={{ type: 'schedule', id }} locked={value.status === 'cancelled'} />
-          <div className="work-stack">
-            {value.tasks.map((task) => (
-              <div key={task.id}>
-                <Button variant="option" onClick={() => setTaskEditor(task.id)}>
-                  {task.name_snapshot}
-                </Button>
-                {taskEditor === task.id && (
-                  <PresetModal
-                    label={tr('MemoEditor.editValue', { v1: task.name_snapshot })}
-                    onClose={() => {
-                      if (!busy) setTaskEditor(undefined);
-                    }}
-                  >
-                    <TaskExecution
-                      allowRename
-                      onDelete={async () => {
-                        await mutate(() => deleteScheduleTask(task.id));
-                        setTaskEditor(undefined);
-                      }}
-                      task={task}
-                      locked={value.status === 'cancelled'}
-                      busy={busy}
-                      mutate={mutate}
-                    />
-                  </PresetModal>
-                )}
-              </div>
-            ))}
-          </div>
         </>
       )}
     </section>

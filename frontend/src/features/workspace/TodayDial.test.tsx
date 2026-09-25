@@ -29,7 +29,7 @@ it('shows the saved-zone current time and clips overnight schedules to the day',
       items={[item, { ...item, id: 'cancelled', status: 'cancelled' }]}
     />,
   );
-  expect(screen.getByRole('img', { name: /현재 23:30, 스케줄 1개/ })).toBeInTheDocument();
+  expect(screen.getByRole('img', { name: /현재 23:30, 일정 1개/ })).toBeInTheDocument();
   const arc = view.container.querySelector('circle[stroke-dasharray]')!;
   const [length, circumference] = arc.getAttribute('stroke-dasharray')!.split(' ').map(Number);
   expect(length! / circumference!).toBeCloseTo(1 / 24);

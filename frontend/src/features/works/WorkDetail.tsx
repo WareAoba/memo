@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { Surface } from '../shared/ui';
-import { IconButton } from '../shared/IconButton';
+import { Surface, Button } from '../shared/ui';
+import { ActionIcon } from '../shared/ActionIcon';
 import { MemoEditor } from '../shared/MemoEditor';
 import { useEffect, useState } from 'react';
 import { archiveWork, getWork, saveWork } from '../../api/works';
@@ -119,13 +119,14 @@ export function WorkDetail({ id, modal = false }: { id: string; edit?: boolean; 
             ? tr('WorkDetail.thisWorkIsArchivedRestoreItToShowIt')
             : tr('WorkDetail.archivingHidesThisWorkFromTheActiveListSaved')}
         </p>
-        <IconButton icon="archive" disabled={busy} onClick={() => void archive()}>
+        <Button variant="ghost" disabled={busy} onClick={() => void archive()}>
+          <ActionIcon name="archive" />
           {busy
             ? tr('PushSettings.processing')
             : value.archived
               ? tr('WorkDetail.restoreWork')
               : tr('WorkDetail.archiveWork')}
-        </IconButton>
+        </Button>
       </section>
     </>
   );

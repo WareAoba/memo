@@ -90,7 +90,7 @@
   .schedule-flip-card {
     display: grid;
     transform-style: preserve-3d;
-    transition: transform 520ms cubic-bezier(0.22, 0.7, 0.25, 1);
+    transition: transform var(--motion-slow) var(--ease-settle);
   }
   .schedule-flip-card.is-flipped {
     transform: rotateY(180deg);
@@ -122,7 +122,7 @@
   .task-group-expansion {
     display: grid;
     grid-template-rows: 0fr;
-    transition: grid-template-rows 240ms ease;
+    transition: grid-template-rows var(--motion-medium) var(--ease-settle);
   }
   .task-group-expansion.is-open {
     grid-template-rows: 1fr;
@@ -146,8 +146,39 @@
       transition: none;
     }
   }
-  /* Small screens keep the clock visible and reveal a separate task card below it. */
+  /* Mobile follows input order; the clock is an optional expansion. */
   @media (max-width: 700px) {
+    .schedule-compose,
+    .preset-modal .schedule-compose {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas: 'work' 'time' 'content';
+      grid-template-rows: auto auto auto;
+      gap: var(--space-4);
+    }
+    .schedule-time-disclosure > summary {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+      min-height: var(--control-height);
+      cursor: pointer;
+      border-bottom: 1px solid var(--line);
+      padding-block: var(--space-2);
+    }
+    .schedule-time-disclosure > summary::after {
+      content: '+';
+      margin-left: auto;
+    }
+    .schedule-time-disclosure[open] > summary::after {
+      content: '−';
+    }
+    .schedule-time-disclosure > .schedule-panel-heading {
+      display: none;
+    }
+    .schedule-card-face,
+    .preset-modal .schedule-content-panel {
+      padding-block: 0;
+    }
     .schedule-flip-card,
     .schedule-flip-card.is-flipped {
       display: flex;

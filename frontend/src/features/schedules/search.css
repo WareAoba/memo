@@ -30,8 +30,9 @@
     text-decoration: none;
     overflow-wrap: anywhere;
   }
-  .schedule-search-results a:hover {
-    background: var(--surface-soft);
+  .schedule-search-results a:hover,
+  .schedule-search-results a:focus-visible {
+    background: var(--accent-soft);
   }
   .schedule-search-results span {
     font-size: 0.85rem;

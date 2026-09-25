@@ -1,6 +1,7 @@
+import { WorkspaceHeader } from '../shared/WorkspaceHeader';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { PageHeader, ButtonLink, Input, Button, Surface, CardButton } from '../shared/ui';
+import { ButtonLink, Input, Button, Surface, CardButton } from '../shared/ui';
 import { ActionIcon } from '../shared/ActionIcon';
 import { PresetMemoButton } from '../shared/PresetMemoButton';
 import { IconButton } from '../shared/IconButton';
@@ -59,12 +60,9 @@ export function WorkListView({ revision = 0 }: { revision?: number }) {
           <WorkDetail id={selected} edit={false} modal />
         </PresetModal>
       )}
-      <PageHeader className="page-heading">
-        <div>
-          <h1>{tr('WorkListView.workPresets')}</h1>
-        </div>
-        <div className="preset-heading-actions">
-          <PresetSwitch kind="works" />
+      <WorkspaceHeader
+        title={<h1>{tr('WorkListView.workPresets')}</h1>}
+        actions={
           <ButtonLink
             iconOnly
             variant="primary"
@@ -76,45 +74,48 @@ export function WorkListView({ revision = 0 }: { revision?: number }) {
           >
             <ActionIcon name="plus" />
           </ButtonLink>
-        </div>
-      </PageHeader>
-      <section aria-label={tr('Picker.searchWorks')} className="toolbar">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            update({ ...filter, q: draft, offset: 0 });
-          }}
-        >
-          <label className="sr-only" htmlFor="search">
-            {tr('Picker.searchWorks')}
-          </label>
-          <Input
-            id="search"
-            type="search"
-            maxLength={200}
-            placeholder={tr('WorkListView.searchWorkNamesAndDetails')}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-          <IconButton icon="search" type="submit">
-            {tr('TaskPresetListView.search')}
-          </IconButton>
-        </form>
-        <div className="tabs">
-          <Button
-            aria-pressed={!filter.archived}
-            onClick={() => update({ ...filter, archived: false, offset: 0 })}
-          >
-            {tr('TaskPresetListView.active')}
-          </Button>
-          <Button
-            aria-pressed={filter.archived}
-            onClick={() => update({ ...filter, archived: true, offset: 0 })}
-          >
-            {tr('TaskPresetListView.archive')}
-          </Button>
-        </div>
-      </section>
+        }
+        navigation={<PresetSwitch kind="works" />}
+        tools={
+          <section aria-label={tr('Picker.searchWorks')} className="workspace-list-tools">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                update({ ...filter, q: draft, offset: 0 });
+              }}
+            >
+              <label className="sr-only" htmlFor="search">
+                {tr('Picker.searchWorks')}
+              </label>
+              <Input
+                id="search"
+                type="search"
+                maxLength={200}
+                placeholder={tr('WorkListView.searchWorkNamesAndDetails')}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+              <IconButton icon="search" type="submit">
+                {tr('TaskPresetListView.search')}
+              </IconButton>
+            </form>
+            <div className="tabs">
+              <Button
+                aria-pressed={!filter.archived}
+                onClick={() => update({ ...filter, archived: false, offset: 0 })}
+              >
+                {tr('TaskPresetListView.active')}
+              </Button>
+              <Button
+                aria-pressed={filter.archived}
+                onClick={() => update({ ...filter, archived: true, offset: 0 })}
+              >
+                {tr('TaskPresetListView.archive')}
+              </Button>
+            </div>
+          </section>
+        }
+      />
       {loading ? (
         <p role="status">{tr('WorkListView.loadingWorks')}</p>
       ) : error ? (

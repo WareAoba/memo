@@ -22,8 +22,25 @@
   .schedule-compose {
     display: grid;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-    gap: 36px;
+    grid-template-areas: 'time work' 'time content';
+    grid-template-rows: auto 1fr;
+    gap: var(--space-4) var(--space-8);
     align-items: start;
+  }
+  .schedule-compose > .schedule-time-panel {
+    grid-area: time;
+  }
+  .schedule-work-selection {
+    grid-area: work;
+    min-width: 0;
+  }
+  .schedule-compose > .schedule-content-panel {
+    grid-area: content;
+  }
+  @media (min-width: 701px) {
+    .schedule-time-disclosure > summary {
+      display: none;
+    }
   }
   .schedule-time-panel,
   .schedule-content-panel {
@@ -373,7 +390,7 @@
   }
   @media (prefers-reduced-motion: no-preference) {
     .time-endpoints button {
-      transition: background 0.15s ease;
+      transition: background var(--motion-fast) ease;
     }
   }
 

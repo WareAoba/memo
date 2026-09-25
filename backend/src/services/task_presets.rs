@@ -269,22 +269,39 @@ fn input(value: Value, previous: Option<&TaskPreset>) -> Result<(Fields, Vec<Str
 }
 pub async fn create(pool: &SqlitePool, value: Value) -> Result<Value> {
     let (fields, tags, items) = input(value, None)?;
-    let mut tx = pool.begin().await.map_err(database)?;
-    let id = Uuid::new_v4().to_string();
-    sqlx::query("INSERT INTO task_presets(id,user_id,name) VALUES(?,?,?)")
-        .bind(&id)
-        .bind(current_user_id())
-        .bind(&fields.name)
-        .execute(&mut *tx)
-        .await
-        .map_err(database)?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
+    let existing = super::unmanaged_presets::matching(&mut tx, "task", &fields.name).await?;
+    let promoted = existing.is_some();
+    let id = existing.unwrap_or_else(|| Uuid::new_v4().to_string());
+    if !promoted {
+        sqlx::query("INSERT INTO task_presets(id,user_id,name) VALUES(?,?,?)")
+            .bind(&id)
+            .bind(current_user_id())
+            .bind(&fields.name)
+            .execute(&mut *tx)
+            .await
+            .map_err(database)?;
+    }
     write(&mut tx, &id, &fields, &tags, &items, None).await?;
     let task_preset = read(&mut tx, &id).await?;
+    if promoted {
+        super::unmanaged_presets::promote(&mut tx, "task", &id, &json!(task_preset)).await?;
+    }
     tx.commit().await.map_err(database)?;
     Ok(json!(task_preset))
 }
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Value> {
     let id = identifier(id)?;
+    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM task_presets WHERE id=? AND user_id=?")
+        .bind(&id)
+        .bind(current_user_id())
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?
+        .unwrap_or(false)
+    {
+        return Err(ApiError::TaskPresetNotFound);
+    }
     let mut tx = pool.begin().await.map_err(database)?;
     let task_preset = read(&mut tx, &id).await?;
     tx.commit().await.map_err(database)?;
@@ -292,6 +309,16 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Value> {
 }
 pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     let id = identifier(id)?;
+    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM task_presets WHERE id=? AND user_id=?")
+        .bind(&id)
+        .bind(current_user_id())
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?
+        .unwrap_or(false)
+    {
+        return Err(ApiError::TaskPresetNotFound);
+    }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     let previous = read(&mut tx, &id).await?;
     let (fields, tags, items) = input(value, Some(&previous))?;
@@ -315,6 +342,16 @@ pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
 }
 pub async fn archive(pool: &SqlitePool, id: &str) -> Result<()> {
     let id = identifier(id)?;
+    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM task_presets WHERE id=? AND user_id=?")
+        .bind(&id)
+        .bind(current_user_id())
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?
+        .unwrap_or(false)
+    {
+        return Err(ApiError::TaskPresetNotFound);
+    }
     let result = sqlx::query("UPDATE task_presets SET version=version+CASE WHEN archived=0 THEN 1 ELSE 0 END,archived=1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
         .bind(id).bind(current_user_id()).execute(pool).await.map_err(database)?;
     if result.rows_affected() == 0 {
@@ -326,9 +363,9 @@ pub async fn list(pool: &SqlitePool, q: ListQuery) -> Result<Value> {
     let limit = q.limit.unwrap_or(20);
     let search = q.search()?;
     let mut tx = pool.begin().await.map_err(database)?;
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task_presets WHERE user_id=? AND archived=? AND (? IS NULL OR group_name=?) AND (name LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM task_preset_tags pt JOIN tags t ON t.id=pt.tag_id AND t.user_id=pt.user_id WHERE pt.task_preset_id=task_presets.id AND pt.user_id=task_presets.user_id AND t.name LIKE ? ESCAPE '!'))")
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task_presets WHERE user_id=? AND unmanaged=0 AND archived=? AND (? IS NULL OR group_name=?) AND (name LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM task_preset_tags pt JOIN tags t ON t.id=pt.tag_id AND t.user_id=pt.user_id WHERE pt.task_preset_id=task_presets.id AND pt.user_id=task_presets.user_id AND t.name LIKE ? ESCAPE '!'))")
         .bind(current_user_id()).bind(q.archived).bind(&q.group_name).bind(&q.group_name).bind(&search).bind(&search).fetch_one(&mut *tx).await.map_err(database)?;
-    let mut items = sqlx::query_as::<_,TaskPresetSummary>("SELECT p.*, (SELECT COUNT(*) FROM task_preset_items i WHERE i.task_preset_id=p.id) AS item_count, (SELECT json_group_array(name) FROM (SELECT t.name FROM task_preset_tags pt JOIN tags t ON t.id=pt.tag_id AND t.user_id=pt.user_id WHERE pt.task_preset_id=p.id AND pt.user_id=p.user_id ORDER BY t.name)) AS tags FROM task_presets p WHERE user_id=? AND archived=? AND (? IS NULL OR group_name=?) AND (name LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM task_preset_tags pt JOIN tags t ON t.id=pt.tag_id AND t.user_id=pt.user_id WHERE pt.task_preset_id=p.id AND pt.user_id=p.user_id AND t.name LIKE ? ESCAPE '!')) ORDER BY group_name,name,id LIMIT ? OFFSET ?")
+    let mut items = sqlx::query_as::<_,TaskPresetSummary>("SELECT p.*, (SELECT COUNT(*) FROM task_preset_items i WHERE i.task_preset_id=p.id) AS item_count, (SELECT json_group_array(name) FROM (SELECT t.name FROM task_preset_tags pt JOIN tags t ON t.id=pt.tag_id AND t.user_id=pt.user_id WHERE pt.task_preset_id=p.id AND pt.user_id=p.user_id ORDER BY t.name)) AS tags FROM task_presets p WHERE user_id=? AND unmanaged=0 AND archived=? AND (? IS NULL OR group_name=?) AND (name LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM task_preset_tags pt JOIN tags t ON t.id=pt.tag_id AND t.user_id=pt.user_id WHERE pt.task_preset_id=p.id AND pt.user_id=p.user_id AND t.name LIKE ? ESCAPE '!')) ORDER BY group_name,name,id LIMIT ? OFFSET ?")
         .bind(current_user_id()).bind(q.archived).bind(&q.group_name).bind(&q.group_name).bind(&search).bind(&search).bind(limit).bind(q.offset).fetch_all(&mut *tx).await.map_err(database)?;
     for item in &mut items {
         item.tags =
@@ -343,6 +380,6 @@ pub(super) async fn snapshot(conn: &mut SqliteConnection, id: &str) -> Result<Va
 }
 
 pub async fn groups(pool: &SqlitePool) -> Result<Value> {
-    let names: Vec<String> = sqlx::query_scalar("SELECT DISTINCT group_name FROM task_presets WHERE user_id=? AND group_name<>'' ORDER BY group_name").bind(current_user_id()).fetch_all(pool).await.map_err(database)?;
+    let names: Vec<String> = sqlx::query_scalar("SELECT DISTINCT group_name FROM task_presets WHERE user_id=? AND unmanaged=0 AND group_name<>'' ORDER BY group_name").bind(current_user_id()).fetch_all(pool).await.map_err(database)?;
     Ok(json!(names))
 }

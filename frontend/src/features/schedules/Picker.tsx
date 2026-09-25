@@ -3,14 +3,13 @@ import { tr } from '../../i18n';
 import { Input, Button } from '../shared/ui';
 import { IconButton } from '../shared/IconButton';
 import { ActionIcon } from '../shared/ActionIcon';
-import { PresetMemoButton } from '../shared/PresetMemoButton';
 import { useEffect, useState } from 'react';
 import { listWorks, type WorkFields } from '../../api/works';
 import { listTaskPresets } from '../../api/taskPresets';
 import type { Page } from '../../api/client';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
-type Choice = { id: string; name: string } & Partial<WorkFields>;
+type Choice = { id: string; name: string; default_notes?: string } & Partial<WorkFields>;
 function matchHint(work: Choice, query: string) {
   const needle = query.trim().toLowerCase();
   const matches = (text: string) => text.toLowerCase().includes(needle);
@@ -44,10 +43,12 @@ export function Picker({
   kind,
   onPick,
   disabled = false,
+  allowCreate = false,
 }: {
   kind: 'work' | 'task';
   onPick: (v: Choice) => void;
   disabled?: boolean;
+  allowCreate?: boolean;
 }) {
   useTranslation();
   const [q, setQ] = useState('');
@@ -55,7 +56,12 @@ export function Picker({
   const [page, setPage] = useState<Page<Choice>>();
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const searching = kind !== 'work' || Boolean(q.trim());
+  const searching = Boolean(q.trim()) || (!allowCreate && kind === 'task');
+  function selectTypedName() {
+    if (!q.trim()) return;
+    onPick({ id: 'name:' + q.trim(), name: q.trim() });
+    search('', 0);
+  }
   useEffect(() => {
     if (!searching) return;
     const c = new AbortController();
@@ -89,17 +95,37 @@ export function Picker({
       </legend>
       <label>
         <span className="sr-only">
-          {kind === 'work' ? tr('Picker.searchWorks') : tr('Picker.searchTasks')}
+          {allowCreate
+            ? tr(kind === 'work' ? 'Picker.workName' : 'Picker.taskName')
+            : kind === 'work'
+              ? tr('Picker.searchWorks')
+              : tr('Picker.searchTasks')}
         </span>
         <Input
           placeholder={
-            kind === 'work' ? tr('Picker.searchWorkNamesDetailsAndMemos') : tr('Picker.searchTasks')
+            allowCreate
+              ? tr(kind === 'work' ? 'Picker.workName' : 'Picker.taskName')
+              : kind === 'work'
+                ? tr('Picker.searchWorkNamesDetailsAndMemos')
+                : tr('Picker.searchTasks')
           }
-          type="search"
+          maxLength={200}
+          type={allowCreate ? 'text' : 'search'}
+          onKeyDown={(e) => {
+            if (allowCreate && e.key === 'Enter' && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              selectTypedName();
+            }
+          }}
           value={q}
           onChange={(e) => search(e.target.value, 0)}
         />
       </label>
+      {allowCreate && q.trim() && (
+        <Button variant="option" onClick={selectTypedName}>
+          {tr('Unmanaged.useName', { name: q.trim() })}
+        </Button>
+      )}
       {error && (
         <ErrorBox
           error={error}
@@ -109,10 +135,13 @@ export function Picker({
           }}
         />
       )}
-      {!searching && <p className="hint">{tr('Picker.enterASearchTermToFindAWork')}</p>}
+      {!searching && !allowCreate && (
+        <p className="hint">{tr('Picker.enterASearchTermToFindAWork')}</p>
+      )}
       {searching && !page && !error && <p role="status">{tr('Picker.searching')}</p>}
       {searching && page && (
         <>
+          {allowCreate && page.items.length > 0 && <p className="hint">{tr('Picker.presets')}</p>}
           <ul className="work-task-list">
             {page.items.map((v) => (
               <li key={v.id} className="picker-result memo-preview">
@@ -125,17 +154,20 @@ export function Picker({
                 >
                   <span>
                     <strong>{v.name}</strong>
-                    {kind === 'work' && matchHint(v, q) && (
-                      <small className="picker-match">{matchHint(v, q)}</small>
+                    {(kind === 'work' ? matchHint(v, q) || v.general_notes : v.default_notes) && (
+                      <small className="picker-match">
+                        {kind === 'work' ? matchHint(v, q) || v.general_notes : v.default_notes}
+                      </small>
                     )}
                   </span>
                   <ActionIcon name={kind === 'work' ? 'right' : 'plus'} />
                 </Button>
-                <PresetMemoButton kind={kind} id={v.id} name={v.name} notes={v.general_notes} />
               </li>
             ))}
           </ul>
-          {!page.total && <p>{tr('Picker.noResultsCreateAPresetFirstInPresetSettings')}</p>}
+          {!page.total && !allowCreate && (
+            <p>{tr('Picker.noResultsCreateAPresetFirstInPresetSettings')}</p>
+          )}
           {(page.total > 20 || offset > 0) && (
             <div className="work-task-actions">
               <IconButton

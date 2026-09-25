@@ -40,15 +40,17 @@ export async function uploadPhoto(target: PhotoTarget, file: File) {
   });
   if (!response.ok)
     throw new LocalizedError(
-      response.status === 409
-        ? 'photos.photosCannotBeAddedToArchivedOrCancelledSchedules'
-        : response.status === 429
-          ? 'photos.uploadBusy'
-          : response.status === 507
-            ? 'photos.storageFull'
-            : response.status === 400 || response.status === 413
-              ? 'photos.checkForADamagedPhotoFileSizeOrResolution'
-              : 'photos.couldNotSaveThePhotoTryAgain',
+      response.status === 401
+        ? 'Auth.signInRequired'
+        : response.status === 409
+          ? 'photos.photosCannotBeAddedToArchivedOrCancelledSchedules'
+          : response.status === 429
+            ? 'photos.uploadBusy'
+            : response.status === 507
+              ? 'photos.storageFull'
+              : response.status === 400 || response.status === 413
+                ? 'photos.checkForADamagedPhotoFileSizeOrResolution'
+                : 'photos.couldNotSaveThePhotoTryAgain',
     );
   return parse(await response.json());
 }

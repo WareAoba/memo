@@ -1,5 +1,5 @@
 //! Web Push transport and browser registration. Scheduling lives in reminder_worker.
-use crate::{errors::ApiError, local_user::current_user_id};
+use crate::errors::ApiError;
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use p256::{
     SecretKey,
@@ -176,7 +176,11 @@ pub fn validate_subscription(s: &Subscription) -> Result<()> {
     Ok(())
 }
 
-pub async fn register(pool: &SqlitePool, registration: Registration) -> Result<Value> {
+pub async fn register(
+    pool: &SqlitePool,
+    user_id: &str,
+    registration: Registration,
+) -> Result<Value> {
     let installation = uuid::Uuid::parse_str(&registration.installation_id)
         .map_err(|_| ApiError::InvalidInput)?
         .to_string();
@@ -189,14 +193,11 @@ pub async fn register(pool: &SqlitePool, registration: Registration) -> Result<V
             .fetch_optional(&mut *tx)
             .await
             .map_err(db)?;
-    if owner
-        .as_deref()
-        .is_some_and(|owner| owner != current_user_id())
-    {
+    if owner.as_deref().is_some_and(|owner| owner != user_id) {
         return Err(ApiError::InvalidInput);
     }
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM push_subscriptions WHERE user_id=? AND installation_id!=? AND endpoint!=?")
-        .bind(current_user_id()).bind(&installation).bind(&s.endpoint).fetch_one(&mut *tx).await.map_err(db)?;
+        .bind(user_id).bind(&installation).bind(&s.endpoint).fetch_one(&mut *tx).await.map_err(db)?;
     if count >= 20 {
         return Err(ApiError::InvalidInput);
     }
@@ -204,27 +205,27 @@ pub async fn register(pool: &SqlitePool, registration: Registration) -> Result<V
     sqlx::query(
         "DELETE FROM push_subscriptions WHERE user_id=? AND endpoint=? AND installation_id!=?",
     )
-    .bind(current_user_id())
+    .bind(user_id)
     .bind(&s.endpoint)
     .bind(&installation)
     .execute(&mut *tx)
     .await
     .map_err(db)?;
     sqlx::query("UPDATE push_deliveries SET status='pending',attempts=0,available_at=unixepoch(),lease_token=NULL,lease_until=NULL WHERE status IN ('sending','failed','cancelled') AND subscription_id IN (SELECT id FROM push_subscriptions WHERE user_id=? AND installation_id=? AND (endpoint!=? OR p256dh!=? OR auth!=? OR enabled=0))")
-        .bind(current_user_id()).bind(&installation).bind(&s.endpoint).bind(&s.keys.p256dh).bind(&s.keys.auth).execute(&mut *tx).await.map_err(db)?;
+        .bind(user_id).bind(&installation).bind(&s.endpoint).bind(&s.keys.p256dh).bind(&s.keys.auth).execute(&mut *tx).await.map_err(db)?;
     sqlx::query("INSERT INTO push_subscriptions(id,user_id,installation_id,endpoint,p256dh,auth,visible_until) VALUES(?,?,?,?,?,?,unixepoch()+45) ON CONFLICT(user_id,installation_id) DO UPDATE SET endpoint=excluded.endpoint,p256dh=excluded.p256dh,auth=excluded.auth,enabled=1,visible_until=excluded.visible_until,updated_at=unixepoch()")
-        .bind(uuid::Uuid::new_v4().to_string()).bind(current_user_id()).bind(&installation).bind(s.endpoint).bind(s.keys.p256dh).bind(s.keys.auth)
+        .bind(uuid::Uuid::new_v4().to_string()).bind(user_id).bind(&installation).bind(s.endpoint).bind(s.keys.p256dh).bind(s.keys.auth)
         .execute(&mut *tx).await.map_err(db)?;
     tx.commit().await.map_err(db)?;
     Ok(json!({"enabled":true}))
 }
 
-pub async fn unregister(pool: &SqlitePool, installation: &str) -> Result<()> {
+pub async fn unregister(pool: &SqlitePool, user_id: &str, installation: &str) -> Result<()> {
     let installation = uuid::Uuid::parse_str(installation)
         .map_err(|_| ApiError::InvalidInput)?
         .to_string();
     sqlx::query("UPDATE push_subscriptions SET enabled=0,visible_until=0,updated_at=unixepoch() WHERE installation_id=? AND user_id=?")
-        .bind(installation).bind(current_user_id()).execute(pool).await.map_err(db)?;
+        .bind(installation).bind(user_id).execute(pool).await.map_err(db)?;
     Ok(())
 }
 
@@ -244,14 +245,14 @@ pub struct Presence {
     #[serde(default)]
     pub seen: Vec<Receipt>,
 }
-pub async fn presence(pool: &SqlitePool, value: Presence) -> Result<Value> {
+pub async fn presence(pool: &SqlitePool, user_id: &str, value: Presence) -> Result<Value> {
     uuid::Uuid::parse_str(&value.installation_id).map_err(|_| ApiError::InvalidInput)?;
     if value.seen.len() > 100 || value.tab_id.len() > 100 {
         return Err(ApiError::InvalidInput);
     }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(db)?;
     let sub = sqlx::query("UPDATE push_subscriptions SET visible_until=?,updated_at=unixepoch() WHERE user_id=? AND installation_id=? AND enabled=1 RETURNING id")
-        .bind(if value.visible { now()+45 } else { 0 }).bind(current_user_id()).bind(value.installation_id).fetch_optional(&mut *tx).await.map_err(db)?;
+        .bind(if value.visible { now()+45 } else { 0 }).bind(user_id).bind(value.installation_id).fetch_optional(&mut *tx).await.map_err(db)?;
     if let Some(sub) = sub {
         sqlx::query("INSERT INTO push_presence(subscription_id,tab_id,expires_at) VALUES(?,?,?) ON CONFLICT(subscription_id,tab_id) DO UPDATE SET expires_at=excluded.expires_at")
             .bind(sub.get::<String,_>("id")).bind(&value.tab_id).bind(if value.visible { now()+45 } else { 0 }).execute(&mut *tx).await.map_err(db)?;
@@ -266,7 +267,7 @@ pub async fn presence(pool: &SqlitePool, value: Presence) -> Result<Value> {
             .bind(sub.get::<String,_>("id")).bind(sub.get::<String,_>("id")).execute(&mut *tx).await.map_err(db)?;
         for receipt in value.seen {
             sqlx::query("INSERT INTO push_deliveries(id,subscription_id,schedule_id,reminder_version,status,result_code) SELECT ?,?,id,reminder_version,'sent','in_app' FROM schedules WHERE id=? AND user_id=? AND reminder_version=? AND reminder_enabled=1 AND reminder_at<=unixepoch() AND reminder_start_at>unixepoch() ON CONFLICT(subscription_id,schedule_id,reminder_version) DO UPDATE SET status='sent',result_code='in_app',lease_token=NULL,lease_until=NULL,updated_at=unixepoch()")
-                .bind(uuid::Uuid::new_v4().to_string()).bind(sub.get::<String,_>("id")).bind(receipt.schedule_id).bind(current_user_id()).bind(receipt.reminder_version)
+                .bind(uuid::Uuid::new_v4().to_string()).bind(sub.get::<String,_>("id")).bind(receipt.schedule_id).bind(user_id).bind(receipt.reminder_version)
                 .execute(&mut *tx).await.map_err(db)?;
         }
         tx.commit().await.map_err(db)?;

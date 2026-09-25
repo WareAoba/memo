@@ -36,6 +36,7 @@ export function AddTaskPicker({
     </fieldset>
   ) : (
     <Picker
+      allowCreate
       kind="task"
       disabled={disabled}
       onPick={(choice) => {

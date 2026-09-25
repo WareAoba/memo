@@ -179,7 +179,6 @@ export function TodayScheduleCard({
                       }}
                     />
                     <Button
-                      iconOnly
                       variant="ghost"
                       disabled={
                         busy ||
@@ -192,7 +191,7 @@ export function TodayScheduleCard({
                       title={editing === task.id ? tr('ScheduleEditor.close') : tr('App.edit')}
                       onClick={() => onEditing(editing === task.id ? undefined : task.id)}
                     >
-                      <ActionIcon name={editing === task.id ? 'close' : 'edit'} />
+                      {editing === task.id ? tr('ScheduleEditor.close') : tr('App.edit')}
                     </Button>
                   </div>
                 </div>
@@ -261,13 +260,12 @@ export function TodayScheduleCard({
           <>
             <ErrorBox error={error} />
             <ButtonLink
-              iconOnly
               title={tr('SavedScheduleCard.enterItemDetails')}
               aria-label={tr('SavedScheduleCard.enterItemDetails')}
               className="button"
               href={'#/schedules/' + value.id}
             >
-              <ActionIcon name="edit" />
+              {tr('SavedScheduleCard.enterItemDetails')}
             </ButtonLink>
           </>
         )}

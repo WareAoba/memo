@@ -24,7 +24,7 @@ afterEach(() => {
 it('opens the schedule, dismisses and does not repeat after remount', async () => {
   const first = render(<Reminders />);
   expect(await screen.findByText('영어 공부')).toBeVisible();
-  expect(screen.getByRole('link', { name: /스케줄 보기/ })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /일정 보기/ })).toHaveAttribute(
     'href',
     '#/schedules/schedule-1',
   );

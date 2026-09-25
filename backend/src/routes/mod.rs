@@ -1,10 +1,11 @@
 mod execution;
-mod health;
+pub(crate) mod health;
 mod photos;
 mod push;
 mod schedules;
 mod settings;
 mod task_presets;
+mod unmanaged_presets;
 mod work_tasks;
 mod works;
 
@@ -14,6 +15,10 @@ use crate::{AppState, errors::ApiError};
 
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route(
+            "/api/unmanaged-presets/{kind}",
+            get(unmanaged_presets::suggestions),
+        )
         .route("/api/settings", get(settings::get).patch(settings::patch))
         .route(
             "/api/settings/bootstrap",
@@ -102,7 +107,6 @@ pub fn router() -> Router<AppState> {
             get(works::get).patch(works::patch).delete(works::archive),
         )
         .route("/api/local-user", axum::routing::post(works::local_user))
-        .route("/api/health", get(health::health))
         .fallback(|| async { ApiError::NotFound })
         .method_not_allowed_fallback(|| async { ApiError::MethodNotAllowed })
 }

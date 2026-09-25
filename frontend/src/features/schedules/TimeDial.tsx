@@ -246,14 +246,17 @@ export function TimeDial({
           );
         })}
       </div>
-      <p id={hint} className="dial-hint">
-        {tr('TimeDial.tapTheDialToSetTheValueTime', {
-          v1: selected === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end'),
-        })}
-        <br />
-        {tr('Settings.clockKeyboard', { count: step })}
-        <span className="sr-only">{tr('TimeDial.midnight0000AtTheTop0600On')}</span>
-      </p>
+      <details className="inline-help dial-help">
+        <summary>{tr('UI.timeHelp')}</summary>
+        <p id={hint} className="dial-hint">
+          {tr('TimeDial.tapTheDialToSetTheValueTime', {
+            v1: selected === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end'),
+          })}
+          <br />
+          {tr('Settings.clockKeyboard', { count: step })}
+          <span className="sr-only">{tr('TimeDial.midnight0000AtTheTop0600On')}</span>
+        </p>
+      </details>
     </div>
   );
 }

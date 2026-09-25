@@ -1,8 +1,8 @@
+import { UnmanagedSuggestions } from '../shared/UnmanagedSuggestions';
 import { ModalActions } from '../shared/PresetModal';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
 import { PageHeader, Surface, Input, Textarea, Button } from '../shared/ui';
-import { IconButton } from '../shared/IconButton';
 import { ActionIcon } from '../shared/ActionIcon';
 import { useId, useState } from 'react';
 import { useEditorActive } from '../useEditorActive';
@@ -126,10 +126,14 @@ export function TaskPresetEditor({
                 onChange={(e) => setName(e.target.value)}
                 placeholder={tr('TaskPresetEditor.eGMemorizeN5Words')}
               />
-              <span id={templateHint} className="hint">
-                {tr('TaskPresetEditor.useNOrCountToEnterValuesInA')}
-              </span>
             </label>
+            <details className="inline-help wide">
+              <summary>{tr('UI.parameterHelp')}</summary>
+              <p id={templateHint} className="hint">
+                {tr('TaskPresetEditor.useNOrCountToEnterValuesInA')}
+              </p>
+            </details>
+            {!id && <UnmanagedSuggestions kind="task" name={name} onSelect={setName} />}
             {!hideMemo && (
               <label className="wide">
                 {tr('TaskPresetDetail.defaultMemo')}
@@ -157,9 +161,16 @@ export function TaskPresetEditor({
         {error && <ErrorBox error={error} />}
         <ModalActions>
           <div className="actions">
-            <IconButton variant="primary" icon="save" form={formId} type="submit" disabled={saving}>
+            <Button
+              variant="primary"
+              form={formId}
+              type="submit"
+              disabled={saving}
+              aria-busy={saving || undefined}
+            >
+              <ActionIcon name="save" />
               {saving ? tr('Photos.saving') : tr('TaskPresetEditor.saveTask')}
-            </IconButton>
+            </Button>
             {!embedded && (
               <Button
                 iconOnly

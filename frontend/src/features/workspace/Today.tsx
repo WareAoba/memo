@@ -1,11 +1,12 @@
+import { WorkspaceHeader } from '../shared/WorkspaceHeader';
+import { ScheduleSearchControl } from '../schedules/ScheduleSearchControl';
 import { ScheduleCardActions } from '../shared/ScheduleCardActions';
 import { LocalizedError } from '../../i18n/errors';
 import { useTranslation } from 'react-i18next';
 import { tr, locale } from '../../i18n';
-import { ActionIcon } from '../shared/ActionIcon';
 
 import { saveSchedule, deleteSchedule, reopenSchedule } from '../../api/schedules';
-import { PageHeader, ButtonLink, Button, Surface } from '../shared/ui';
+import { Button, Surface } from '../shared/ui';
 import { useEffect, useRef, useState } from 'react';
 import { completeSchedule, getDaySchedules, type ScheduleDetail } from '../../api/schedules';
 import { ErrorBox } from '../shared/ErrorBox';
@@ -54,6 +55,7 @@ export function Today({
       if (
         !active ||
         lock.current ||
+        rolloverPending ||
         (!requested && (editing || adding || document.visibilityState === 'hidden'))
       )
         return;
@@ -143,29 +145,21 @@ export function Today({
   }
   return (
     <section className="today-workspace">
-      <PageHeader className="workspace-heading">
-        <div>
-          <p className="eyebrow">
-            {fromDateKey(displayDate).toLocaleDateString(locale(), {
-              month: 'long',
-              day: 'numeric',
-              weekday: 'long',
-            })}
-          </p>
-          <h1>{tr('Calendar.today')}</h1>
-        </div>
-        <ButtonLink
-          iconOnly
-          variant="primary"
-          className="add-work-icon"
-          data-modal-trigger
-          href={'#/schedules/new?date=' + today}
-          aria-label={tr('App.addSchedule')}
-          title={tr('App.addSchedule')}
-        >
-          <ActionIcon name="calendar-add" />
-        </ButtonLink>
-      </PageHeader>
+      <WorkspaceHeader
+        title={<h1>{tr('Calendar.today')}</h1>}
+        tools={
+          <>
+            <ScheduleSearchControl />
+            <p className="eyebrow">
+              {fromDateKey(displayDate).toLocaleDateString(locale(), {
+                month: 'long',
+                day: 'numeric',
+                weekday: 'long',
+              })}
+            </p>
+          </>
+        }
+      />
       {rolloverPending && <p role="status">{tr('Today.theDateHasChangedSaveYourInputAndClose')}</p>}
       {error && (
         <ErrorBox

@@ -10,7 +10,7 @@ it('groups memo and schedule edit controls inside a card without triggering comp
       <ScheduleCardActions id="s" label="워크" value="" onSave={vi.fn()} />
     </article>,
   );
-  const edit = screen.getByRole('link', { name: '스케줄 수정' });
+  const edit = screen.getByRole('link', { name: '일정 수정' });
   expect(edit).toHaveAttribute('href', '#/schedules/s/edit');
   fireEvent.click(edit);
   expect(card).not.toHaveBeenCalled();

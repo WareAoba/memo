@@ -1,3 +1,6 @@
+vi.mock('./api/auth', () => ({
+  getAccount: vi.fn(async () => ({ id: 'local', display_name: '가상 계정', email: null })),
+}));
 import { defaultSettings } from './api/settings';
 vi.mock('./api/settings', async (original) => ({
   ...(await original<typeof import('./api/settings')>()),

@@ -1,4 +1,7 @@
 import { bootstrapSettings, defaultSettings } from './api/settings';
+vi.mock('./api/auth', () => ({
+  getAccount: vi.fn(async () => ({ id: 'local', display_name: '가상 계정', email: null })),
+}));
 vi.mock('./api/settings', async (original) => ({
   ...(await original<typeof import('./api/settings')>()),
   bootstrapSettings: vi.fn(),
@@ -71,6 +74,7 @@ describe('work workspace', () => {
       .mockRejectedValueOnce(new Error('연결 실패'))
       .mockResolvedValueOnce({ items: [], total: 0, offset: 0, limit: 20 });
     render(<App />);
+    await screen.findByText('가상 계정');
     expect(await screen.findByText('연결 실패')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
     expect(await screen.findByText('첫 워크를 등록해 보세요.')).toBeInTheDocument();
@@ -78,6 +82,7 @@ describe('work workspace', () => {
   it('searches and switches archive scope with pagination reset', async () => {
     vi.mocked(listWorks).mockResolvedValue({ items: [work], total: 49, offset: 0, limit: 20 });
     render(<App />);
+    await screen.findByText('가상 계정');
     expect(await screen.findByText('중앙 워크')).toBeInTheDocument();
     expect(screen.queryByText('사전 연락 필요')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '다음' }));
@@ -101,6 +106,7 @@ describe('work workspace', () => {
     vi.mocked(saveWork).mockRejectedValueOnce(new Error('저장 실패')).mockResolvedValueOnce(work);
     vi.mocked(getWork).mockResolvedValue(work);
     render(<App />);
+    await screen.findByText('가상 계정');
     fireEvent.change(screen.getByLabelText('워크 이름 *'), { target: { value: '중앙 워크' } });
     fireEvent.change(screen.getByLabelText('태그'), { target: { value: '정기, 방문' } });
     fireEvent.click(screen.getByRole('button', { name: '워크 저장' }));
@@ -116,6 +122,7 @@ describe('work workspace', () => {
   it('rejects duplicate custom information names before saving', async () => {
     window.location.hash = '/entities/new';
     render(<App />);
+    await screen.findByText('가상 계정');
     fireEvent.change(screen.getByLabelText('워크 이름 *'), { target: { value: '워크' } });
     fireEvent.click(screen.getByRole('button', { name: '정보 추가' }));
     fireEvent.click(screen.getByRole('button', { name: '정보 추가' }));
@@ -134,6 +141,7 @@ describe('work workspace', () => {
     vi.mocked(archiveWork).mockResolvedValue();
     vi.mocked(saveWork).mockResolvedValue(work);
     render(<App />);
+    await screen.findByText('가상 계정');
     fireEvent.click(await screen.findByRole('button', { name: '워크 보관' }));
     expect(await screen.findByText('보관된 워크')).toBeInTheDocument();
     expect(archiveWork).toHaveBeenCalledWith(work.id);
@@ -146,6 +154,7 @@ describe('work workspace', () => {
     vi.mocked(getWork).mockResolvedValue(work);
     vi.mocked(saveWork).mockResolvedValue(work);
     render(<App />);
+    await screen.findByText('가상 계정');
     expect(await screen.findByLabelText('워크 이름 *')).toHaveValue('중앙 워크');
     fireEvent.change(screen.getByLabelText('워크 이름 *'), { target: { value: '부산' } });
     fireEvent.click(screen.getByRole('button', { name: '워크 저장' }));
@@ -161,6 +170,7 @@ describe('three-destination workspace structure', () => {
   it('starts with today and has exactly three primary destinations', async () => {
     window.history.replaceState(null, '', '/');
     render(<App />);
+    await screen.findByText('가상 계정');
     expect(screen.getByRole('heading', { name: '오늘' })).toBeInTheDocument();
     const navigation = within(screen.getByRole('navigation', { name: '주 메뉴' }));
     expect(
@@ -173,12 +183,13 @@ describe('three-destination workspace structure', () => {
       'page',
     );
     expect(screen.queryByText('화면 구조 미리보기')).not.toBeInTheDocument();
-    expect(await screen.findByText('오늘 저장된 스케줄이 없습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('오늘 저장된 일정이 없습니다.')).toBeInTheDocument();
     expect(listWorks).not.toHaveBeenCalled();
   });
   it('loads saved calendar schedules without preview controls', async () => {
     window.history.replaceState(null, '', '#/calendar');
     render(<App />);
+    await screen.findByText('가상 계정');
     expect(await screen.findByRole('region', { name: '월 캘린더' })).toBeInTheDocument();
     await waitFor(() => expect(getRangeSchedules).toHaveBeenCalled());
     expect(getRangeSchedules).toHaveBeenCalled();
@@ -187,6 +198,7 @@ describe('three-destination workspace structure', () => {
   it('separates stored work and task presets', async () => {
     window.history.replaceState(null, '', '#/presets/tasks');
     render(<App />);
+    await screen.findByText('가상 계정');
     fireEvent.click(screen.getByRole('button', { name: '메뉴 펼치기' }));
     fireEvent.click(screen.getByRole('button', { name: '프리셋 종류 메뉴' }));
     const navigation = within(screen.getByRole('navigation', { name: '프리셋 종류' }));
@@ -201,22 +213,24 @@ describe('three-destination workspace structure', () => {
     expect(await screen.findByText('첫 워크를 등록해 보세요.')).toBeInTheDocument();
     expect(listWorks).toHaveBeenCalled();
   });
-  it('moves calendar months and returns to today', async () => {
+  it('moves calendar months forward and backward', async () => {
     window.history.replaceState(null, '', '#/calendar');
     render(<App />);
+    await screen.findByText('가상 계정');
     const label = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
     expect(await screen.findByRole('heading', { name: label })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '다음 달' }));
     expect(screen.queryByRole('heading', { name: label })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '오늘' }));
+    fireEvent.click(screen.getByRole('button', { name: '이전 달' }));
     expect(await screen.findByRole('heading', { name: label })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: '일간 스케줄 상세' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '일간 일정 상세' })).not.toBeInTheDocument();
   });
 });
 
 it('switches calendar views through the tab drawer', async () => {
   window.history.replaceState(null, '', '#/calendar');
   render(<App />);
+  await screen.findByText('가상 계정');
   await screen.findByRole('region', { name: '월 캘린더' });
   fireEvent.click(screen.getByRole('button', { name: '메뉴 펼치기' }));
   fireEvent.click(screen.getByLabelText('캘린더 보기 메뉴'));
@@ -226,8 +240,8 @@ it('switches calendar views through the tab drawer', async () => {
   expect(screen.getByRole('region', { name: '월 캘린더' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '메뉴 펼치기' }));
   fireEvent.click(screen.getByRole('link', { name: '일간 상세 보기' }));
-  expect(screen.getByRole('region', { name: '일간 스케줄 상세' })).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: '이 날짜에 스케줄 만들기' })).toHaveAttribute(
+  expect(screen.getByRole('region', { name: '일간 일정 상세' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '일정 추가' })).toHaveAttribute(
     'href',
     expect.stringContaining('-12-01'),
   );
@@ -235,6 +249,7 @@ it('switches calendar views through the tab drawer', async () => {
 
 it('expands the icon rail and preserves navigation when collapsed', async () => {
   render(<App />);
+  await screen.findByText('가상 계정');
   expect(screen.getByRole('button', { name: '메뉴 펼치기' })).toHaveAttribute(
     'aria-expanded',
     'false',
@@ -279,50 +294,51 @@ it('creates a schedule in a dialog while preserving the calendar date and route'
   vi.mocked(getWorkTasks).mockResolvedValue([]);
   vi.mocked(saveSchedule).mockResolvedValue({ id: 'new-schedule' } as ScheduleDetail);
   render(<App />);
+  await screen.findByText('가상 계정');
   await screen.findByRole('region', { name: '월 캘린더' });
   fireEvent.click(screen.getByRole('button', { name: '다음 달' }));
-  fireEvent.click(screen.getByRole('button', { name: /월 15일.*스케줄 0개/ }));
-  const launch = screen.getByRole('link', { name: '이 날짜에 스케줄 만들기' });
+  fireEvent.click(screen.getByRole('button', { name: /월 15일.*일정 0개/ }));
+  const launch = screen.getByRole('link', { name: '일정 추가' });
   const date = launch.getAttribute('href')!.split('date=')[1];
-  const calendar = screen.getByRole('region', { name: '일간 스케줄 상세' });
+  const calendar = screen.getByRole('region', { name: '일간 일정 상세' });
   launch.focus();
   fireEvent.click(launch);
-  let dialog = await screen.findByRole('dialog', { name: '스케줄 추가' });
+  let dialog = await screen.findByRole('dialog', { name: '일정 추가' });
   expect(window.location.hash).toBe('#/calendar');
   expect(calendar).toBeInTheDocument();
-  expect(within(dialog).queryByLabelText('스케줄 날짜')).not.toBeInTheDocument();
+  expect(within(dialog).queryByLabelText('일정 날짜')).not.toBeInTheDocument();
   expect(within(dialog).queryByLabelText('시작 날짜')).not.toBeInTheDocument();
-  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 스케줄'));
+  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 일정'));
   expect(within(dialog).getByLabelText('시작 날짜')).toHaveValue(date);
-  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 스케줄'));
+  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 일정'));
   expect(
     within(dialog)
-      .getByRole('button', { name: /스케줄 저장/ })
+      .getByRole('button', { name: /일정 저장/ })
       .closest('.modal-footer'),
   ).not.toBeNull();
   expect(within(dialog).queryByRole('button', { name: '취소' })).not.toBeInTheDocument();
-  fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 추가 닫기' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: '일정 추가 닫기' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(launch).toHaveFocus();
   fireEvent.click(launch);
-  dialog = await screen.findByRole('dialog', { name: '스케줄 추가' });
-  fireEvent.change(within(dialog).getByRole('searchbox', { name: '워크 검색' }), {
+  dialog = await screen.findByRole('dialog', { name: '일정 추가' });
+  fireEvent.change(within(dialog).getByRole('textbox', { name: '워크 이름' }), {
     target: { value: '중앙' },
   });
   fireEvent.click(await within(dialog).findByRole('button', { name: '중앙 워크 선택' }));
   await waitFor(() =>
-    expect(within(dialog).getByRole('button', { name: /스케줄 저장/ })).toBeEnabled(),
+    expect(within(dialog).getByRole('button', { name: /일정 저장/ })).toBeEnabled(),
   );
   const before = vi.mocked(getRangeSchedules).mock.calls.length;
-  fireEvent.click(within(dialog).getByRole('button', { name: /스케줄 저장/ }));
+  fireEvent.click(within(dialog).getByRole('button', { name: /일정 저장/ }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(saveSchedule).toHaveBeenCalledWith(
     expect.objectContaining({ scheduled_date: date, entity_id: work.id }),
     undefined,
   );
   expect(window.location.hash).toBe('#/calendar');
-  expect(screen.getByRole('region', { name: '일간 스케줄 상세' })).toBe(calendar);
-  expect(screen.getByRole('link', { name: '이 날짜에 스케줄 만들기' })).toHaveAttribute(
+  expect(screen.getByRole('region', { name: '일간 일정 상세' })).toBe(calendar);
+  expect(screen.getByRole('link', { name: '일정 추가' })).toHaveAttribute(
     'href',
     '#/schedules/new?date=' + date,
   );
@@ -346,11 +362,12 @@ it('opens a direct schedule creation URL as a dialog over the calendar', async (
   vi.mocked(listSchedules).mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
   window.history.replaceState(null, '', '#/schedules/new?date=2026-11-02');
   render(<App />);
-  const dialog = await screen.findByRole('dialog', { name: '스케줄 추가' });
+  await screen.findByText('가상 계정');
+  const dialog = await screen.findByRole('dialog', { name: '일정 추가' });
   expect(within(dialog).queryByLabelText('시작 날짜')).not.toBeInTheDocument();
-  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 스케줄'));
+  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 일정'));
   expect(within(dialog).getByLabelText('시작 날짜')).toHaveValue('2026-11-02');
-  fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 추가 닫기' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: '일정 추가 닫기' }));
   expect(window.location.hash).toBe('#/calendar');
   expect(screen.getByRole('heading', { name: '캘린더' })).toBeInTheDocument();
 });
@@ -359,6 +376,7 @@ it('opens work registration after a full pointer click with the sidebar expanded
   window.history.replaceState(null, '', '#/presets/works');
   vi.mocked(saveWork).mockResolvedValue(work);
   render(<App />);
+  await screen.findByText('가상 계정');
   await screen.findByText('첫 워크를 등록해 보세요.');
   fireEvent.click(screen.getByRole('button', { name: '메뉴 펼치기' }));
   const trigger = screen.getByRole('link', { name: '+ 워크 등록' });
@@ -387,13 +405,28 @@ it('opens work registration after a full pointer click with the sidebar expanded
 it('replaces the removed schedule management page with the calendar', async () => {
   window.history.replaceState(null, '', '#/schedules');
   render(<App />);
+  await screen.findByText('가상 계정');
   expect(await screen.findByRole('region', { name: '월 캘린더' })).toBeVisible();
-  expect(screen.queryByRole('link', { name: '저장된 스케줄 관리' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: '저장된 스케줄' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '저장된 일정 관리' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: '저장된 일정' })).not.toBeInTheDocument();
   expect(listSchedules).not.toHaveBeenCalled();
 });
 
 describe('app settings', () => {
+  it('resets the scrolling main on page navigation but preserves it when closing a modal', async () => {
+    window.history.replaceState(null, '', '#/presets/works');
+    render(<App />);
+    await screen.findByRole('heading', { name: '워크 프리셋' });
+    const main = screen.getByRole('main');
+    main.scrollTop = 220;
+    fireEvent.click(screen.getByRole('link', { name: '+ 워크 등록' }));
+    fireEvent.click(await screen.findByRole('button', { name: '등록 닫기' }));
+    expect(main.scrollTop).toBe(220);
+    window.history.replaceState(null, '', '#/presets/tasks');
+    fireEvent(window, new HashChangeEvent('hashchange'));
+    await screen.findByRole('heading', { name: '태스크 프리셋' });
+    expect(main.scrollTop).toBe(0);
+  });
   it.each([
     ['/today', '당일 요약'],
     ['/calendar', '전체 캘린더'],
@@ -401,9 +434,11 @@ describe('app settings', () => {
   ])('clears navigation selection and returns to the same %s destination', async (path, name) => {
     window.history.replaceState(null, '', '#' + path);
     render(<App />);
+    await screen.findByText('가상 계정');
     await waitFor(() => expect(bootstrapSettings).toHaveBeenCalled());
     const link = screen.getByRole('link', { name });
     expect(link).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(screen.getByRole('button', { name: '가상 계정' }));
     fireEvent.click(screen.getByRole('button', { name: '설정' }));
     expect(document.querySelector('.workspace-sidebar [aria-current]')).toBeNull();
     // Keep jsdom's deferred anchor navigation from leaking into the next test.
@@ -418,21 +453,23 @@ describe('app settings', () => {
     window.history.replaceState(null, '', '#/presets/works');
     vi.mocked(getWork).mockResolvedValue(work);
     render(<App />);
+    await screen.findByText('가상 계정');
     fireEvent.change(await screen.findByRole('searchbox', { name: '워크 검색' }), {
       target: { value: '작성 중 이름' },
     });
+    fireEvent.click(screen.getByRole('button', { name: '가상 계정' }));
     fireEvent.click(screen.getByRole('button', { name: '설정' }));
     expect(screen.getByRole('heading', { name: '설정' })).toHaveFocus();
     expect(screen.queryByRole('searchbox', { name: '워크 검색' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: '화면' }));
     expect(screen.getByRole('tabpanel', { name: '화면' })).toBeVisible();
-    fireEvent.keyDown(screen.getByRole('tab', { name: '화면' }), { key: 'ArrowUp' });
+    fireEvent.keyDown(screen.getByRole('tab', { name: '화면' }), { key: 'Home' });
     expect(screen.getByRole('tab', { name: '일반' })).toHaveFocus();
     expect(screen.getByRole('tabpanel', { name: '일반' })).toBeVisible();
     expect(within(screen.getByRole('tabpanel')).queryByRole('button')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '설정 닫기' }));
     expect(screen.getByRole('searchbox', { name: '워크 검색' })).toHaveValue('작성 중 이름');
-    await waitFor(() => expect(screen.getByRole('button', { name: '설정' })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('button', { name: '가상 계정' })).toHaveFocus());
     expect(saveWork).not.toHaveBeenCalled();
   });
 });
@@ -460,7 +497,8 @@ describe('unified edit dialogs', () => {
       window.history.replaceState(null, '', '#/schedules/schedule-edit' + suffix);
       vi.mocked(getSchedule).mockResolvedValue(scheduled);
       render(<App />);
-      const dialog = await screen.findByRole('dialog', { name: '스케줄 수정' });
+      await screen.findByText('가상 계정');
+      const dialog = await screen.findByRole('dialog', { name: '일정 수정' });
       expect(await within(dialog).findByRole('slider', { name: '시작 시간' })).toHaveAttribute(
         'aria-valuetext',
         '23:00',
@@ -480,19 +518,20 @@ describe('unified edit dialogs', () => {
       .mockRejectedValueOnce(new Error('편집 실패'))
       .mockResolvedValueOnce(scheduled);
     render(<App />);
+    await screen.findByText('가상 계정');
     const card = await screen.findByRole('article', { name: work.name });
     fireEvent.click(within(card).getByRole('button', { name: work.name }));
     const trigger = within(card).getByRole('link', { name: '수정' });
     trigger.focus();
     fireEvent.click(trigger);
-    const dialog = screen.getByRole('dialog', { name: '스케줄 수정' });
+    const dialog = screen.getByRole('dialog', { name: '일정 수정' });
     const start = await within(dialog).findByRole('slider', { name: '시작 시간' });
     fireEvent.keyDown(start, { key: 'ArrowRight' });
     expect(window.location.hash).toBe('#/today');
-    fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 저장' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '일정 저장' }));
     expect(await within(dialog).findByText('편집 실패')).toBeVisible();
     expect(start).toHaveAttribute('aria-valuetext', '23:05');
-    fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 저장' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '일정 저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(saveSchedule).toHaveBeenLastCalledWith(
       expect.objectContaining({ start_time: '23:05', end_date: '2026-09-26' }),
@@ -502,4 +541,37 @@ describe('unified edit dialogs', () => {
     expect(trigger).toHaveFocus();
     await waitFor(() => expect(getDaySchedules).toHaveBeenCalledTimes(2));
   });
+});
+
+it.each(['/today', '/presets/works', '/presets/tasks'])(
+  'offers one header schedule action using today on %s',
+  async (path) => {
+    window.history.replaceState(null, '', '#' + path);
+    render(<App />);
+    await screen.findByText('가상 계정');
+    const action = screen.getByRole('link', { name: '일정 추가' });
+    expect(action.closest('header')).toHaveClass('site-header');
+    expect(action).toHaveAttribute(
+      'href',
+      '#/schedules/new?date=' +
+        new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tokyo' }).format(new Date()),
+    );
+  },
+);
+it('uses the selected day only in the daily calendar, including after day navigation', async () => {
+  window.history.replaceState(null, '', '#/calendar');
+  render(<App />);
+  await screen.findByRole('region', { name: '월 캘린더' });
+  const action = screen.getByRole('link', { name: '일정 추가' });
+  const todayHref = action.getAttribute('href');
+  fireEvent.click(screen.getByRole('button', { name: '다음 달' }));
+  expect(action).toHaveAttribute('href', todayHref);
+  fireEvent.click(screen.getByRole('button', { name: /월 15일.*일정 0개/ }));
+  expect(action.getAttribute('href')).toMatch(/-15$/);
+  fireEvent.click(screen.getByRole('button', { name: '다음 날' }));
+  expect(action.getAttribute('href')).toMatch(/-16$/);
+  expect(screen.queryByRole('link', { name: '이 날짜에 일정 만들기' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '가상 계정' }));
+  fireEvent.click(screen.getByRole('button', { name: '설정' }));
+  expect(screen.queryByRole('link', { name: '일정 추가' })).not.toBeInTheDocument();
 });

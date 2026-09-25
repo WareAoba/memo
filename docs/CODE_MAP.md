@@ -1,12 +1,14 @@
 # 기능별 파일 지도
 
+
+- 페이지 공통 배치: `frontend/src/features/shared/WorkspaceHeader.tsx`, `workspace-header.css` (같은 폴더). 일정 검색 진입점은 `frontend/src/features/schedules/ScheduleSearchControl.tsx`.
 루트 기준 경로. 먼저 해당 행의 파일을 찾고 관련 심볼·테스트로 범위를 좁힌다.
 
 ## 실행 흐름
 
 - 브라우저: `frontend/src/main.tsx` → `App.tsx`(목록 hash 라우팅·상세/수정 통합 팝업) → `features/` → `api/client.ts`.
 - 서버: `backend/src/main.rs` → `lib.rs` → `routes/mod.rs` → 기능 route → service → SQLite.
-- DB 초기화: `backend/src/db/mod.rs`, `backend/migrations/`. 사용자 결정: `backend/src/local_user.rs`.
+- DB 초기화: `backend/src/db/mod.rs`, `backend/migrations/`. 사용자 결정: `backend/src/auth.rs` (서비스 호환 import: `backend/src/local_user.rs`).
 - API Host/Origin·응답 헤더: `backend/src/security.rs`, `backend/src/config.rs`, `backend/tests/security_audit.rs`. 앱 HTML 헤더: `frontend/vite.config.ts`, `docker/Caddyfile`.
 - 워크는 UI·소스에서 `works`, HTTP·DB 및 기존 백엔드 테스트에서는 `entities`다.
 
@@ -14,6 +16,7 @@
 
 | 기능 | 프런트 (`frontend/src/` 기준) | 백엔드 (`backend/src/` 기준) | 테스트 |
 | --- | --- | --- | --- |
+| 가상 계정·인증 경계 | `features/auth/AccountBoundary.tsx`, `features/auth/AccountMenu.tsx`, `features/auth/account-menu.css`, `api/auth.ts`, `App.tsx` | `auth.rs`, `config.rs`, `lib.rs`, `migrations/202609260002_virtual_account.sql` (backend 기준) | `backend/tests/auth.rs`, `frontend/src/features/auth/AccountBoundary.test.tsx` |
 | 워크 프리셋 | `features/works/`, `api/works.ts` | `routes/works.rs`, `services/works.rs` | `backend/tests/entities.rs`, `frontend/src/api/works.test.ts` |
 | 태스크 프리셋 | `features/tasks/`, `api/taskPresets.ts` | `routes/task_presets.rs`, `services/task_presets.rs` | `backend/tests/task_presets.rs`, `frontend/src/features/tasks/TaskPresets.test.tsx` |
 | 워크 기본 태스크 | `features/works/WorkTasks.tsx`, `api/workTasks.ts` | `routes/work_tasks.rs`, `services/work_tasks.rs` | `backend/tests/work_tasks.rs`, `frontend/src/features/works/WorkTasks.test.tsx` |
@@ -32,6 +35,10 @@
 - 요약 시계의 호·저장 후 갱신: `frontend/src/features/workspace/TodayDial.tsx`, `Today.tsx` (같은 폴더). 드래그 경계는 `frontend/src/features/schedules/TimeDial.tsx`.
 
 - 일정·실행 태스크 삭제: `backend/src/services/schedule_deletion.rs`, `frontend/src/features/shared/SwipeDelete.tsx`. 완료 취소는 `backend/src/services/execution.rs`; 실행·삭제 API와 첨부 정리 회귀는 `backend/tests/execution.rs`.
+
+- 직접 입력·숨겨진 프리셋: `backend/src/services/unmanaged_presets.rs`, `backend/src/routes/unmanaged_presets.rs`, `backend/migrations/202609260001_unmanaged_presets.sql`, `frontend/src/api/unmanagedPresets.ts`, `frontend/src/features/shared/UnmanagedSuggestions.tsx`. 일정 선택 입력은 `Picker.tsx`, 이름 전달은 `api/schedules.ts`가 담당한다.
+
+- 캘린더 막대 배치: `frontend/src/features/workspace/calendarLayout.ts`, 공통 월/연간 격자: `CalendarGrid.tsx`, 전환·조회: `Calendar.tsx`, 실측 좌표 확대/축소·페이지 전환: `useCalendarTransition.ts`, 6주 격자 날짜 드롭다운: `CalendarDatePicker.tsx`, 전용 스타일: `calendar.css` (같은 폴더).
 
 ## 스타일
 
@@ -52,3 +59,5 @@ npm run check:docs
 ```
 
 선택 테스트는 반복 편집 중 피드백용이다. 완료 시 변경한 쪽의 `check:frontend` / `check:backend`를 실행한다. 프런트·백엔드 계약 변경은 양쪽 검사와 SPEC 관련 절을 함께 확인한다.
+
+- 반응형 기준: `frontend/src/features/shared/useMobileLayout.ts` (700px), 메모 호환 이름은 `useMobileMemoLayout.ts`. 일간 태스크 직접 편집은 `frontend/src/features/workspace/SavedScheduleCard.tsx`, 모달 퇴장과 포커스 복귀는 `frontend/src/features/shared/PresetModal.tsx` 및 인접 테스트.

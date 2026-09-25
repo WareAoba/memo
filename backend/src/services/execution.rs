@@ -133,7 +133,10 @@ pub async fn task(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     if name.is_empty() || name.chars().count() > 200 {
         return Err(invalid());
     }
-    if status == "completed" && !requirements_met(&mut tx, &id).await? {
+    if fields.contains_key("status")
+        && status == "completed"
+        && !requirements_met(&mut tx, &id).await?
+    {
         return Err(ApiError::RequirementsIncomplete);
     }
     if status != old_status
@@ -306,13 +309,9 @@ pub async fn add_task(pool: &SqlitePool, id: &str, value: Value) -> Result<Value
     }) {
         return Err(invalid());
     }
-    let source = identifier(
-        fields
-            .get("task_preset_id")
-            .and_then(Value::as_str)
-            .ok_or_else(invalid)?,
-    )?;
+    let source_value = fields.get("task_preset_id").ok_or_else(invalid)?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
+    let source = super::unmanaged_presets::resolve(&mut tx, "task", source_value).await?;
     unlocked(&mut tx, &id).await?;
     let position: i64 = sqlx::query_scalar(
         "SELECT COALESCE(MAX(position)+1,0) FROM schedule_tasks WHERE schedule_id=?",

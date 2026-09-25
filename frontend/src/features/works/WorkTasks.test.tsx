@@ -51,7 +51,7 @@ it('adds, reorders, preserves failed edits, saves and cancels changes', async ()
       { ...a, position: 1 },
     ]);
   render(<WorkTasks id="work" />);
-  expect(await screen.findByText('보관됨 · 스케줄 선택 제외')).toBeVisible();
+  expect(await screen.findByText('보관됨 · 일정 선택 제외')).toBeVisible();
   fireEvent.click(await screen.findByRole('button', { name: '추가' }));
   fireEvent.click(screen.getByRole('button', { name: 'B 위로' }));
   fireEvent.click(screen.getByRole('button', { name: '기본 태스크 저장' }));

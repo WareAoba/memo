@@ -207,6 +207,7 @@
     color: var(--on-accent);
   }
   .ui-button.ui-icon-button {
+    flex-grow: 0;
     width: var(--control-height);
     height: var(--control-height);
     min-width: var(--control-height);
@@ -220,6 +221,29 @@
     height: var(--icon-size);
     flex-shrink: 0;
     vertical-align: middle;
+  }
+  .inline-help {
+    margin-block: var(--space-2);
+  }
+  .inline-help > summary {
+    color: var(--muted);
+    cursor: pointer;
+    min-height: var(--control-height);
+    padding-block: var(--space-3);
+    font-size: 13px;
+  }
+  .inline-help > summary:hover {
+    color: var(--accent-hover);
+  }
+  .inline-help p {
+    margin-top: 0;
+  }
+  .execution-task-list {
+    margin-bottom: var(--space-5);
+  }
+  .execution-task-list > h2 {
+    margin: 0;
+    font-size: 18px;
   }
   .ui-button[aria-pressed='true']:not([data-variant='plain']) {
     background: var(--accent-soft);
@@ -419,7 +443,8 @@
     border-radius: 0;
     padding: 0;
   }
-  .preset-switch a {
+  .preset-switch a,
+  .preset-switch.calendar-view-switch button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -427,11 +452,21 @@
     border-radius: 0;
     border-bottom: 2px solid transparent;
   }
-  .preset-switch a[aria-current] {
+  .preset-switch a[aria-current],
+  .preset-switch.calendar-view-switch button[aria-pressed='true'] {
     color: var(--accent-hover);
     background: transparent;
     border-bottom-color: var(--accent);
     box-shadow: none;
+  }
+  .preset-switch.calendar-view-switch button {
+    padding: var(--space-2) var(--view-tab-padding, var(--space-5));
+    background: transparent;
+    color: var(--muted);
+    box-shadow: none;
+  }
+  .preset-switch.calendar-view-switch button[aria-pressed='true'] {
+    color: var(--accent-hover);
   }
   .brand-mark {
     color: var(--on-accent);
@@ -493,6 +528,9 @@
     padding: var(--page-padding);
   }
   @media (max-width: 700px) {
+    .calendar-view-switch {
+      --view-tab-padding: var(--space-3);
+    }
     .ui-page-header {
       flex-wrap: wrap;
     }
@@ -510,16 +548,37 @@
         background-color var(--motion-fast) ease,
         color var(--motion-fast) ease,
         border-color var(--motion-fast) ease,
-        box-shadow var(--motion-medium) ease;
+        box-shadow var(--motion-medium) ease,
+        scale var(--motion-medium) var(--ease-settle);
     }
     .route-content,
-    .preset-modal[open],
+    .view-enter,
     .ui-menu,
     .error-box {
       animation: content-enter var(--motion-medium) var(--ease-settle) both;
     }
+    .ui-button:not([data-variant='plain']):not(:disabled):active,
+    .ui-card-button:not(:disabled):active,
+    .preset-switch a:active {
+      scale: 0.97;
+      transition-duration: var(--motion-press);
+    }
+    .preset-modal[open] {
+      animation: modal-enter var(--motion-slow) var(--ease-settle) both;
+    }
     .preset-modal[open]::backdrop {
       animation: veil-enter var(--motion-fast) ease both;
+    }
+    .preset-modal[data-closing]::backdrop {
+      animation: veil-enter var(--motion-exit) var(--ease-exit) reverse both;
+    }
+    .calendar-bar,
+    .schedule-search-results a,
+    .sidebar-navigation a,
+    .sidebar-row {
+      transition:
+        background-color var(--motion-fast) ease,
+        box-shadow var(--motion-fast) ease;
     }
     .ui-button[aria-busy='true'] .action-icon {
       animation: saving-breathe 850ms ease-in-out infinite alternate;
@@ -531,6 +590,16 @@
         background-color var(--motion-medium) ease,
         fill var(--motion-medium) ease,
         stroke var(--motion-medium) ease;
+    }
+  }
+  @keyframes modal-enter {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
   @keyframes content-enter {
@@ -562,7 +631,8 @@
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
-    *::after {
+    *::after,
+    *::backdrop {
       animation: none !important;
       transition: none !important;
       scroll-behavior: auto !important;

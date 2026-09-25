@@ -132,6 +132,10 @@
   .modal-footer:empty {
     display: none;
   }
+  .preset-modal .modal-body > .actions {
+    position: static;
+    background: transparent;
+  }
   .modal-footer .actions,
   .modal-footer .schedule-save {
     display: flex;
@@ -140,6 +144,9 @@
     gap: var(--space-3);
     margin: 0;
     padding: 0;
+  }
+  .modal-footer .actions > button {
+    flex: 0 0 auto;
   }
   .modal-footer .schedule-save > span {
     margin-right: auto;

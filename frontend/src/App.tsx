@@ -1,11 +1,13 @@
 import { Settings } from './features/settings/Settings';
+import { AccountBoundary } from './features/auth/AccountBoundary';
+import type { Account } from './api/auth';
 import { SettingsProvider } from './features/settings/SettingsProvider';
 import { useSettings } from './features/settings/settingsContext';
 import { useTranslation } from 'react-i18next';
 import { tr } from './i18n';
 import { Reminders } from './features/schedules/Reminders';
 import { ActionIcon } from './features/shared/ActionIcon';
-import { Button, Surface } from './features/shared/ui';
+import { Button, ButtonLink, Surface } from './features/shared/ui';
 import { PresetModal } from './features/shared/PresetModal';
 import { Sidebar } from './features/workspace/Sidebar';
 import { Today } from './features/workspace/Today';
@@ -16,7 +18,7 @@ import {
   TaskPresetEditor,
   TaskPresetListView,
 } from './features/tasks/TaskPresets';
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { emptyFields } from './api/works';
 import { WorkDetail, WorkEditor, WorkListView } from './features/works/Works';
 import { Calendar, type CalendarMode } from './features/workspace/Calendar';
@@ -43,17 +45,25 @@ function backgroundRoute(path: string) {
 }
 export default function App() {
   return (
-    <SettingsProvider>
-      <Workspace />
-    </SettingsProvider>
+    <AccountBoundary>
+      {(account) => (
+        <SettingsProvider key={account.id}>
+          <Workspace account={account} />
+        </SettingsProvider>
+      )}
+    </AccountBoundary>
   );
 }
-function Workspace() {
+function Workspace({ account }: { account: Account }) {
   useTranslation();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settings = useSettings();
   const [dataRevision, setDataRevision] = useState(0);
   const [path, setPath] = useState(() => backgroundRoute(route()));
+  const main = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    if (main.current) main.current.scrollTop = 0;
+  }, [path, dataRevision]);
   const [editor, setEditor] = useState<EditTarget | null>(() => editTarget(route()));
   function closeEditor() {
     setEditor(null);
@@ -89,6 +99,7 @@ function Workspace() {
 
   const [menuExpanded, setMenuExpanded] = useState(false);
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month');
+  const [calendarDate, setCalendarDate] = useState<string>();
   const [online, setOnline] = useState(navigator.onLine);
   const timeZone = settings.loaded ? settings.values.time_zone : undefined;
   const today = useToday(timeZone);
@@ -118,7 +129,6 @@ function Workspace() {
       }
       setScheduleDraft(null);
       setPath(next);
-      window.scrollTo(0, 0);
     };
     const status = () => setOnline(navigator.onLine);
     window.addEventListener('hashchange', change);
@@ -202,8 +212,25 @@ function Workspace() {
             Preset
           </a>
         </div>
+        {!settingsOpen && (
+          <ButtonLink
+            variant="primary"
+            className="header-add-schedule"
+            data-modal-trigger
+            href={
+              '#/schedules/new?date=' +
+              (!settingsOpen && path === '/calendar' && calendarMode === 'day'
+                ? (calendarDate ?? today)
+                : today)
+            }
+          >
+            <ActionIcon name="plus" />
+            {tr('App.addSchedule')}
+          </ButtonLink>
+        )}
       </header>
       <Sidebar
+        account={account}
         settingsOpen={settingsOpen}
         onSettings={() => {
           setSettingsOpen(true);
@@ -216,7 +243,7 @@ function Workspace() {
         calendarMode={calendarMode}
         onCalendarMode={setCalendarMode}
       />
-      <main hidden={settingsOpen}>
+      <main ref={main} hidden={settingsOpen}>
         {!online && (
           <Surface as="div" tone="danger" className="error-box" role="status">
             {tr('App.youAreOfflineReconnectAndTrySavingAgain')}
@@ -233,6 +260,7 @@ function Workspace() {
                 today={today}
                 mode={calendarMode}
                 onModeChange={setCalendarMode}
+                onSelectedDateChange={setCalendarDate}
               />
             ) : (
               <p role="status">{tr('App.loadingAppSettings')}</p>
@@ -251,7 +279,7 @@ function Workspace() {
           <Settings
             onClose={() => {
               setSettingsOpen(false);
-              requestAnimationFrame(() => document.getElementById('open-settings')?.focus());
+              requestAnimationFrame(() => document.getElementById('account-menu-trigger')?.focus());
             }}
           />
         </main>

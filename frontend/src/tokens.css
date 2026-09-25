@@ -1,6 +1,9 @@
 @layer base, features, components;
 /* Design reference: change values here, never in a feature stylesheet. */
 :root {
+  --calendar-bar-fill: #ffffff;
+  --calendar-bar-ink: #36323d;
+  --calendar-bar-shadow: 3px 4px 8px rgb(54 50 61 / 16%), -2px -2px 5px rgb(255 255 255 / 80%);
   --schedule-red: #ff3030;
   --schedule-orange: #ff8500;
   --schedule-yellow: #f5cf00;
@@ -60,9 +63,13 @@
   --shadow-dialog: 0 24px 80px rgb(54 50 61 / 20%);
   --shadow-hover: 0 4px 14px rgb(54 50 61 / 8%);
   --backdrop: rgb(36 30 43 / 38%);
-  --ease-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --motion-fast: 160ms;
-  --motion-medium: 280ms;
+  --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
+  --motion-press: 100ms;
+  --motion-fast: 220ms;
+  --motion-medium: 460ms;
+  --motion-slow: 560ms;
+  --motion-exit: 260ms;
   /* Clock illustration and schedule progress have their own semantic palette. */
   --dial-night: #c0b0de;
   --dial-dawn: #d9c3e3;

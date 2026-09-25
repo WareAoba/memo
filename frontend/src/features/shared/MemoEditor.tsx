@@ -66,9 +66,13 @@ export function MemoEditor({
           void memo.flush();
         }}
       />
-      {!memo.error && (memo.saving || memo.saved) && (
+      {!memo.error && (
         <p className="hint memo-save-status" role="status" aria-live="polite">
-          {memo.saving ? tr('Photos.saving') : tr('MemoEditor.memoSaved')}
+          {memo.saving
+            ? tr('Photos.saving')
+            : memo.saved
+              ? tr('MemoEditor.memoSaved')
+              : tr('UI.memoAutoSave')}
         </p>
       )}
       {memo.error && (

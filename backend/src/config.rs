@@ -2,6 +2,7 @@ use std::{env, net::SocketAddr, path::PathBuf};
 
 #[derive(Debug)]
 pub struct Config {
+    pub auth_mode: crate::auth::AuthMode,
     pub bind_address: SocketAddr,
     pub database_path: PathBuf,
     pub photo_dir: PathBuf,
@@ -20,6 +21,9 @@ impl Config {
             return Err("DATABASE_PATH must not be empty".into());
         }
         Ok(Self {
+            auth_mode: crate::auth::AuthMode::parse(
+                &env::var("AUTH_MODE").unwrap_or_else(|_| "virtual".into()),
+            )?,
             bind_address,
             request_policy: match env::var("APP_ORIGINS") {
                 Ok(value) => crate::security::RequestPolicy::parse(&value)?,

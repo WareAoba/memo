@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod config;
 pub mod db;
 pub mod errors;
@@ -41,13 +42,31 @@ pub fn app_with_policy(
     push: Option<std::sync::Arc<push::PushService>>,
     policy: security::RequestPolicy,
 ) -> Router {
+    app_with_auth(pool, photo_dir, push, policy, auth::AuthMode::Virtual)
+}
+
+pub fn app_with_auth(
+    pool: SqlitePool,
+    photo_dir: std::path::PathBuf,
+    push: Option<std::sync::Arc<push::PushService>>,
+    policy: security::RequestPolicy,
+    mode: auth::AuthMode,
+) -> Router {
+    let state = AppState {
+        pool,
+        photo_dir,
+        push,
+        uploads: std::sync::Arc::new(tokio::sync::Semaphore::new(4)),
+    };
     routes::router()
-        .with_state(AppState {
-            pool,
-            photo_dir,
-            push,
-            uploads: std::sync::Arc::new(tokio::sync::Semaphore::new(4)),
-        })
+        .route("/api/auth/me", axum::routing::get(auth::me))
+        .route_layer(middleware::from_fn_with_state(
+            (state.clone(), mode),
+            auth::protect,
+        ))
+        .route("/api/health", axum::routing::get(routes::health::health))
+        .method_not_allowed_fallback(|| async { errors::ApiError::MethodNotAllowed })
+        .with_state(state)
         .layer(middleware::from_fn_with_state(policy, security::protect))
 }
 

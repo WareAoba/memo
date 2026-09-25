@@ -13,7 +13,8 @@ import { ButtonLink, Input, Button, Textarea, PageHeader } from '../shared/ui';
 import { TaskGroupPicker } from './TaskGroupPicker';
 import { IconButton } from '../shared/IconButton';
 import { ActionIcon } from '../shared/ActionIcon';
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
+import { useMobileLayout } from '../shared/useMobileLayout';
 import { ModalActions } from '../shared/PresetModal';
 import { saveSchedule, type ScheduleDetail, type ScheduleFields } from '../../api/schedules';
 import { getWorkTasks } from '../../api/workTasks';
@@ -23,13 +24,6 @@ import { useEditorActive } from '../useEditorActive';
 import { Picker } from './Picker';
 import { TimeDial } from './TimeDial';
 import { dateInZone, nextDate } from './timeRange';
-const mobileQuery = '(max-width: 700px)';
-function subscribeMobile(update: () => void) {
-  const query = window.matchMedia?.(mobileQuery);
-  query?.addEventListener('change', update);
-  return () => query?.removeEventListener('change', update);
-}
-const readMobile = () => window.matchMedia?.(mobileQuery).matches ?? false;
 export function ScheduleEditor({
   embedded = false,
   hideMemo = false,
@@ -53,7 +47,7 @@ export function ScheduleEditor({
   const step = useSettings().values.clock_step;
   const active = useEditorActive();
   const formId = useId();
-  const mobile = useSyncExternalStore(subscribeMobile, readMobile, () => false);
+  const mobile = useMobileLayout();
   const taskCard = useRef<HTMLDivElement>(null);
   const [fields, setFields] = useState<ScheduleFields>(() =>
     initial
@@ -113,7 +107,7 @@ export function ScheduleEditor({
     setLoading(true);
     setDefaultsError('');
     try {
-      const t = await getWorkTasks(w.id);
+      const t = w.id.startsWith('name:') ? [] : await getWorkTasks(w.id);
       if (active.current && token === generation.current) setTasks(t.filter((x) => !x.archived));
     } catch (e) {
       if (active.current && token === generation.current) setDefaultsError(message(e));
@@ -213,6 +207,44 @@ export function ScheduleEditor({
       <form id={formId} onSubmit={(e) => void submit(e)}>
         <fieldset disabled={busy} className="schedule-form">
           <div className="schedule-compose">
+            <div className="schedule-work-selection">
+              <div className="schedule-panel-heading">
+                <h2>{tr('ScheduleEditor.work')}</h2>
+              </div>
+              {initial ? (
+                <p className="selected-work">{initial.entity_snapshot.name}</p>
+              ) : (
+                <>
+                  {work && (
+                    <div className="selected-work memo-preview">
+                      <strong>{work.name}</strong>
+                      <Button
+                        variant="ghost"
+                        type="button"
+                        aria-label={
+                          showWorks ? tr('ScheduleEditor.close') : tr('ScheduleEditor.change')
+                        }
+                        title={showWorks ? tr('ScheduleEditor.close') : tr('ScheduleEditor.change')}
+                        onClick={() => setShowWorks(!showWorks)}
+                      >
+                        {showWorks ? tr('ScheduleEditor.close') : tr('ScheduleEditor.change')}
+                      </Button>
+                    </div>
+                  )}
+                  {showWorks && <Picker allowCreate kind="work" onPick={(w) => void choose(w)} />}
+                </>
+              )}
+              {loading && <p role="status">{tr('ScheduleEditor.loadingDefaultTasks')}</p>}
+              {defaultsError && (
+                <ErrorBox
+                  error={defaultsError}
+                  retry={() => {
+                    if (work) void choose(work);
+                  }}
+                />
+              )}
+            </div>
+
             <section className="schedule-time-panel schedule-card-stage">
               <div className={`schedule-flip-card${showTasks ? ' is-flipped' : ''}`}>
                 {!mobile && !initial && (
@@ -223,7 +255,7 @@ export function ScheduleEditor({
                     aria-hidden={!showTasks}
                   >
                     <div className="schedule-panel-heading">
-                      <h2>{tr('ScheduleEditor.taskGroups')}</h2>
+                      <h2>{tr('ScheduleEditor.addTask')}</h2>
                       <IconButton icon="close" type="button" onClick={() => setShowTasks(false)}>
                         {mobile
                           ? tr('ScheduleEditor.closeTaskSelection')
@@ -247,142 +279,113 @@ export function ScheduleEditor({
                   inert={showTasks && !mobile}
                   aria-hidden={showTasks && !mobile}
                 >
-                  <div className="schedule-panel-heading">
-                    <h2>{multiDay ? tr('ScheduleEditor.dateAndTime') : tr('app.time')}</h2>
-                  </div>
-                  {multiDay && (
-                    <label>
-                      {tr('ScheduleEditor.startDate')}
-                      <Input
-                        required
-                        type="date"
-                        min="0001-01-01"
-                        max="9999-12-31"
-                        value={fields.scheduled_date}
-                        onChange={(e) =>
-                          setFields({
-                            ...fields,
-                            scheduled_date: e.target.value,
-                            end_date: multiDay ? fields.end_date : e.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                  )}
-
-                  <TimeDial
-                    independentEndpoints={multiDay}
-                    daySpan={
-                      multiDay
-                        ? Math.max(
-                            0,
-                            (Date.parse(fields.end_date) - Date.parse(fields.scheduled_date)) /
-                              86400000,
-                          ) || 0
-                        : 0
-                    }
-                    start={fields.start_time}
-                    end={fields.end_time}
-                    disabled={busy}
-                    onChange={(range) =>
-                      setFields({ ...fields, start_time: range.start, end_time: range.end })
-                    }
-                  />
-                  {multiDay && (
-                    <div className="manual-time-range">
+                  <details className="schedule-time-disclosure" open={!mobile}>
+                    <summary>
+                      <span>{tr('app.time')}</span>
+                      <strong>
+                        {fields.start_time} — {fields.end_time}
+                      </strong>
+                      {multiDay && (
+                        <span>
+                          {fields.scheduled_date} → {fields.end_date}
+                        </span>
+                      )}
+                    </summary>
+                    <div className="schedule-panel-heading">
+                      <h2>{multiDay ? tr('ScheduleEditor.dateAndTime') : tr('app.time')}</h2>
+                    </div>
+                    {multiDay && (
                       <label>
-                        {tr('ScheduleEditor.endDate')}
+                        {tr('ScheduleEditor.startDate')}
                         <Input
                           required
                           type="date"
-                          min={fields.scheduled_date}
+                          min="0001-01-01"
                           max="9999-12-31"
-                          value={fields.end_date}
-                          onChange={(e) => setFields({ ...fields, end_date: e.target.value })}
+                          value={fields.scheduled_date}
+                          onChange={(e) =>
+                            setFields({
+                              ...fields,
+                              scheduled_date: e.target.value,
+                              end_date: multiDay ? fields.end_date : e.target.value,
+                            })
+                          }
                         />
                       </label>
-                      <div className="schedule-times">
-                        <label>
-                          {tr('ScheduleEditor.startTime')}
-                          <Input
-                            required
-                            type="time"
-                            step={60}
-                            value={fields.start_time}
-                            onChange={(e) => setFields({ ...fields, start_time: e.target.value })}
-                          />
-                        </label>
-                        <label>
-                          {tr('ScheduleEditor.endTime')}
-                          <Input
-                            min="00:01"
-                            required
-                            type="time"
-                            step={60}
-                            value={fields.end_time}
-                            onChange={(e) => setFields({ ...fields, end_time: e.target.value })}
-                          />
-                        </label>
-                      </div>
-                      <p className="hint">
-                        {tr('ScheduleEditor.setTheStartAndEndDatesAndTimesTimes')}
-                      </p>
-                    </div>
-                  )}
-                  <label className="multi-day-toggle">
-                    <Input
-                      type="checkbox"
-                      checked={multiDay}
-                      onChange={(e) => toggleMulti(e.target.checked)}
+                    )}
+
+                    <TimeDial
+                      independentEndpoints={multiDay}
+                      daySpan={
+                        multiDay
+                          ? Math.max(
+                              0,
+                              (Date.parse(fields.end_date) - Date.parse(fields.scheduled_date)) /
+                                86400000,
+                            ) || 0
+                          : 0
+                      }
+                      start={fields.start_time}
+                      end={fields.end_time}
+                      disabled={busy}
+                      onChange={(range) =>
+                        setFields({ ...fields, start_time: range.start, end_time: range.end })
+                      }
                     />
-                    <span>{tr('ScheduleEditor.scheduleSpanningMultipleDays')}</span>
-                  </label>
+                    {multiDay && (
+                      <div className="manual-time-range">
+                        <label>
+                          {tr('ScheduleEditor.endDate')}
+                          <Input
+                            required
+                            type="date"
+                            min={fields.scheduled_date}
+                            max="9999-12-31"
+                            value={fields.end_date}
+                            onChange={(e) => setFields({ ...fields, end_date: e.target.value })}
+                          />
+                        </label>
+                        <div className="schedule-times">
+                          <label>
+                            {tr('ScheduleEditor.startTime')}
+                            <Input
+                              required
+                              type="time"
+                              step={60}
+                              value={fields.start_time}
+                              onChange={(e) => setFields({ ...fields, start_time: e.target.value })}
+                            />
+                          </label>
+                          <label>
+                            {tr('ScheduleEditor.endTime')}
+                            <Input
+                              min="00:01"
+                              required
+                              type="time"
+                              step={60}
+                              value={fields.end_time}
+                              onChange={(e) => setFields({ ...fields, end_time: e.target.value })}
+                            />
+                          </label>
+                        </div>
+                        <p className="hint">
+                          {tr('ScheduleEditor.setTheStartAndEndDatesAndTimesTimes')}
+                        </p>
+                      </div>
+                    )}
+                    <label className="multi-day-toggle">
+                      <Input
+                        type="checkbox"
+                        checked={multiDay}
+                        onChange={(e) => toggleMulti(e.target.checked)}
+                      />
+                      <span>{tr('ScheduleEditor.scheduleSpanningMultipleDays')}</span>
+                    </label>
+                  </details>
                 </div>
               </div>
             </section>
             <section className="schedule-content-panel">
-              <div className="schedule-panel-heading">
-                <h2>{tr('ScheduleEditor.work')}</h2>
-              </div>
-              {initial ? (
-                <p className="selected-work">{initial.entity_snapshot.name}</p>
-              ) : (
-                <>
-                  {work && (
-                    <div className="selected-work memo-preview">
-                      <strong>{work.name}</strong>
-                      <MemoButton
-                        label={work.name}
-                        value={fields.notes}
-                        onSave={async (notes) => setFields((f) => ({ ...f, notes }))}
-                        scope={tr('ScheduleEditor.memoForThisWorkSavedTogetherWithTheSchedule')}
-                      />
-                      <Button
-                        iconOnly
-                        variant="ghost"
-                        type="button"
-                        aria-label={
-                          showWorks ? tr('ScheduleEditor.close') : tr('ScheduleEditor.change')
-                        }
-                        title={showWorks ? tr('ScheduleEditor.close') : tr('ScheduleEditor.change')}
-                        onClick={() => setShowWorks(!showWorks)}
-                      >
-                        <ActionIcon name={showWorks ? 'close' : 'edit'} />
-                      </Button>
-                    </div>
-                  )}
-                  {showWorks && <Picker kind="work" onPick={(w) => void choose(w)} />}
-                </>
-              )}
-              {loading && <p role="status">{tr('ScheduleEditor.loadingDefaultTasks')}</p>}
-              {defaultsError && (
-                <ErrorBox
-                  error={defaultsError}
-                  retry={() => {
-                    if (work) void choose(work);
-                  }}
-                />
-              )}
               {!initial && work && !loading && !defaultsError && (
                 <div className="schedule-tasks">
                   <h3>
@@ -409,7 +412,6 @@ export function ScheduleEditor({
                           <MemoButton
                             label={t.name}
                             value={customizations[t.id]?.execution_notes ?? ''}
-                            scope={tr('ScheduleEditor.memoForThisTaskSavedTogetherWithTheSchedule')}
                             onSave={async (execution_notes) => customize(t.id, { execution_notes })}
                           />
                           <Button
@@ -441,9 +443,6 @@ export function ScheduleEditor({
                       </li>
                     ))}
                   </ol>
-                  {!tasks.length && (
-                    <p className="hint">{tr('ScheduleEditor.youCanSaveWithoutAnyTasks')}</p>
-                  )}
                   <Button
                     type="button"
                     className="schedule-task-toggle"
@@ -451,7 +450,7 @@ export function ScheduleEditor({
                     onClick={() => setShowTasks(!showTasks)}
                   >
                     <ActionIcon name={showTasks ? 'close' : 'plus'} />
-                    {tr('ScheduleEditor.task')}
+                    {tr('ScheduleEditor.addTask')}
                   </Button>
                   {mobile && showTasks && (
                     <div
@@ -461,7 +460,7 @@ export function ScheduleEditor({
                       aria-hidden={!showTasks}
                     >
                       <div className="schedule-panel-heading">
-                        <h2>{tr('ScheduleEditor.taskGroups')}</h2>
+                        <h2>{tr('ScheduleEditor.addTask')}</h2>
                         <IconButton icon="close" type="button" onClick={() => setShowTasks(false)}>
                           {mobile
                             ? tr('ScheduleEditor.closeTaskSelection')
@@ -498,19 +497,10 @@ export function ScheduleEditor({
                       rows={3}
                       maxLength={5000}
                       value={fields.notes}
-                      placeholder={tr('ScheduleEditor.memoForThisScheduleOnly')}
                       onChange={(e) => setFields({ ...fields, notes: e.target.value })}
                     />
                   </label>
-                  <p className="hint">
-                    {tr('ScheduleEditor.thisMemoIsSavedOnlyToThisScheduleAnd')}
-                  </p>
                 </div>
-              )}
-              {initial && (
-                <p className="hint">
-                  {tr('ScheduleEditor.theOriginalWorkAndTaskSelectionIsPreserved')}
-                </p>
               )}
             </section>
           </div>
@@ -525,7 +515,11 @@ export function ScheduleEditor({
                 />
               )}
               <span>
-                {multiDay ? `${fields.scheduled_date} → ${fields.end_date}` : null}
+                {multiDay
+                  ? `${fields.scheduled_date} → ${fields.end_date}`
+                  : !initial && (
+                      <time dateTime={fields.scheduled_date}>{fields.scheduled_date}</time>
+                    )}
                 <strong>
                   {fields.start_time} — {fields.end_time}
                 </strong>
@@ -542,17 +536,17 @@ export function ScheduleEditor({
                   <ActionIcon name="close" />
                 </Button>
               )}
-              <IconButton
+              <Button
                 variant="primary"
-                icon="save"
+                aria-busy={busy || undefined}
 
                 disabled={busy || (!initial && (!work || loading || Boolean(defaultsError)))}
                 form={formId}
                 type="submit"
               >
-                {busy ? tr('Photos.saving') : tr('ScheduleEditor.saveSchedule')}{' '}
-                <span aria-hidden="true">↗</span>
-              </IconButton>
+                <ActionIcon name="save" />
+                {busy ? tr('Photos.saving') : tr('ScheduleEditor.saveSchedule')}
+              </Button>
             </div>
           </ModalActions>
         </fieldset>

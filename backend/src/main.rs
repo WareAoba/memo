@@ -1,5 +1,5 @@
 use preset_execution_api::{
-    app_with_policy, cleanup_photos, config::Config, db, push::PushService, reminder_worker,
+    app_with_auth, cleanup_photos, config::Config, db, push::PushService, reminder_worker,
 };
 use tracing_subscriber::EnvFilter;
 
@@ -40,7 +40,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!(event = "server_start", address = %listener.local_addr()?, "API listening");
     let result = axum::serve(
         listener,
-        app_with_policy(pool.clone(), config.photo_dir, push, config.request_policy),
+        app_with_auth(
+            pool.clone(),
+            config.photo_dir,
+            push,
+            config.request_policy,
+            config.auth_mode,
+        ),
     )
     .with_graceful_shutdown(shutdown_signal())
     .await;

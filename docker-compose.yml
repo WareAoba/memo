@@ -12,6 +12,7 @@ services:
       VAPID_KEY_PATH: /data/push/vapid.key
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@example.invalid}
       RUST_LOG: ${RUST_LOG:-info}
+      AUTH_MODE: ${AUTH_MODE:-virtual}
       APP_ORIGINS: http://localhost:${APP_PORT:-8080},http://127.0.0.1:${APP_PORT:-8080},http://[::1]:${APP_PORT:-8080},http://127.0.0.1:3000,http://127.0.0.1
     volumes:
       - ${DATA_VOLUME:-app-data}:/data

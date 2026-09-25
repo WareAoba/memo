@@ -1,3 +1,5 @@
+import type { Account } from '../../api/auth';
+import { AccountMenu } from '../auth/AccountMenu';
 import { useTranslation } from 'react-i18next';
 import { tr, monthLabel } from '../../i18n';
 import { Button } from '../shared/ui';
@@ -6,6 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CalendarMode } from './Calendar';
 
 export function Sidebar({
+  account,
   settingsOpen = false,
   onSettings,
   path,
@@ -15,6 +18,7 @@ export function Sidebar({
   expanded,
   onExpanded,
 }: {
+  account?: Account;
   settingsOpen?: boolean;
   onSettings?: () => void;
   expanded: boolean;
@@ -103,9 +107,9 @@ export function Sidebar({
               title={tr('Sidebar.fullCalendar')}
               aria-current={!settingsOpen && path === '/calendar' ? 'page' : undefined}
               onClick={() => {
-                if (expanded || mobile()) {
+                if (mobile()) onExpanded(false);
+                else if (expanded) {
                   setDrawer('calendar');
-                  if (mobile()) onExpanded(true);
                 }
               }}
             >
@@ -170,13 +174,13 @@ export function Sidebar({
               title={tr('Sidebar.presetSettings')}
               aria-current={!settingsOpen && path.startsWith('/presets/') ? 'page' : undefined}
               onClick={() => {
-                if (expanded || mobile()) {
+                if (mobile()) onExpanded(false);
+                else if (expanded) {
                   setDrawer('presets');
-                  if (mobile()) onExpanded(true);
                 }
               }}
             >
-              <ActionIcon name="settings" className="nav-symbol" />
+              <ActionIcon name="presets" className="nav-symbol" />
               <span className="sidebar-label">{tr('Sidebar.presetSettings')}</span>
             </a>
             {expanded && (
@@ -221,20 +225,7 @@ export function Sidebar({
           </div>
         </div>
       </nav>
-      {onSettings && (
-        <Button
-          id="open-settings"
-          variant="ghost"
-          className="sidebar-settings"
-          aria-label={tr('Settings.title')}
-          title={tr('Settings.title')}
-          aria-pressed={settingsOpen}
-          onClick={onSettings}
-        >
-          <ActionIcon name="settings" />
-          <span className="sidebar-label">{tr('Settings.title')}</span>
-        </Button>
-      )}
+      {account && onSettings && <AccountMenu account={account} onSettings={onSettings} />}
     </aside>
   );
 }

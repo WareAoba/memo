@@ -33,6 +33,7 @@ export async function requestJson(
     throw new LocalizedError('client.cannotConnectToTheServerCheckYourConnectionAnd');
   });
   if (!response.ok) {
+    if (response.status === 401) throw new ApiError('Auth.signInRequired', 401, 'UNAUTHORIZED');
     if (response.status === 409) {
       const body = await response.json().catch(() => undefined);
       const code = record(body) && record(body.error) ? body.error.code : undefined;
@@ -56,7 +57,10 @@ export async function requestJson(
       response.status,
     );
   }
-  if (method !== 'GET' && path.startsWith('/api/schedule'))
+  if (
+    (method !== 'GET' && path.startsWith('/api/schedule')) ||
+    (method === 'POST' && ['/api/entities', '/api/task-presets'].includes(path))
+  )
     window.dispatchEvent(new Event('schedules-changed'));
   if (response.status === 204) return undefined;
   try {

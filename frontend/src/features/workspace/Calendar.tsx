@@ -1,15 +1,20 @@
+import { WorkspaceHeader } from '../shared/WorkspaceHeader';
+import { ScheduleSearchControl } from '../schedules/ScheduleSearchControl';
+import { CalendarDatePicker } from './CalendarDatePicker';
 import { useTranslation } from 'react-i18next';
 import { tr, locale, weekdays, monthLabel } from '../../i18n';
-import { PageHeader, Button, Surface, Input, ButtonLink } from '../shared/ui';
+import { Button, Surface } from '../shared/ui';
 import { IconButton } from '../shared/IconButton';
 import { ActionIcon } from '../shared/ActionIcon';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useCalendarTransition } from './useCalendarTransition';
+import { CalendarGrid } from './CalendarGrid';
+import './calendar.css';
 import { getRangeSchedules, type ScheduleDetail } from '../../api/schedules';
 import { dateKey, fromDateKey, monthDays } from './preview';
 import { SavedScheduleCard } from './SavedScheduleCard';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
-import { ScheduleSearch } from '../schedules/ScheduleSearch';
 
 const dateLabel = (date: string) =>
   fromDateKey(date).toLocaleDateString(locale(), {
@@ -22,26 +27,37 @@ export function Calendar({
   today,
   mode: controlledMode,
   onModeChange,
+  onSelectedDateChange,
   revision = 0,
 }: {
   today: string;
   revision?: number;
   mode?: CalendarMode;
   onModeChange?: (mode: CalendarMode) => void;
+  onSelectedDateChange?: (date: string) => void;
 }) {
   useTranslation();
   const [localMode, setLocalMode] = useState<CalendarMode>('month');
   const mode = controlledMode ?? localMode;
-  function changeMode(next: CalendarMode) {
+  function changeMode(next: CalendarMode, date = selected) {
+    if (next === mode) return;
+    prepare({ from: mode, to: next, date });
+    setDatePickerOpen(false);
     setLocalMode(next);
     onModeChange?.(next);
   }
   const [selected, setSelected] = useState(today);
+  useEffect(() => {
+    onSelectedDateChange?.(selected);
+  }, [selected, onSelectedDateChange]);
   const [month, setMonth] = useState(() => today.slice(0, 7));
   const [result, setResult] = useState<{ range: string; items: ScheduleDetail[] }>();
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const panel = useRef<HTMLElement>(null);
+  const dateTrigger = useRef<HTMLButtonElement>(null);
+  const prepare = useCalendarTransition(panel, `${mode}:${month}:${selected}`);
   const cells = monthDays(fromDateKey(month + '-01'));
   const dates = cells.filter((d): d is string => d !== null);
   const first = dates[0]!;
@@ -60,7 +76,11 @@ export function Calendar({
       });
     return () => controller.abort();
   }, [rangeStart, rangeEnd, range, attempt, revision]);
-  const items = result?.range === range ? result.items : undefined;
+  const loadedBounds = result?.range.split('/');
+  const items =
+    result && loadedBounds && loadedBounds[0]! <= rangeStart && loadedBounds[1]! >= rangeEnd
+      ? result.items
+      : undefined;
   const onDate = (date: string) =>
     items?.filter((s) => s.scheduled_date <= date && s.end_date >= date) || [];
   const list = onDate(selected);
@@ -70,119 +90,101 @@ export function Calendar({
     setSelected(date);
   }
   function move(delta: number) {
+    prepare({ direction: Math.sign(delta) });
     const d = fromDateKey(month + '-01');
     d.setMonth(d.getMonth() + delta);
     const next = dateKey(d);
     chooseMonth(next.slice(0, 7), next);
   }
+  function moveDay(delta: number) {
+    prepare({ direction: Math.sign(delta) });
+    const date = fromDateKey(selected);
+    date.setDate(date.getDate() + delta);
+    const next = dateKey(date);
+    chooseMonth(next.slice(0, 7), next);
+  }
   return (
-    <section className={`calendar-workspace calendar-mode-${mode}`}>
-      <PageHeader className="workspace-heading">
-        <h1>{tr('Schedules.calendar')}</h1>
-        <div className="calendar-heading-actions">
-          <Button
-            iconOnly
-            variant="ghost"
-            aria-label={tr('ScheduleSearch.searchSchedules')}
-            title={tr('ScheduleSearch.searchSchedules')}
-            onClick={() => setSearchOpen(true)}
+    <section ref={panel} className={`calendar-workspace calendar-mode-${mode}`}>
+      <WorkspaceHeader
+        title={<h1>{tr('Schedules.calendar')}</h1>}
+        navigation={
+          <div
+            className="preset-switch calendar-view-switch"
+            role="group"
+            aria-label={tr('Sidebar.calendarViews')}
           >
-            <ActionIcon name="search" />
-          </Button>
-          <Button
-            iconOnly
-            variant="ghost"
-            onClick={() => {
-              setResult(undefined);
-              setError('');
-              setAttempt((n) => n + 1);
-            }}
-            aria-label={tr('Calendar.refresh')}
-            title={tr('Calendar.refresh')}
-          >
-            <ActionIcon name="refresh" />
-          </Button>
-        </div>
-      </PageHeader>
-      {searchOpen && <ScheduleSearch onClose={() => setSearchOpen(false)} />}
+            {(['day', 'month', 'year'] as const).map((value) => (
+              <Button
+                variant="plain"
+                key={value}
+                aria-pressed={mode === value}
+                onClick={() => changeMode(value)}
+              >
+                {tr(`Calendar.${value}Tab`)}
+              </Button>
+            ))}
+          </div>
+        }
+        tools={<ScheduleSearchControl />}
+      />
+      {datePickerOpen && (
+        <CalendarDatePicker
+          anchor={dateTrigger}
+          selected={selected}
+          today={today}
+          onClose={() => setDatePickerOpen(false)}
+          onSelect={(date) => {
+            chooseMonth(date.slice(0, 7), date);
+            setDatePickerOpen(false);
+          }}
+        />
+      )}
       {mode === 'month' && (
         <Surface
           as="section"
+          padding="compact"
+          data-calendar-page
           className="calendar-panel"
+          tabIndex={-1}
           aria-label={tr('Calendar.monthlyCalendar')}
         >
-          <div className="calendar-controls">
+          <div className="calendar-controls calendar-period-heading">
+            <IconButton icon="left" disabled={month <= '0001-01'} onClick={() => move(-1)}>
+              {tr('Calendar.previousMonth')}
+            </IconButton>
             <h2 aria-live="polite">
               {fromDateKey(first).toLocaleDateString(locale(), { year: 'numeric', month: 'long' })}
             </h2>
-            <div>
-              <Button
-                iconOnly
-                variant="ghost"
-                disabled={month <= '0001-01'}
-                onClick={() => move(-1)}
-                aria-label={tr('Calendar.previousMonth')}
-              >
-                <ActionIcon name="left" />
-              </Button>
-              <Button onClick={() => chooseMonth(today.slice(0, 7), today)}>
-                {tr('Calendar.today')}
-              </Button>
-              <Button
-                iconOnly
-                variant="ghost"
-                disabled={month >= '9999-12'}
-                onClick={() => move(1)}
-                aria-label={tr('Calendar.nextMonth')}
-              >
-                <ActionIcon name="right" />
-              </Button>
-            </div>
+            <IconButton icon="right" disabled={month >= '9999-12'} onClick={() => move(1)}>
+              {tr('Calendar.nextMonth')}
+            </IconButton>
           </div>
           <div className="calendar-weekdays" aria-hidden="true">
             {weekdays().map((d) => (
               <span key={d}>{d}</span>
             ))}
           </div>
-          <div className="calendar-days">
-            {cells.map((date, index) => {
-              if (!date) return <span className="calendar-blank" key={'blank-' + index} />;
-              const scheduled = onDate(date);
-              return (
-                <Button
-                  variant="plain"
-                  key={date}
-                  className={`calendar-day${date === selected ? ' selected' : ''}${date === today ? ' is-today' : ''}`}
-                  aria-pressed={date === selected}
-                  aria-current={date === today ? 'date' : undefined}
-                  aria-label={tr('Calendar.valueValueSchedulesValue', {
-                    v1: dateLabel(date),
-                    v2: date === today ? tr('Calendar.todayLabel') : '',
-                    v3: scheduled.length,
-                  })}
-                  onClick={() => {
-                    setSelected(date);
-                    changeMode('day');
-                  }}
-                >
-                  <span className="day-number">{fromDateKey(date).getDate()}</span>
-                  {!!scheduled.length && (
-                    <>
-                      <span className="day-work-name">{scheduled[0]!.entity_snapshot.name}</span>
-                      <span className="day-count">
-                        {tr('Calendar.value', { v1: scheduled.length })}
-                      </span>
-                    </>
-                  )}
-                </Button>
-              );
-            })}
-          </div>
+          <CalendarGrid
+            month={month}
+            items={items ?? []}
+            today={today}
+            selected={selected}
+            onSelect={(date) => {
+              setSelected(date);
+              changeMode('day', date);
+            }}
+          />
         </Surface>
       )}
       {mode === 'year' && (
-        <Surface as="section" className="year-panel" aria-label={tr('Calendar.selectMonthByYear')}>
-          <div className="calendar-controls">
+        <Surface
+          as="section"
+          data-calendar-page
+          className="year-panel"
+          padding="compact"
+          aria-label={tr('Calendar.selectMonthByYear')}
+        >
+          <div className="calendar-controls calendar-period-heading">
             <Button
               iconOnly
               variant="ghost"
@@ -203,12 +205,6 @@ export function Calendar({
               <ActionIcon name="right" />
             </Button>
           </div>
-          <p className="year-legend">
-            {tr('Calendar.taskCompletion')}
-            <span className="year-legend-red">0–50%</span>
-            <span className="year-legend-green">60–100%</span>{' '}
-            {tr('Calendar.daysWithoutTasksAreNeutral')}
-          </p>
           <div className="year-months">
             {Array.from({ length: 12 }, (_, i) => {
               const next = month.slice(0, 4) + '-' + String(i + 1).padStart(2, '0');
@@ -218,75 +214,22 @@ export function Calendar({
                   key={next}
                   aria-label={monthLabel(i + 1, true)}
                   aria-current={next === today.slice(0, 7) ? 'date' : undefined}
+                  data-month={next}
                   onClick={() => {
                     chooseMonth(next, next + '-01');
-                    changeMode('month');
+                    changeMode('month', next + '-01');
                   }}
                 >
                   <span className="year-month-heading">
                     <strong>{monthLabel(i + 1, true)}</strong>
                     {next === today.slice(0, 7) && <span>{tr('Calendar.thisMonth')}</span>}
                   </span>
-                  <span className="mini-weekdays" aria-hidden="true">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                      <span key={index}>{day}</span>
-                    ))}
-                  </span>
-                  <span className="mini-days">
-                    {monthDays(fromDateKey(next + '-01')).map((date, index) => {
-                      if (!date) return <span key={`blank-${index}`} aria-hidden="true" />;
-                      const tasks = onDate(date).flatMap((schedule) => schedule.tasks);
-                      const completed = tasks.filter((task) => task.status === 'completed').length;
-                      const rate = tasks.length ? (completed / tasks.length) * 100 : null;
-                      const label = `${dateLabel(date)}${date === today ? tr('Calendar.todayLabel') : ''}, ${!items ? tr('Calendar.loading') : rate === null ? tr('Calendar.noTasks') : tr('Calendar.valueOfValueTasksCompletedValueComplete', { v1: tasks.length, v2: completed, v3: Math.round(rate) })}`;
-                      return (
-                        <span
-                          key={date}
-                          className={`mini-day${date === today ? ' is-today' : ''}`}
-                          data-date={date}
-                          title={label}
-                          aria-label={label}
-                          style={
-                            rate === null
-                              ? undefined
-                              : {
-                                  backgroundColor:
-                                    rate < 60
-                                      ? `hsl(4 78% ${76 + (Math.min(rate, 50) / 50) * 14}%)`
-                                      : `hsl(${145 - ((rate - 60) / 40) * 60} 58% ${79 - ((rate - 60) / 40) * 9}%)`,
-                                  color: rate < 60 ? 'var(--danger)' : 'var(--success)',
-                                }
-                          }
-                        />
-                      );
-                    })}
-                  </span>
+                  <CalendarGrid month={next} items={items ?? []} today={today} miniature />
                 </Button>
               );
             })}
           </div>
         </Surface>
-      )}
-      {mode === 'day' && (
-        <div className="calendar-controls">
-          <label>
-            {tr('Calendar.selectDate')}
-            <Input
-              type="date"
-              min="0001-01-01"
-              max="9999-12-31"
-              value={selected}
-              onChange={(event) => {
-                const date = event.target.value;
-                if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date >= '0001-01-01')
-                  chooseMonth(date.slice(0, 7), date);
-              }}
-            />
-          </label>
-          <IconButton icon="calendar" onClick={() => changeMode('month')}>
-            {tr('Calendar.backToMonthlyCalendar')}
-          </IconButton>
-        </div>
       )}
       {error && (
         <ErrorBox
@@ -299,62 +242,76 @@ export function Calendar({
       )}
       {!items && !error && <p role="status">{tr('Schedules.loadingSchedules')}</p>}
       {mode === 'day' && (
-        <div
-          className="day-detail-scroll"
-          tabIndex={0}
-          role="region"
-          aria-label={tr('Calendar.dailyScheduleDetails')}
-        >
-          <div className="section-heading">
-            <h2>{dateLabel(selected)}</h2>
-            <ButtonLink
-              iconOnly
-              title={tr('Calendar.createScheduleOnThisDate')}
-              aria-label={tr('Calendar.createScheduleOnThisDate')}
-              className="button"
-              data-modal-trigger
-              href={'#/schedules/new?date=' + selected}
-            >
-              <ActionIcon name="plus" />
-            </ButtonLink>
+        <Surface as="section" padding="compact" data-calendar-page className="calendar-day-panel">
+          <div className="calendar-controls calendar-period-heading calendar-day-heading">
+            <IconButton icon="left" disabled={selected <= '0001-01-01'} onClick={() => moveDay(-1)}>
+              {tr('Calendar.previousDay')}
+            </IconButton>
+            <div className="calendar-date-title">
+              <h2 aria-live="polite">{dateLabel(selected)}</h2>
+              <Button
+                variant="ghost"
+                ref={dateTrigger}
+                onClick={() => setDatePickerOpen((open) => !open)}
+                aria-haspopup="dialog"
+                aria-expanded={datePickerOpen}
+              >
+                <ActionIcon name="calendar" />
+                {tr('Calendar.selectDate')}
+              </Button>
+            </div>
+            <IconButton icon="right" disabled={selected >= '9999-12-31'} onClick={() => moveDay(1)}>
+              {tr('Calendar.nextDay')}
+            </IconButton>
           </div>
-          {items && (
-            <>
-              <p>{tr('Calendar.schedulesValueByTime', { v1: list.length })}</p>
-              <div className="work-stack">
-                {list.map((value) => (
-                  <SavedScheduleCard
-                    key={value.id}
-                    value={value}
-                    onDelete={() =>
-                      setResult((current) =>
-                        current
-                          ? {
-                              ...current,
-                              items: current.items.filter((item) => item.id !== value.id),
-                            }
-                          : current,
-                      )
-                    }
-                    onChange={(updated) =>
-                      setResult((current) =>
-                        current
-                          ? {
-                              ...current,
-                              items: current.items.map((s) => (s.id === updated.id ? updated : s)),
-                            }
-                          : current,
-                      )
-                    }
-                  />
-                ))}
-              </div>
-              {!list.length && (
-                <p className="empty">{tr('Calendar.noSchedulesSavedForThisDate')}</p>
-              )}
-            </>
-          )}
-        </div>
+          <div
+            className="day-detail-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label={tr('Calendar.dailyScheduleDetails')}
+          >
+            <div className="section-heading">
+              <h2>{tr('Calendar.schedulesValueByTime', { v1: list.length })}</h2>
+            </div>
+            {items && (
+              <>
+                <div className="work-stack">
+                  {list.map((value) => (
+                    <SavedScheduleCard
+                      key={value.id}
+                      value={value}
+                      onDelete={() =>
+                        setResult((current) =>
+                          current
+                            ? {
+                                ...current,
+                                items: current.items.filter((item) => item.id !== value.id),
+                              }
+                            : current,
+                        )
+                      }
+                      onChange={(updated) =>
+                        setResult((current) =>
+                          current
+                            ? {
+                                ...current,
+                                items: current.items.map((s) =>
+                                  s.id === updated.id ? updated : s,
+                                ),
+                              }
+                            : current,
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+                {!list.length && (
+                  <p className="empty">{tr('Calendar.noSchedulesSavedForThisDate')}</p>
+                )}
+              </>
+            )}
+          </div>
+        </Surface>
       )}
     </section>
   );
