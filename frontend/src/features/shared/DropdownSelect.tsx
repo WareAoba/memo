@@ -1,9 +1,10 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { observeAnchoredPopover } from './anchoredPopover';
+import { usePopupState } from './usePopupExit';
+import { type ReactNode, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ActionIcon } from './ActionIcon';
-import { Button, MenuOption, MenuSurface } from './ui';
+import { DisclosureIcon, Button, MenuOption, MenuSurface } from './ui';
 
-type Option = { value: string; label: string };
+type Option = { value: string; label: string; decoration?: ReactNode };
 
 /** Select-only combobox using the same menu surface as preset detail inputs. */
 export function DropdownSelect({
@@ -12,18 +13,24 @@ export function DropdownSelect({
   options,
   onChange,
   disabled = false,
+  hideLabel = false,
+  className,
+  menuMinWidth = 0,
 }: {
   label: string;
   value: string;
   options: readonly Option[];
   onChange: (value: string) => void;
   disabled?: boolean;
+  hideLabel?: boolean;
+  className?: string;
+  menuMinWidth?: number;
 }) {
   const id = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const popup = useRef<HTMLDivElement>(null);
   const search = useRef({ text: '', time: 0 });
-  const [open, setOpen] = useState(false);
+  const [open, setOpen, toggle] = usePopupState(popup);
   const [active, setActive] = useState(0);
   const selected = Math.max(
     0,
@@ -44,17 +51,10 @@ export function DropdownSelect({
   useLayoutEffect(() => {
     if (!expanded || !popup.current || !trigger.current) return;
     const menu = popup.current;
-    menu.showPopover?.();
-    function position() {
-      const rect = trigger.current!.getBoundingClientRect();
-      const below = window.innerHeight - rect.bottom - 12;
-      const above = rect.top - 12;
-      const upwards = below < Math.min(menu.scrollHeight, 280) && above > below;
-      menu.style.width = `${Math.min(rect.width, window.innerWidth - 24)}px`;
-      menu.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - rect.width - 12))}px`;
-      menu.style.maxHeight = `${Math.max(0, Math.min(280, upwards ? above : below))}px`;
-      menu.style.top = `${upwards ? rect.top - menu.offsetHeight - 4 : rect.bottom + 4}px`;
-    }
+    const stopPositioning = observeAnchoredPopover(menu, trigger.current, {
+      minWidth: menuMinWidth,
+      maxHeight: 280,
+    });
     const outside = (event: PointerEvent) => {
       if (
         event.target instanceof Node &&
@@ -63,27 +63,19 @@ export function DropdownSelect({
       )
         setOpen(false);
     };
-    position();
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(position);
-    observer?.observe(trigger.current);
-    window.addEventListener('resize', position);
-    document.addEventListener('scroll', position, true);
     document.addEventListener('pointerdown', outside);
     return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', position);
-      document.removeEventListener('scroll', position, true);
       document.removeEventListener('pointerdown', outside);
-      menu.hidePopover?.();
+      stopPositioning?.();
     };
-  }, [expanded]);
+  }, [expanded, setOpen, menuMinWidth]);
   useLayoutEffect(() => {
     if (expanded)
       document.getElementById(`${id}-option-${active}`)?.scrollIntoView?.({ block: 'nearest' });
   }, [expanded, active, id]);
   return (
-    <div className="ui-dropdown">
-      <label id={`${id}-label`} htmlFor={id}>
+    <div className={`ui-dropdown ${className ?? ''}`}>
+      <label className={hideLabel ? 'sr-only' : undefined} id={`${id}-label`} htmlFor={id}>
         {label}
       </label>
       <Button
@@ -99,7 +91,7 @@ export function DropdownSelect({
         aria-controls={expanded ? `${id}-options` : undefined}
         aria-activedescendant={expanded ? `${id}-option-${active}` : undefined}
         disabled={disabled}
-        onClick={() => (expanded ? setOpen(false) : show())}
+        onClick={() => (expanded ? toggle() : show())}
         onBlur={() => setOpen(false)}
         onKeyDown={(event) => {
           const key = event.key;
@@ -140,8 +132,13 @@ export function DropdownSelect({
           }
         }}
       >
-        <span>{options.find((option) => option.value === value)?.label ?? value}</span>
-        <ActionIcon name="down" />
+        <span className="ui-option-label">
+          <span aria-hidden="true">
+            {options.find((option) => option.value === value)?.decoration}
+          </span>
+          {options.find((option) => option.value === value)?.label ?? value}
+        </span>
+        <DisclosureIcon />
       </Button>
       {expanded &&
         createPortal(
@@ -164,7 +161,10 @@ export function DropdownSelect({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(index)}
               >
-                {option.label}
+                <span className="ui-option-label">
+                  <span aria-hidden="true">{option.decoration}</span>
+                  {option.label}
+                </span>
               </MenuOption>
             ))}
           </MenuSurface>,

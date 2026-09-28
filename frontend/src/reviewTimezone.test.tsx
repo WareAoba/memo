@@ -1,3 +1,10 @@
+vi.mock('./api/tracks', () => ({
+  listTracks: async () => ({
+    items: [{ id: 'local', name: 'My Track' }],
+    limit: 3,
+    default_id: 'local',
+  }),
+}));
 vi.mock('./api/auth', () => ({
   getAccount: vi.fn(async () => ({ id: 'local', display_name: '가상 계정', email: null })),
 }));
@@ -17,6 +24,7 @@ vi.mock('./api/works', async (original) => ({
 vi.mock('./api/schedules', async (original) => ({
   ...(await original<typeof import('./api/schedules')>()),
   getRangeSchedules: vi.fn().mockResolvedValue([]),
+  getRangeScheduleSummaries: vi.fn().mockResolvedValue([]),
 }));
 afterEach(() => {
   vi.useRealTimers();
@@ -35,7 +43,7 @@ it('REVIEW: calendar initially selects the saved-zone date', async () => {
     render(<App />);
   });
   fireEvent.click(screen.getByRole('button', { current: 'date' }));
-  expect(screen.getByRole('link', { name: '일정 추가' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: '스케줄 추가' })).toHaveAttribute(
     'href',
     '#/schedules/new?date=' + expected,
   );

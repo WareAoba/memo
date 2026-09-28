@@ -195,7 +195,7 @@ export function WorkEditor({
               aria-busy={saving || undefined}
             >
               <ActionIcon name="save" />
-              {saving ? tr('Photos.saving') : tr('WorkEditor.saveWork')}
+              {tr('WorkEditor.saveWork')}
             </Button>
           </div>
         </ModalActions>

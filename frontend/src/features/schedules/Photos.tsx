@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { Button, Input } from '../shared/ui';
+import { DisclosureSummary, Button, Input } from '../shared/ui';
 import { IconButton } from '../shared/IconButton';
 import { ActionIcon } from '../shared/ActionIcon';
 import { useEffect, useRef, useState } from 'react';
@@ -25,7 +25,7 @@ export function Photos({ target, locked }: { target: PhotoTarget; locked: boolea
         if (e.currentTarget.open) setOpened(true);
       }}
     >
-      <summary>{tr('Photos.photosOptional')}</summary>
+      <DisclosureSummary>{tr('Photos.photosOptional')}</DisclosureSummary>
       {opened && <PhotoPanel key={target.type + target.id} target={target} locked={locked} />}
     </details>
   );
@@ -186,7 +186,7 @@ function PhotoPanel({ target, locked }: { target: PhotoTarget; locked: boolean }
                 disabled={busy || !file || items.length >= 100}
                 onClick={() => void save()}
               >
-                {busy ? tr('Photos.saving') : tr('Photos.addPhoto')}
+                {tr('Photos.addPhoto')}
               </IconButton>
             </div>
           )}

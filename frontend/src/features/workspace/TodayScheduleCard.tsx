@@ -6,9 +6,6 @@ import { Surface, Button, Input, ButtonLink } from '../shared/ui';
 import { ActionIcon } from '../shared/ActionIcon';
 import { useState } from 'react';
 import {
-  addScheduleTask,
-  completeSchedule,
-  reopenSchedule,
   deleteScheduleTask,
   updateTask,
   saveSchedule,
@@ -17,7 +14,8 @@ import {
 import { MemoButton } from '../shared/MemoButton';
 import { Requirements } from '../works/Requirements';
 import { TaskExecution } from '../schedules/TaskExecution';
-import { AddTaskPicker } from '../schedules/AddTaskPicker';
+import { NewTaskRows } from '../schedules/ScheduleTaskRows';
+import { toggleScheduleCompletion } from '../schedules/scheduleCompletion';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
 import { PresetModal } from '../shared/PresetModal';
@@ -68,6 +66,7 @@ export function TodayScheduleCard({
         as="article"
         className="today-schedule-card memo-preview schedule-card"
         data-selected={selected}
+        data-context-content
         data-schedule-color={value.color ?? 'none'}
         aria-label={value.entity_snapshot.name}
         onClick={(event) => {
@@ -91,12 +90,10 @@ export function TodayScheduleCard({
               }
               checked={completed}
               disabled={selectionLocked || locked}
-              onChange={() =>
-                void run(() => (completed ? reopenSchedule(value.id) : completeSchedule(value.id)))
-              }
+              onChange={() => void run(() => toggleScheduleCompletion(value))}
             />
             <div>
-              <h2>
+              <h2 className="schedule-card-title">
                 <Button
                   variant="plain"
                   className="today-work-select"
@@ -106,10 +103,10 @@ export function TodayScheduleCard({
                 >
                   {value.entity_snapshot.name}
                 </Button>
+                <span className="schedule-card-time">
+                  {value.start_time} — {value.end_time}
+                </span>
               </h2>
-              <p>
-                {value.start_time} — {value.end_time}
-              </p>
               {value.end_date !== value.scheduled_date && (
                 <p>
                   {value.scheduled_date} — {value.end_date}
@@ -120,7 +117,9 @@ export function TodayScheduleCard({
           <div className="preview-actions">
             <ScheduleCardActions
               onDelete={onDelete}
+              mobileEdit
               id={value.id}
+              color={value.color}
               label={value.entity_snapshot.name}
               value={value.notes}
               disabled={busy || !!editing || adding || otherAdding}
@@ -132,6 +131,9 @@ export function TodayScheduleCard({
           </div>
         </header>
         {value.title !== value.entity_snapshot.name && <p>{value.title}</p>}
+        {value.notes.trim() && (
+          <p className="schedule-card-memo">{value.notes.replace(/\s+/g, ' ').trim()}</p>
+        )}
         <Requirements value={value.entity_snapshot} />
         <div className="today-task-cards">
           {value.tasks.map((task) => (
@@ -142,6 +144,7 @@ export function TodayScheduleCard({
               onDelete={() => mutate(() => deleteScheduleTask(task.id))}
             >
               <section
+                data-context-content
                 className={`today-task-card memo-preview ${task.status === 'completed' ? 'is-complete' : ''}`}
               >
                 <div className="today-task-heading">
@@ -186,6 +189,8 @@ export function TodayScheduleCard({
                         adding ||
                         otherAdding
                       }
+                      data-context-action="edit"
+                      data-context-label={tr('App.edit')}
                       aria-expanded={editing === task.id}
                       aria-label={tr('MemoEditor.editValue', { v1: task.name_snapshot })}
                       title={editing === task.id ? tr('ScheduleEditor.close') : tr('App.edit')}
@@ -236,24 +241,20 @@ export function TodayScheduleCard({
                 <ActionIcon name={adding ? 'close' : 'plus'} />
                 {adding ? tr('TodayScheduleCard.closeTaskAddition') : tr('Picker.addTask')}
               </Button>
-              <ButtonLink variant="ghost" href={'#/schedules/' + value.id}>
-                {tr('App.edit')}
-              </ButtonLink>
             </>
           )}
         </footer>
         {adding && (
-          <AddTaskPicker
+          <NewTaskRows
+            scheduleId={value.id}
             disabled={busy || locked}
-            onPick={(id, customization) => {
-              void run(() =>
-                customization
-                  ? addScheduleTask(value.id, id, customization)
-                  : addScheduleTask(value.id, id),
-              ).then((ok) => {
-                if (ok) onAdding(false);
-              });
-            }}
+            mutate={mutate}
+            initialRow
+            onEmpty={() => onAdding(false)}
+            existing={value.tasks.map((task) => ({
+              id: task.id,
+              name: task.name_template_snapshot ?? task.name_snapshot,
+            }))}
           />
         )}
         {error && (

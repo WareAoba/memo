@@ -1,7 +1,7 @@
 import { WorkspaceHeader } from '../shared/WorkspaceHeader';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { ButtonLink, Input, Button, Surface, CardButton } from '../shared/ui';
+import { ButtonLink, Input, Surface, CardButton } from '../shared/ui';
 import { ActionIcon } from '../shared/ActionIcon';
 import { PresetMemoButton } from '../shared/PresetMemoButton';
 import { IconButton } from '../shared/IconButton';
@@ -12,11 +12,17 @@ import { listWorks } from '../../api/works';
 import type { WorkList } from '../../api/works';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
-export function WorkListView({ revision = 0 }: { revision?: number }) {
+export function WorkListView({
+  revision = 0,
+  heading = true,
+}: {
+  revision?: number;
+  heading?: boolean;
+}) {
   useTranslation();
   const [selected, setSelected] = useState<string>();
   const [draft, setDraft] = useState('');
-  const [filter, setFilter] = useState({ q: '', archived: false, offset: 0 });
+  const [filter, setFilter] = useState({ q: '', offset: 0 });
   const [data, setData] = useState<WorkList>();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -25,7 +31,7 @@ export function WorkListView({ revision = 0 }: { revision?: number }) {
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 15000);
     let active = true;
-    listWorks(filter.q, filter.archived, filter.offset, controller.signal, 48)
+    listWorks(filter.q, false, filter.offset, controller.signal, 48)
       .then((value) => {
         if (active) setData(value);
       })
@@ -61,7 +67,7 @@ export function WorkListView({ revision = 0 }: { revision?: number }) {
         </PresetModal>
       )}
       <WorkspaceHeader
-        title={<h1>{tr('WorkListView.workPresets')}</h1>}
+        title={heading && <h1>{tr('WorkListView.workPresets')}</h1>}
         actions={
           <ButtonLink
             iconOnly
@@ -75,7 +81,7 @@ export function WorkListView({ revision = 0 }: { revision?: number }) {
             <ActionIcon name="plus" />
           </ButtonLink>
         }
-        navigation={<PresetSwitch kind="works" />}
+        navigation={heading && <PresetSwitch kind="works" />}
         tools={
           <section aria-label={tr('Picker.searchWorks')} className="workspace-list-tools">
             <form
@@ -99,20 +105,6 @@ export function WorkListView({ revision = 0 }: { revision?: number }) {
                 {tr('TaskPresetListView.search')}
               </IconButton>
             </form>
-            <div className="tabs">
-              <Button
-                aria-pressed={!filter.archived}
-                onClick={() => update({ ...filter, archived: false, offset: 0 })}
-              >
-                {tr('TaskPresetListView.active')}
-              </Button>
-              <Button
-                aria-pressed={filter.archived}
-                onClick={() => update({ ...filter, archived: true, offset: 0 })}
-              >
-                {tr('TaskPresetListView.archive')}
-              </Button>
-            </div>
           </section>
         }
       />
@@ -130,38 +122,38 @@ export function WorkListView({ revision = 0 }: { revision?: number }) {
       ) : (
         data && (
           <>
-            <p className="result-count">
-              {tr('TaskPresetListView.valueValueValue', {
-                v1: filter.archived ? tr('WorkDetail.archivedWork') : tr('ScheduleEditor.work'),
-                v2: data.total,
-                v3: filter.q && tr('TaskPresetListView.resultsForValue', { v1: filter.q }),
-              })}
-            </p>
+            {data.total > 0 && (
+              <p className="result-count">
+                {tr('TaskPresetListView.valueValueValue', {
+                  v1: tr('ScheduleEditor.work'),
+                  v2: data.total,
+                  v3: filter.q && tr('TaskPresetListView.resultsForValue', { v1: filter.q }),
+                })}
+              </p>
+            )}
             {data.items.length === 0 ? (
               <Surface as="section" className="empty">
                 <h2>
                   {filter.q
                     ? tr('ScheduleSearch.noResultsFound')
-                    : filter.archived
-                      ? tr('WorkListView.noArchivedWorks')
-                      : tr('WorkListView.createYourFirstWork')}
+                    : tr('WorkListView.createYourFirstWork')}
                 </h2>
                 <p>
                   {filter.q
                     ? tr('WorkListView.tryADifferentWorkNameDetailTypeOrContent')
-                    : filter.archived
-                      ? tr('WorkListView.youCanRestoreArchivedWorksHere')
-                      : tr('WorkListView.saveAWorkNameAndDescriptionThenLinkDefault')}
+                    : tr('WorkListView.saveAWorkNameAndDescriptionThenLinkDefault')}
                 </p>
               </Surface>
             ) : (
               <div className="work-list compact-presets">
                 {data.items.map((item) => (
-                  <div key={item.id} className="preset-preview memo-preview">
+                  <div key={item.id} data-context-content className="preset-preview memo-preview">
                     <CardButton
                       type="button"
                       key={item.id}
                       data-modal-trigger
+                      data-context-action="edit"
+                      data-context-label={tr('App.edit')}
                       className="work-card"
                       onClick={() => setSelected(item.id)}
                     >

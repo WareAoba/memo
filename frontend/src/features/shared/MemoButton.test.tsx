@@ -2,6 +2,22 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest';
 import { MemoButton } from './MemoButton';
 
+it('keeps a memo open when selection starts inside and ends outside', () => {
+  render(
+    <>
+      <span>바깥</span>
+      <MemoButton label="워크" value="드래그할 메모" onSave={vi.fn()} />
+    </>,
+  );
+  fireEvent.click(screen.getByRole('button', { name: '워크 메모' }));
+  fireEvent.pointerDown(screen.getByLabelText('메모'));
+  fireEvent.pointerUp(screen.getByText('바깥'));
+  fireEvent.click(screen.getByText('바깥'));
+  expect(screen.getByRole('dialog', { name: '워크 메모' })).toBeInTheDocument();
+  fireEvent.pointerDown(screen.getByText('바깥'));
+  expect(screen.queryByRole('dialog', { name: '워크 메모' })).not.toBeInTheDocument();
+});
+
 it('flushes on close, keeps a failed draft open, and retries without a save button', async () => {
   const save = vi.fn().mockRejectedValueOnce(new Error('연결 실패')).mockResolvedValue(undefined);
   const outside = vi.fn();
@@ -14,12 +30,18 @@ it('flushes on close, keeps a failed draft open, and retries without a save butt
   fireEvent.click(screen.getByRole('button', { name: '워크 메모' }));
   fireEvent.change(screen.getByLabelText('메모'), { target: { value: '기록' } });
   expect(screen.queryByRole('button', { name: '메모 저장' })).not.toBeInTheDocument();
+  fireEvent.pointerDown(screen.getByText('다른 동작'));
   fireEvent.click(screen.getByText('다른 동작'));
   expect(outside).not.toHaveBeenCalled();
   expect(await screen.findByText('연결 실패')).toBeVisible();
   expect(screen.getByLabelText('메모')).toHaveValue('기록');
   fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-  await screen.findByText('메모를 저장했습니다.');
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   fireEvent.keyDown(screen.getByLabelText('메모'), { key: 'Escape' });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(save).toHaveBeenLastCalledWith('기록');

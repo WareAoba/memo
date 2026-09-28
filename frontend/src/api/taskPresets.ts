@@ -1,3 +1,4 @@
+import { publishScheduleChange } from './scheduleChanges';
 import { LocalizedError } from '../i18n/errors';
 import { requestJson, record, parsePage } from './client';
 import type { Page } from './client';
@@ -128,14 +129,13 @@ export async function saveTaskPreset(
   fields: Partial<TaskPresetFields>,
   id?: string,
 ): Promise<TaskPreset> {
-  return preset(
+  const value = preset(
     await request(
       '/api/task-presets' + (id ? '/' + encodeURIComponent(id) : ''),
       id ? 'PATCH' : 'POST',
       fields,
     ),
   );
-}
-export async function archiveTaskPreset(id: string): Promise<void> {
-  await request('/api/task-presets/' + encodeURIComponent(id), 'DELETE');
+  if (!id) publishScheduleChange({ kind: 'presets' });
+  return value;
 }

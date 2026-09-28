@@ -1,3 +1,4 @@
+use super::tracks::current_track_id;
 use super::{Result, database, identifier, invalid};
 use crate::local_user::current_user_id;
 use serde_json::{Value, json};
@@ -39,9 +40,9 @@ pub(super) async fn resolve(
     )?;
     let table = table(kind)?;
     let existing: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT id FROM {table} WHERE user_id=? AND unmanaged=1 AND name=? COLLATE NOCASE"
+        "SELECT id FROM {table} WHERE user_id=? AND track_id=? AND unmanaged=1 AND name=? COLLATE NOCASE"
     ))
-    .bind(current_user_id())
+    .bind(current_user_id()).bind(current_track_id())
     .bind(name)
     .fetch_optional(&mut *conn)
     .await
@@ -51,10 +52,11 @@ pub(super) async fn resolve(
     }
     let id = Uuid::new_v4().to_string();
     sqlx::query(&format!(
-        "INSERT INTO {table}(id,user_id,name,unmanaged) VALUES(?,?,?,1)"
+        "INSERT INTO {table}(id,user_id,track_id,name,unmanaged) VALUES(?,?,?,?,1)"
     ))
     .bind(&id)
     .bind(current_user_id())
+    .bind(current_track_id())
     .bind(name)
     .execute(conn)
     .await
@@ -69,9 +71,9 @@ pub(super) async fn matching(
 ) -> Result<Option<String>> {
     let table = table(kind)?;
     sqlx::query_scalar(&format!(
-        "SELECT id FROM {table} WHERE user_id=? AND unmanaged=1 AND name=? COLLATE NOCASE"
+        "SELECT id FROM {table} WHERE user_id=? AND track_id=? AND unmanaged=1 AND name=? COLLATE NOCASE"
     ))
-    .bind(current_user_id())
+    .bind(current_user_id()).bind(current_track_id())
     .bind(value)
     .fetch_optional(conn)
     .await
@@ -88,8 +90,8 @@ pub async fn suggestions(pool: &SqlitePool, kind: &str, q: &str) -> Result<Value
         "{}%",
         q.replace('!', "!!").replace('%', "!%").replace('_', "!_")
     );
-    let rows: Vec<(String,String)> = sqlx::query_as(&format!("SELECT id,name FROM {table} WHERE user_id=? AND unmanaged=1 AND name LIKE ? ESCAPE '!' ORDER BY name COLLATE NOCASE,id LIMIT 10"))
-        .bind(current_user_id()).bind(pattern).fetch_all(pool).await.map_err(database)?;
+    let rows: Vec<(String,String)> = sqlx::query_as(&format!("SELECT id,name FROM {table} WHERE user_id=? AND track_id=? AND unmanaged=1 AND name LIKE ? ESCAPE '!' ORDER BY name COLLATE NOCASE,id LIMIT 10"))
+        .bind(current_user_id()).bind(current_track_id()).bind(pattern).fetch_all(pool).await.map_err(database)?;
     Ok(json!(
         rows.into_iter()
             .map(|(id, name)| json!({"id":id,"name":name}))
@@ -105,21 +107,22 @@ pub(super) async fn promote(
 ) -> Result<()> {
     let table = table(kind)?;
     sqlx::query(&format!(
-        "UPDATE {table} SET unmanaged=0 WHERE id=? AND user_id=?"
+        "UPDATE {table} SET unmanaged=0 WHERE id=? AND user_id=? AND track_id=?"
     ))
     .bind(id)
     .bind(current_user_id())
+    .bind(current_track_id())
     .execute(&mut *conn)
     .await
     .map_err(database)?;
     if kind == "work" {
-        sqlx::query("UPDATE schedule_entity_snapshot SET definition=? WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id=? AND entity_id=?)")
-            .bind(snapshot.to_string()).bind(current_user_id()).bind(id).execute(&mut *conn).await.map_err(database)?;
-        sqlx::query("UPDATE schedules SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE user_id=? AND entity_id=?")
-            .bind(current_user_id()).bind(id).execute(conn).await.map_err(database)?;
+        sqlx::query("UPDATE schedule_entity_snapshot SET definition=? WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id=? AND track_id=? AND entity_id=?)")
+            .bind(snapshot.to_string()).bind(current_user_id()).bind(current_track_id()).bind(id).execute(&mut *conn).await.map_err(database)?;
+        sqlx::query("UPDATE schedules SET updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE user_id=? AND track_id=? AND entity_id=?")
+            .bind(current_user_id()).bind(current_track_id()).bind(id).execute(conn).await.map_err(database)?;
     } else {
-        sqlx::query("UPDATE schedule_tasks SET default_notes_snapshot=?,source_task_preset_version=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE user_id=? AND source_task_preset_id=?")
-            .bind(snapshot["default_notes"].as_str()).bind(snapshot["version"].as_i64()).bind(current_user_id()).bind(id).execute(&mut *conn).await.map_err(database)?;
+        sqlx::query("UPDATE schedule_tasks SET default_notes_snapshot=?,source_task_preset_version=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE user_id=? AND track_id=? AND source_task_preset_id=?")
+            .bind(snapshot["default_notes"].as_str()).bind(snapshot["version"].as_i64()).bind(current_user_id()).bind(current_track_id()).bind(id).execute(&mut *conn).await.map_err(database)?;
         // Unmanaged tasks have no preset items. Add definitions in bounded set-based writes;
         // task IDs, execution state, notes and attachments remain untouched.
         for item in snapshot["items"].as_array().ok_or_else(invalid)? {
@@ -131,8 +134,8 @@ pub(super) async fn promote(
                 Some("number") => item["default_value"].as_f64().is_some(),
                 _ => return Err(invalid()),
             };
-            sqlx::query("INSERT INTO schedule_task_items(id,schedule_task_id,source_preset_item_id,position,definition,value_boolean,value_text,value_number,completed,completed_at) SELECT lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),id,?,?,?,?,?,?,?,CASE WHEN ? THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE NULL END FROM schedule_tasks WHERE user_id=? AND source_task_preset_id=?")
-                .bind(item["id"].as_str()).bind(item["position"].as_i64()).bind(item.to_string()).bind(item["default_value"].as_bool()).bind(item["default_value"].as_str()).bind(item["default_value"].as_f64()).bind(completed).bind(completed).bind(current_user_id()).bind(id).execute(&mut *conn).await.map_err(database)?;
+            sqlx::query("INSERT INTO schedule_task_items(id,schedule_task_id,source_preset_item_id,position,definition,value_boolean,value_text,value_number,completed,completed_at) SELECT lower(hex(randomblob(4)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(2)))||'-'||lower(hex(randomblob(6))),id,?,?,?,?,?,?,?,CASE WHEN ? THEN strftime('%Y-%m-%dT%H:%M:%fZ','now') ELSE NULL END FROM schedule_tasks WHERE user_id=? AND track_id=? AND source_task_preset_id=?")
+                .bind(item["id"].as_str()).bind(item["position"].as_i64()).bind(item.to_string()).bind(item["default_value"].as_bool()).bind(item["default_value"].as_str()).bind(item["default_value"].as_f64()).bind(completed).bind(completed).bind(current_user_id()).bind(current_track_id()).bind(id).execute(&mut *conn).await.map_err(database)?;
         }
     }
     Ok(())

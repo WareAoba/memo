@@ -16,6 +16,22 @@ fn db(_: sqlx::Error) -> ApiError {
     ApiError::DatabaseUnavailable
 }
 
+pub async fn is_subscribed(
+    pool: &SqlitePool,
+    user: &str,
+    installation: Option<&str>,
+) -> Result<bool> {
+    sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM push_subscriptions \
+         WHERE user_id=? AND installation_id=? AND enabled=1)",
+    )
+    .bind(user)
+    .bind(installation)
+    .fetch_one(pool)
+    .await
+    .map_err(db)
+}
+
 pub struct PushService {
     key: ES256KeyPair,
     pub public_key: String,

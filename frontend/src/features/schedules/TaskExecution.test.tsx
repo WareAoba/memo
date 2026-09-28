@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { TaskExecution } from './TaskExecution';
 import { updateItem, updateTask, type ScheduleDetail } from '../../api/schedules';
@@ -24,7 +24,12 @@ it('keeps template fields editable after creation and saves only this execution'
   render(<TaskExecution task={task} locked={false} busy={false} mutate={mutate} allowRename />);
   fireEvent.change(screen.getByLabelText('n'), { target: { value: '10' } });
   fireEvent.click(screen.getByRole('button', { name: '이름 저장' }));
-  expect(await screen.findByText('저장했습니다.')).toBeVisible();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(updateTask).toHaveBeenCalledWith('t', {
     name: '단어 [n=5]개 외우기',
     parameters: { n: '10' },
@@ -132,7 +137,12 @@ it('preserves all draft inputs after failure, saves fields independently, accept
   expect(screen.getByLabelText('측정 · 필수 (kg)')).toHaveValue(0);
   expect(screen.getByLabelText('기록 · 필수')).toHaveValue('unsaved');
   fireEvent.click(screen.getByRole('button', { name: '측정 저장' }));
-  expect(await screen.findByText('저장했습니다.')).toBeVisible();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(updateItem).toHaveBeenLastCalledWith('i', 0);
   expect(screen.getByRole('button', { name: '측정 저장' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '태스크 완료' })).toBeDisabled();
@@ -151,7 +161,12 @@ it('saves notes and retries rejected completion without inventing a completed st
   render(<Harness />);
   fireEvent.change(screen.getByLabelText('실행 메모'), { target: { value: 'memo' } });
   fireEvent.blur(screen.getByLabelText('실행 메모'));
-  expect(await screen.findByText('메모를 저장했습니다.')).toBeVisible();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(updateTask).toHaveBeenCalledWith('t', { execution_notes: 'memo' });
   fireEvent.click(screen.getByRole('button', { name: '태스크 완료' }));
   expect(await screen.findByText('필수 항목을 모두 입력한 뒤 완료해 주세요.')).toBeVisible();

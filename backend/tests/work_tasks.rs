@@ -37,138 +37,78 @@ async fn create(pool: &SqlitePool, kind: &str, name: &str) -> String {
     value["id"].as_str().unwrap().to_owned()
 }
 #[tokio::test]
-async fn order_archive_validation_rollback_and_persistence() {
-    let dir = tempfile::tempdir().unwrap();
-    let path = dir.path().join("app.sqlite3");
-    let pool = db::connect(&path).await.unwrap();
-    let work = create(&pool, "entities", "work").await;
-    let a = create(&pool, "task-presets", "A").await;
-    let b = create(&pool, "task-presets", "B").await;
-    let uri = format!("/api/entities/{work}/task-presets");
-    assert_eq!(
-        request(&pool, "GET", &uri, Value::Null).await.1,
-        json!({"items":[]})
-    );
-    assert_eq!(
-        request(&pool, "PUT", &uri, json!({"task_preset_ids":[a,b]}))
-            .await
-            .0,
-        200
-    );
-    let reordered = request(&pool, "PUT", &uri, json!({"task_preset_ids":[b,a]})).await;
-    assert_eq!(reordered.1["items"][0]["id"], b);
-    assert_eq!(reordered.1["items"][1]["position"], 1);
-    for body in [
-        json!({"task_preset_ids":[a,a]}),
-        json!({"task_preset_ids":["bad"]}),
-        json!({"task_preset_ids":[],"user_id":"x"}),
-        json!({}),
-        json!({"task_preset_ids":vec![a.clone();101]}),
-    ] {
-        assert_eq!(request(&pool, "PUT", &uri, body).await.0, 400);
-        assert_eq!(
-            request(&pool, "GET", &uri, Value::Null).await.1,
-            reordered.1
-        );
-    }
-    sqlx::query("CREATE TRIGGER reject_link BEFORE INSERT ON work_task_presets BEGIN SELECT RAISE(ABORT,'test'); END").execute(&pool).await.unwrap();
-    assert_eq!(
-        request(&pool, "PUT", &uri, json!({"task_preset_ids":[a]}))
-            .await
-            .0,
-        503
-    );
-    assert_eq!(
-        request(&pool, "GET", &uri, Value::Null).await.1,
-        reordered.1
-    );
-    sqlx::query("DROP TRIGGER reject_link")
-        .execute(&pool)
-        .await
-        .unwrap();
-    request(
-        &pool,
-        "DELETE",
-        &format!("/api/task-presets/{a}"),
-        Value::Null,
-    )
-    .await;
-    let kept = request(&pool, "PUT", &uri, json!({"task_preset_ids":[a,b]})).await;
-    assert_eq!(kept.0, 200);
-    assert_eq!(kept.1["items"][0]["archived"], true);
-    pool.close().await;
-    let pool = db::connect(&path).await.unwrap();
-    assert_eq!(request(&pool, "GET", &uri, Value::Null).await.1, kept.1);
-    assert_eq!(
-        request(&pool, "PUT", &uri, json!({"task_preset_ids":[b]}))
-            .await
-            .0,
-        200
-    );
-    assert_eq!(
-        request(&pool, "PUT", &uri, json!({"task_preset_ids":[b,a]}))
-            .await
-            .0,
-        400
-    );
-    assert_eq!(
-        request(&pool, "PUT", &uri, json!({"task_preset_ids":[]}))
-            .await
-            .1,
-        json!({"items":[]})
-    );
-    pool.close().await;
-}
-#[tokio::test]
-async fn ownership_is_enforced_by_api_and_database() {
+async fn default_task_routes_are_removed_and_work_selection_creates_no_tasks() {
     let dir = tempfile::tempdir().unwrap();
     let pool = db::connect(&dir.path().join("app.sqlite3")).await.unwrap();
     let work = create(&pool, "entities", "work").await;
     let task = create(&pool, "task-presets", "task").await;
-    let other = "00000000-0000-4000-8000-000000000002";
-    sqlx::query("INSERT INTO users(id,display_name) VALUES(?,'other')")
-        .bind(other)
-        .execute(&pool)
-        .await
-        .unwrap();
-    sqlx::query("UPDATE task_presets SET user_id=? WHERE id=?")
-        .bind(other)
-        .bind(&task)
-        .execute(&pool)
-        .await
-        .unwrap();
     let uri = format!("/api/entities/{work}/task-presets");
-    assert_eq!(
-        request(&pool, "PUT", &uri, json!({"task_preset_ids":[task]}))
-            .await
-            .0,
-        404
-    );
-    assert!(sqlx::query("INSERT INTO work_task_presets(entity_id,task_preset_id,user_id,position) VALUES(?,?,?,0)").bind(&work).bind(&task).bind(other).execute(&pool).await.is_err());
-    sqlx::query("UPDATE entities SET user_id=? WHERE id=?")
-        .bind(other)
-        .bind(&work)
-        .execute(&pool)
-        .await
-        .unwrap();
     for method in ["GET", "PUT"] {
         assert_eq!(
-            request(&pool, method, &uri, json!({"task_preset_ids":[]}))
+            request(&pool, method, &uri, json!({"task_preset_ids":[task]}))
                 .await
                 .0,
             404
         );
-        assert_eq!(
-            request(
-                &pool,
-                method,
-                "/api/entities/bad/task-presets",
-                json!({"task_preset_ids":[]})
-            )
-            .await
-            .0,
-            400
-        );
     }
-    pool.close().await;
+    // A historical link cannot add tasks to new schedules.
+    sqlx::query("INSERT INTO work_task_presets(entity_id,task_preset_id,user_id,track_id,position) SELECT id,?,user_id,track_id,0 FROM entities WHERE id=?")
+        .bind(&task).bind(&work).execute(&pool).await.unwrap();
+    let (status, schedule) = request(
+        &pool,
+        "POST",
+        "/api/schedules",
+        json!({
+            "entity_id": work, "task_preset_ids": [], "scheduled_date":"2026-09-27",
+            "start_time":"09:00", "end_time":"10:00", "time_zone":"Asia/Tokyo"
+        }),
+    )
+    .await;
+    assert_eq!(status, 201, "{schedule}");
+    assert_eq!(schedule["tasks"], json!([]));
+}
+
+#[tokio::test]
+async fn retired_archive_migration_restores_definitions_without_touching_snapshots() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("app.sqlite3")).await.unwrap();
+    let work = create(&pool, "entities", "work").await;
+    let task = create(&pool, "task-presets", "task").await;
+    let (_, schedule) = request(
+        &pool,
+        "POST",
+        "/api/schedules",
+        json!({
+            "entity_id": work, "task_preset_ids": [task], "scheduled_date":"2026-09-27",
+            "start_time":"09:00", "end_time":"10:00", "time_zone":"Asia/Tokyo"
+        }),
+    )
+    .await;
+    sqlx::query("UPDATE entities SET archived=1")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE task_presets SET archived=1")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::raw_sql(include_str!(
+        "../migrations/202609270003_remove_preset_archiving.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    for kind in ["entities", "task-presets"] {
+        let (_, page) = request(&pool, "GET", &format!("/api/{kind}"), Value::Null).await;
+        assert_eq!(page["total"], 1);
+        assert_eq!(page["items"][0]["archived"], false);
+    }
+    let (_, after) = request(
+        &pool,
+        "GET",
+        &format!("/api/schedules/{}", schedule["id"].as_str().unwrap()),
+        Value::Null,
+    )
+    .await;
+    assert_eq!(after, schedule);
 }

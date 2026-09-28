@@ -86,3 +86,36 @@ it('disables server delivery before removing the browser subscription', async ()
     unsubscribe.mock.invocationCallOrder[0]!,
   );
 });
+
+it.each(['fcm.googleapis.com', 'jmt17.google.com'])(
+  'keeps registration errors translatable for %s',
+  async (provider) => {
+    const { LocalizedError } = await import('../i18n/errors');
+    const { changeLanguage, displayMessage, tr } = await import('../i18n');
+    const { message } = await import('../features/shared/form');
+    const cause = new Error('Untranslated provider failure');
+    subscribe.mockResolvedValue({
+      endpoint: `https://${provider}/send/test`,
+      toJSON: () => ({}),
+    });
+    vi.mocked(requestJson).mockImplementation(async (path) => {
+      if (path.startsWith('/api/push/config'))
+        return { enabled: true, subscribed: false, public_key: key };
+      throw cause;
+    });
+    const push = await import('./push');
+    const error = await push.enablePush().catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(LocalizedError);
+    expect((error as Error).cause).toBe(cause);
+    const stored = message(error);
+    const messageKey =
+      provider === 'jmt17.google.com'
+        ? 'push.thisBrowserSTestPushServiceIsNotSupported'
+        : 'push.couldNotRegisterPushNotifications';
+    for (const language of ['en', 'ja', 'ko'] as const) {
+      await changeLanguage(language);
+      expect(displayMessage(stored)).toBe(tr(messageKey));
+      expect(displayMessage(stored)).not.toContain(cause.message);
+    }
+  },
+);

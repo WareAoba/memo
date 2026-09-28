@@ -1,9 +1,11 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { tr } from '../../i18n';
 import { Input } from '../shared/ui';
 import { IconButton } from '../shared/IconButton';
 import { ScheduleSearch } from './ScheduleSearch';
 export function ScheduleSearchControl() {
+  useTranslation();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   return (

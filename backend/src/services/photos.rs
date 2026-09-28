@@ -1,3 +1,4 @@
+use super::tracks::current_track_id;
 use super::{Result, database, identifier, invalid};
 use crate::{errors::ApiError, local_user::current_user_id};
 use serde::{Deserialize, Serialize};
@@ -76,8 +77,8 @@ async fn target(
     task: &Option<String>,
     writable: bool,
 ) -> Result<()> {
-    let row: Option<String> = sqlx::query_scalar("SELECT status FROM schedules WHERE user_id=? AND (id=? OR id=(SELECT schedule_id FROM schedule_tasks WHERE id=? AND user_id=?))")
-        .bind(current_user_id()).bind(schedule).bind(task).bind(current_user_id()).fetch_optional(conn).await.map_err(database)?;
+    let row: Option<String> = sqlx::query_scalar("SELECT status FROM schedules WHERE user_id=? AND track_id=? AND (id=? OR id=(SELECT schedule_id FROM schedule_tasks WHERE id=? AND user_id=? AND track_id=?))")
+        .bind(current_user_id()).bind(current_track_id()).bind(schedule).bind(task).bind(current_user_id()).bind(current_track_id()).fetch_optional(conn).await.map_err(database)?;
     let status = row.ok_or(ApiError::NotFound)?;
     if writable && status == "cancelled" {
         return Err(ApiError::ExecutionLocked);
@@ -125,13 +126,14 @@ pub async fn list(pool: &SqlitePool, query: Target) -> Result<Vec<Photo>> {
     let (schedule, task) = query.ids()?;
     let mut conn = pool.acquire().await.map_err(database)?;
     target(&mut conn, &schedule, &task, false).await?;
-    sqlx::query_as("SELECT * FROM photos WHERE user_id=? AND (schedule_id=? OR schedule_task_id=?) AND state='ready' ORDER BY created_at,id LIMIT 100")
-        .bind(current_user_id()).bind(schedule).bind(task).fetch_all(&mut *conn).await.map_err(database)
+    sqlx::query_as("SELECT * FROM photos WHERE user_id=? AND track_id=? AND (schedule_id=? OR schedule_task_id=?) AND state='ready' ORDER BY created_at,id LIMIT 100")
+        .bind(current_user_id()).bind(current_track_id()).bind(schedule).bind(task).fetch_all(&mut *conn).await.map_err(database)
 }
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Photo> {
-    sqlx::query_as("SELECT * FROM photos WHERE id=? AND user_id=? AND state='ready'")
+    sqlx::query_as("SELECT * FROM photos WHERE id=? AND user_id=? AND track_id=? AND state='ready'")
         .bind(identifier(id)?)
         .bind(current_user_id())
+        .bind(current_track_id())
         .fetch_optional(pool)
         .await
         .map_err(database)?
@@ -206,7 +208,7 @@ pub async fn upload(
     let id = Uuid::new_v4().to_string();
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     target(&mut tx, &schedule, &task, true).await?;
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM photos WHERE user_id=? AND (schedule_id=? OR schedule_task_id=?) AND state!='deleted'").bind(current_user_id()).bind(&schedule).bind(&task).fetch_one(&mut *tx).await.map_err(database)?;
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM photos WHERE user_id=? AND track_id=? AND (schedule_id=? OR schedule_task_id=?) AND state!='deleted'").bind(current_user_id()).bind(current_track_id()).bind(&schedule).bind(&task).fetch_one(&mut *tx).await.map_err(database)?;
     if count >= 100 {
         return Err(invalid());
     }
@@ -217,8 +219,8 @@ pub async fn upload(
     if used.saturating_add(bytes.len() as i64) > MAX_STORAGE {
         return Err(ApiError::PhotoStorageFull);
     }
-    sqlx::query("INSERT INTO photos(id,user_id,schedule_id,schedule_task_id,filename,mime_type,size_bytes,state) VALUES(?,?,?,?,?,?,?,'pending')")
-        .bind(&id).bind(current_user_id()).bind(&schedule).bind(&task).bind(filename).bind(mime).bind(bytes.len() as i64).execute(&mut *tx).await.map_err(database)?;
+    sqlx::query("INSERT INTO photos(id,user_id,track_id,schedule_id,schedule_task_id,filename,mime_type,size_bytes,state) VALUES(?,?,?,?,?,?,?,?,'pending')")
+        .bind(&id).bind(current_user_id()).bind(current_track_id()).bind(&schedule).bind(&task).bind(filename).bind(mime).bind(bytes.len() as i64).execute(&mut *tx).await.map_err(database)?;
     let photo: Photo = sqlx::query_as("SELECT * FROM photos WHERE id=?")
         .bind(&id)
         .fetch_one(&mut *tx)
@@ -254,10 +256,10 @@ pub async fn delete(pool: &SqlitePool, root: &Path, id: &str) -> Result<()> {
     let id = identifier(id)?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     let photo: Photo = sqlx::query_as(
-        "SELECT * FROM photos WHERE id=? AND user_id=? AND state IN ('ready','deleted')",
+        "SELECT * FROM photos WHERE id=? AND user_id=? AND track_id=? AND state IN ('ready','deleted')",
     )
     .bind(&id)
-    .bind(current_user_id())
+    .bind(current_user_id()).bind(current_track_id())
     .fetch_optional(&mut *tx)
     .await
     .map_err(database)?

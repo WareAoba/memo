@@ -148,4 +148,10 @@ it('notification click only navigates to a same-origin schedule', async () => {
   await w.click('/#/schedules/abcd');
   expect(w.client.navigate).toHaveBeenCalledWith('https://preset.test/#/schedules/abcd');
   expect(w.client.focus).toHaveBeenCalledOnce();
+  await w.click('/#/schedules/abcd?track=1234-abcd');
+  expect(w.client.navigate).toHaveBeenLastCalledWith(
+    'https://preset.test/#/schedules/abcd?track=1234-abcd',
+  );
+  await w.click('/#/schedules/abcd?track=https://evil.test');
+  expect(w.client.navigate).toHaveBeenCalledTimes(2);
 });

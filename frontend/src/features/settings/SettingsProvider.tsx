@@ -10,14 +10,15 @@ import { changeLanguage, currentLanguage } from '../../i18n';
 import { message } from '../shared/form';
 import { SettingsContext } from './settingsContext';
 import './preferences.css';
+import { useTheme } from './useTheme';
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [values, setValues] = useState<UserSettings>(() => ({
     ...defaultSettings,
     language: currentLanguage(),
   }));
+  useTheme(values.theme);
   const [loaded, setLoaded] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const pending = useRef<Partial<UserSettings>>({});
   const running = useRef(false);
@@ -43,7 +44,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (running.current || !ready.current) return;
     running.current = true;
     failed.current = false;
-    setSaving(true);
     setError('');
     ++generation.current;
     try {
@@ -62,7 +62,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       running.current = false;
-      if (alive.current) setSaving(false);
     }
   }, []);
   const update = useCallback(
@@ -108,11 +107,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void changeLanguage(values.language);
     const root = document.documentElement;
-    const systemDark = window.matchMedia?.('(prefers-color-scheme: dark)');
     const systemMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     const apply = () => {
-      root.dataset.theme =
-        values.theme === 'system' ? (systemDark?.matches ? 'dark' : 'light') : values.theme;
       root.dataset.motion =
         values.motion === 'system' ? (systemMotion?.matches ? 'reduced' : 'full') : values.motion;
       root.dataset.accent = values.accent;
@@ -120,10 +116,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       root.style.setProperty('--content-scale', String(values.content_scale / 100));
     };
     apply();
-    systemDark?.addEventListener('change', apply);
     systemMotion?.addEventListener('change', apply);
     return () => {
-      systemDark?.removeEventListener('change', apply);
       systemMotion?.removeEventListener('change', apply);
     };
   }, [values]);
@@ -132,7 +126,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       value={{
         values,
         loaded,
-        saving,
         error,
         update,
         retry: () => {

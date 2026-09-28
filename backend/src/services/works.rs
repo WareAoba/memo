@@ -1,3 +1,4 @@
+use super::tracks::current_track_id;
 use super::{ListQuery, Result, database, identifier, invalid};
 use crate::{errors::ApiError, local_user::current_user_id};
 use serde::{Deserialize, Serialize};
@@ -104,57 +105,60 @@ fn validate(fields: &mut Fields, tags: &mut Vec<String>) -> Result<()> {
     Ok(())
 }
 async fn read(conn: &mut SqliteConnection, id: &str) -> Result<Work> {
-    let mut work = sqlx::query_as::<_, Work>("SELECT * FROM entities WHERE id=? AND user_id=?")
-        .bind(id)
-        .bind(current_user_id())
-        .fetch_optional(&mut *conn)
-        .await
-        .map_err(database)?
-        .ok_or(ApiError::WorkNotFound)?;
+    let mut work =
+        sqlx::query_as::<_, Work>("SELECT * FROM entities WHERE id=? AND user_id=? AND track_id=?")
+            .bind(id)
+            .bind(current_user_id())
+            .bind(current_track_id())
+            .fetch_optional(&mut *conn)
+            .await
+            .map_err(database)?
+            .ok_or(ApiError::WorkNotFound)?;
     work.tags = read_tags(conn, id).await?;
     Ok(work)
 }
 async fn read_tags(conn: &mut SqliteConnection, id: &str) -> Result<Vec<String>> {
-    sqlx::query_scalar("SELECT t.name FROM tags t JOIN entity_tags et ON t.id=et.tag_id AND t.user_id=et.user_id WHERE et.entity_id=? AND et.user_id=? ORDER BY t.name")
-        .bind(id).bind(current_user_id()).fetch_all(conn).await.map_err(database)
+    sqlx::query_scalar("SELECT t.name FROM tags t JOIN entity_tags et ON t.id=et.tag_id AND t.user_id=et.user_id WHERE et.entity_id=? AND et.user_id=? AND et.track_id=? ORDER BY t.name")
+        .bind(id).bind(current_user_id()).bind(current_track_id()).fetch_all(conn).await.map_err(database)
 }
 async fn write_tags(conn: &mut SqliteConnection, id: &str, tags: &[String]) -> Result<()> {
-    sqlx::query("DELETE FROM entity_tags WHERE entity_id=? AND user_id=?")
+    sqlx::query("DELETE FROM entity_tags WHERE entity_id=? AND user_id=? AND track_id=?")
         .bind(id)
         .bind(current_user_id())
+        .bind(current_track_id())
         .execute(&mut *conn)
         .await
         .map_err(database)?;
     for name in tags {
         sqlx::query(
-            "INSERT INTO tags(id,user_id,name) VALUES(?,?,?) ON CONFLICT(user_id,name) DO NOTHING",
+            "INSERT INTO tags(id,user_id,track_id,name) VALUES(?,?,?,?) ON CONFLICT(user_id,track_id,name) DO NOTHING",
         )
         .bind(Uuid::new_v4().to_string())
-        .bind(current_user_id())
+        .bind(current_user_id()).bind(current_track_id())
         .bind(name)
         .execute(&mut *conn)
         .await
         .map_err(database)?;
-        sqlx::query("INSERT INTO entity_tags(entity_id,tag_id,user_id) SELECT ?,id,user_id FROM tags WHERE user_id=? AND name=?")
-            .bind(id).bind(current_user_id()).bind(name).execute(&mut *conn).await.map_err(database)?;
+        sqlx::query("INSERT INTO entity_tags(entity_id,tag_id,user_id,track_id) SELECT ?,id,user_id,track_id FROM tags WHERE user_id=? AND track_id=? AND name=?")
+            .bind(id).bind(current_user_id()).bind(current_track_id()).bind(name).execute(&mut *conn).await.map_err(database)?;
     }
     Ok(())
 }
 async fn write(conn: &mut SqliteConnection, id: &str, f: &Fields, tags: &[String]) -> Result<()> {
-    sqlx::query("UPDATE entities SET custom_fields=?,name=?,reference_code=?,address=?,contact_name=?,contact_info=?,advance_contact_required=?,notice_required=?,default_work_start_time=?,default_work_end_time=?,access_instructions=?,parking_info=?,special_notes=?,general_notes=?,archived=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
+    sqlx::query("UPDATE entities SET custom_fields=?,name=?,reference_code=?,address=?,contact_name=?,contact_info=?,advance_contact_required=?,notice_required=?,default_work_start_time=?,default_work_end_time=?,access_instructions=?,parking_info=?,special_notes=?,general_notes=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=? AND track_id=?")
         .bind(serde_json::to_string(&f.custom_fields).map_err(|_| invalid())?).bind(&f.name).bind(&f.reference_code).bind(&f.address).bind(&f.contact_name).bind(&f.contact_info)
         .bind(f.advance_contact_required).bind(f.notice_required).bind(&f.default_work_start_time).bind(&f.default_work_end_time)
-        .bind(&f.access_instructions).bind(&f.parking_info).bind(&f.special_notes).bind(&f.general_notes).bind(f.archived)
-        .bind(id).bind(current_user_id()).execute(&mut *conn).await.map_err(database)?;
+        .bind(&f.access_instructions).bind(&f.parking_info).bind(&f.special_notes).bind(&f.general_notes)
+        .bind(id).bind(current_user_id()).bind(current_track_id()).execute(&mut *conn).await.map_err(database)?;
     for field in f
         .custom_fields
         .iter()
         .filter(|field| !field.name.is_empty())
     {
         sqlx::query(
-            "INSERT INTO work_field_names(user_id,name) VALUES(?,?) ON CONFLICT DO NOTHING",
+            "INSERT INTO work_field_names(user_id,track_id,name) VALUES(?,?,?) ON CONFLICT DO NOTHING",
         )
-        .bind(current_user_id())
+        .bind(current_user_id()).bind(current_track_id())
         .bind(&field.name)
         .execute(&mut *conn)
         .await
@@ -164,6 +168,12 @@ async fn write(conn: &mut SqliteConnection, id: &str, f: &Fields, tags: &[String
 }
 fn input(value: Value, previous: Option<&Work>) -> Result<(Fields, Vec<String>)> {
     let mut object = value.as_object().cloned().ok_or_else(invalid)?;
+    if object
+        .get("archived")
+        .is_some_and(|value| value != &json!(false))
+    {
+        return Err(invalid());
+    }
     if object.is_empty() {
         return Err(invalid());
     }
@@ -186,9 +196,10 @@ pub async fn create(pool: &SqlitePool, value: Value) -> Result<Value> {
     let promoted = existing.is_some();
     let id = existing.unwrap_or_else(|| Uuid::new_v4().to_string());
     if !promoted {
-        sqlx::query("INSERT INTO entities(id,user_id,name) VALUES(?,?,?)")
+        sqlx::query("INSERT INTO entities(id,user_id,track_id,name) VALUES(?,?,?,?)")
             .bind(&id)
             .bind(current_user_id())
+            .bind(current_track_id())
             .bind(&fields.name)
             .execute(&mut *tx)
             .await
@@ -204,13 +215,16 @@ pub async fn create(pool: &SqlitePool, value: Value) -> Result<Value> {
 }
 pub async fn get(pool: &SqlitePool, id: &str) -> Result<Value> {
     let id = identifier(id)?;
-    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM entities WHERE id=? AND user_id=?")
-        .bind(&id)
-        .bind(current_user_id())
-        .fetch_optional(pool)
-        .await
-        .map_err(database)?
-        .unwrap_or(false)
+    if sqlx::query_scalar::<_, bool>(
+        "SELECT unmanaged FROM entities WHERE id=? AND user_id=? AND track_id=?",
+    )
+    .bind(&id)
+    .bind(current_user_id())
+    .bind(current_track_id())
+    .fetch_optional(pool)
+    .await
+    .map_err(database)?
+    .unwrap_or(false)
     {
         return Err(ApiError::WorkNotFound);
     }
@@ -221,13 +235,16 @@ pub async fn get(pool: &SqlitePool, id: &str) -> Result<Value> {
 }
 pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     let id = identifier(id)?;
-    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM entities WHERE id=? AND user_id=?")
-        .bind(&id)
-        .bind(current_user_id())
-        .fetch_optional(pool)
-        .await
-        .map_err(database)?
-        .unwrap_or(false)
+    if sqlx::query_scalar::<_, bool>(
+        "SELECT unmanaged FROM entities WHERE id=? AND user_id=? AND track_id=?",
+    )
+    .bind(&id)
+    .bind(current_user_id())
+    .bind(current_track_id())
+    .fetch_optional(pool)
+    .await
+    .map_err(database)?
+    .unwrap_or(false)
     {
         return Err(ApiError::WorkNotFound);
     }
@@ -239,35 +256,37 @@ pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     tx.commit().await.map_err(database)?;
     Ok(json!(work))
 }
-pub async fn archive(pool: &SqlitePool, id: &str) -> Result<()> {
-    let id = identifier(id)?;
-    if sqlx::query_scalar::<_, bool>("SELECT unmanaged FROM entities WHERE id=? AND user_id=?")
-        .bind(&id)
-        .bind(current_user_id())
-        .fetch_optional(pool)
-        .await
-        .map_err(database)?
-        .unwrap_or(false)
-    {
-        return Err(ApiError::WorkNotFound);
-    }
-    let result = sqlx::query("UPDATE entities SET archived=1,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
-        .bind(id).bind(current_user_id()).execute(pool).await.map_err(database)?;
-    if result.rows_affected() == 0 {
-        return Err(ApiError::WorkNotFound);
-    }
-    Ok(())
-}
 pub async fn list(pool: &SqlitePool, q: ListQuery) -> Result<Value> {
     let limit = q.limit.unwrap_or(20);
     let search = q.search()?;
+    if q.archived {
+        return Err(invalid());
+    }
     let mut tx = pool.begin().await.map_err(database)?;
-    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM entities WHERE user_id=? AND unmanaged=0 AND archived=? AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!'))")
-        .bind(current_user_id()).bind(q.archived).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).fetch_one(&mut *tx).await.map_err(database)?;
-    let mut items = sqlx::query_as::<_,Work>("SELECT * FROM entities WHERE user_id=? AND unmanaged=0 AND archived=? AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!')) ORDER BY name,id LIMIT ? OFFSET ?")
-        .bind(current_user_id()).bind(q.archived).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(limit).bind(q.offset).fetch_all(&mut *tx).await.map_err(database)?;
-    for work in &mut items {
-        work.tags = read_tags(&mut tx, &work.id).await?;
+    let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM entities WHERE user_id=? AND track_id=? AND unmanaged=0 AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!'))")
+        .bind(current_user_id()).bind(current_track_id()).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).fetch_one(&mut *tx).await.map_err(database)?;
+    let mut items = sqlx::query_as::<_,Work>("SELECT * FROM entities WHERE user_id=? AND track_id=? AND unmanaged=0 AND (name LIKE ? ESCAPE '!' OR reference_code LIKE ? ESCAPE '!' OR address LIKE ? ESCAPE '!' OR general_notes LIKE ? ESCAPE '!' OR special_notes LIKE ? ESCAPE '!' OR contact_name LIKE ? ESCAPE '!' OR contact_info LIKE ? ESCAPE '!' OR access_instructions LIKE ? ESCAPE '!' OR parking_info LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM json_each(entities.custom_fields) AS detail WHERE json_extract(detail.value, '$.name') LIKE ? ESCAPE '!' OR json_extract(detail.value, '$.value') LIKE ? ESCAPE '!')) ORDER BY name,id LIMIT ? OFFSET ?")
+        .bind(current_user_id()).bind(current_track_id()).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(&search).bind(limit).bind(q.offset).fetch_all(&mut *tx).await.map_err(database)?;
+    if !items.is_empty() {
+        let placeholders = vec!["?"; items.len()].join(",");
+        let sql = format!(
+            "SELECT et.entity_id,t.name FROM tags t \
+             JOIN entity_tags et ON t.id=et.tag_id AND t.user_id=et.user_id \
+             WHERE et.user_id=? AND et.track_id=? AND et.entity_id IN ({placeholders}) ORDER BY t.name"
+        );
+        let mut query = sqlx::query_as::<_, (String, String)>(&sql)
+            .bind(current_user_id())
+            .bind(current_track_id());
+        for work in &items {
+            query = query.bind(&work.id);
+        }
+        let mut tags = std::collections::HashMap::<String, Vec<String>>::new();
+        for (id, name) in query.fetch_all(&mut *tx).await.map_err(database)? {
+            tags.entry(id).or_default().push(name);
+        }
+        for work in &mut items {
+            work.tags = tags.remove(&work.id).unwrap_or_default();
+        }
     }
     tx.commit().await.map_err(database)?;
     Ok(json!({"items":items,"total":total,"limit":limit,"offset":q.offset}))
@@ -296,11 +315,13 @@ pub(super) async fn snapshot(conn: &mut SqliteConnection, id: &str) -> Result<Va
 }
 
 pub async fn field_names(pool: &SqlitePool) -> Result<Value> {
-    let names: Vec<String> =
-        sqlx::query_scalar("SELECT name FROM work_field_names WHERE user_id=? ORDER BY name")
-            .bind(current_user_id())
-            .fetch_all(pool)
-            .await
-            .map_err(database)?;
+    let names: Vec<String> = sqlx::query_scalar(
+        "SELECT name FROM work_field_names WHERE user_id=? AND track_id=? ORDER BY name",
+    )
+    .bind(current_user_id())
+    .bind(current_track_id())
+    .fetch_all(pool)
+    .await
+    .map_err(database)?;
     Ok(json!(names))
 }

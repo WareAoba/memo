@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { emptyFields } from '../../api/works';
 import { updateTask, type ScheduleDetail } from '../../api/schedules';
@@ -46,14 +46,29 @@ it('opens the selected execution directly and retains a failed rename until retr
   trigger.focus();
   fireEvent.click(trigger);
   const dialog = within(screen.getByRole('dialog', { name: '화면 확인 수정' }));
-  expect(screen.queryByRole('dialog', { name: '일정 수정' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: '스케줄 수정' })).not.toBeInTheDocument();
   fireEvent.change(dialog.getByLabelText('태스크 이름'), { target: { value: '모바일 확인' } });
   fireEvent.click(dialog.getByRole('button', { name: '이름 저장' }));
   expect(await dialog.findByText('연결 실패')).toBeVisible();
   expect(dialog.getByLabelText('태스크 이름')).toHaveValue('모바일 확인');
   fireEvent.click(dialog.getByRole('button', { name: '이름 저장' }));
   await waitFor(() => expect(updateTask).toHaveBeenLastCalledWith('task', { name: '모바일 확인' }));
-  await dialog.findByText('저장했습니다.');
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   fireEvent.click(dialog.getByRole('button', { name: '상세 닫기' }));
   expect(screen.getByRole('button', { name: '모바일 확인' })).toHaveFocus();
+});
+
+it('previews schedule notes without line breaks and keeps the time in the heading', () => {
+  const { container, rerender } = render(
+    <SavedScheduleCard value={{ ...schedule, notes: '  첫 줄\n\n  다음 줄 ' }} />,
+  );
+  expect(container.querySelector('.schedule-card-memo')?.textContent).toBe('첫 줄 다음 줄');
+  expect(screen.getByRole('heading', { name: /점검/ })).toHaveTextContent('09:00 — 10:00');
+  rerender(<SavedScheduleCard value={{ ...schedule, notes: ' \n ' }} />);
+  expect(container.querySelector('.schedule-card-memo')).toBeNull();
 });

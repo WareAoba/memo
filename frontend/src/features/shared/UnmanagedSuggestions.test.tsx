@@ -14,7 +14,7 @@ it('debounces names, hides stale suggestions and explains promotion before savin
   rerender(<UnmanagedSuggestions kind="work" name="운동" onSelect={select} />);
   fireEvent.click(await screen.findByRole('button', { name: '운동' }));
   expect(select).toHaveBeenCalledWith('운동');
-  expect(screen.getByRole('status')).toHaveTextContent('기존 일정에도 이 상세정보를 적용');
+  expect(screen.getByRole('status')).toHaveTextContent('기존 스케줄에도 이 상세정보를 적용');
   expect(suggestUnmanaged).toHaveBeenCalledTimes(1);
   const signal = vi.mocked(suggestUnmanaged).mock.calls[0]![2];
   rerender(<UnmanagedSuggestions kind="work" name="독서" onSelect={select} />);

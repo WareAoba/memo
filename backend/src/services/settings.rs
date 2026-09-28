@@ -1,3 +1,4 @@
+use super::tracks::current_track_id;
 use super::{Result, database, invalid};
 use crate::local_user::current_user_id;
 use serde::{Deserialize, Serialize};
@@ -119,22 +120,22 @@ pub async fn reset(pool: &SqlitePool, root: &std::path::Path, input: Reset) -> R
     // All SQL is selected from constants; the client cannot provide identifiers or owner IDs.
     let statements: &[&str] = match input.target.as_str() {
         "schedules" => &[
-            "UPDATE photos SET state='deleted' WHERE user_id=?",
-            "DELETE FROM push_deliveries WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id=?)",
+            "UPDATE photos SET state='deleted' WHERE user_id=? AND track_id=?",
+            "DELETE FROM push_deliveries WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id=? AND track_id=?)",
         ],
         "works" => &[
-            "UPDATE schedules SET entity_id=NULL WHERE user_id=?",
-            "DELETE FROM work_task_presets WHERE user_id=?",
-            "DELETE FROM entity_tags WHERE user_id=?",
-            "DELETE FROM entities WHERE user_id=?",
-            "DELETE FROM work_field_names WHERE user_id=?",
+            "UPDATE schedules SET entity_id=NULL WHERE user_id=? AND track_id=?",
+            "DELETE FROM work_task_presets WHERE user_id=? AND track_id=?",
+            "DELETE FROM entity_tags WHERE user_id=? AND track_id=?",
+            "DELETE FROM entities WHERE user_id=? AND track_id=?",
+            "DELETE FROM work_field_names WHERE user_id=? AND track_id=?",
         ],
         "tasks" => &[
-            "UPDATE schedule_tasks SET source_task_preset_id=NULL WHERE user_id=?",
-            "DELETE FROM work_task_presets WHERE user_id=?",
-            "DELETE FROM task_preset_tags WHERE user_id=?",
-            "DELETE FROM task_preset_items WHERE task_preset_id IN (SELECT id FROM task_presets WHERE user_id=?)",
-            "DELETE FROM task_presets WHERE user_id=?",
+            "UPDATE schedule_tasks SET source_task_preset_id=NULL WHERE user_id=? AND track_id=?",
+            "DELETE FROM work_task_presets WHERE user_id=? AND track_id=?",
+            "DELETE FROM task_preset_tags WHERE user_id=? AND track_id=?",
+            "DELETE FROM task_preset_items WHERE task_preset_id IN (SELECT id FROM task_presets WHERE user_id=? AND track_id=?)",
+            "DELETE FROM task_presets WHERE user_id=? AND track_id=?",
         ],
         _ => return Err(invalid()),
     };
@@ -142,30 +143,32 @@ pub async fn reset(pool: &SqlitePool, root: &std::path::Path, input: Reset) -> R
     for sql in statements {
         sqlx::query(sql)
             .bind(current_user_id())
+            .bind(current_track_id())
             .execute(&mut *tx)
             .await
             .map_err(database)?;
     }
     if input.target == "schedules" {
         // Keep durable cleanup records without retaining schedule foreign keys.
-        sqlx::query("INSERT INTO photo_deletions(user_id,id,mime_type) SELECT user_id,id,mime_type FROM photos WHERE user_id=?")
-            .bind(current_user_id()).execute(&mut *tx).await.map_err(database)?;
+        sqlx::query("INSERT INTO photo_deletions(user_id,id,mime_type) SELECT user_id,id,mime_type FROM photos WHERE user_id=? AND track_id=?")
+            .bind(current_user_id()).bind(current_track_id()).execute(&mut *tx).await.map_err(database)?;
         for sql in [
-            "DELETE FROM photos WHERE user_id=?",
-            "DELETE FROM schedule_task_items WHERE schedule_task_id IN (SELECT id FROM schedule_tasks WHERE user_id=?)",
-            "DELETE FROM schedule_tasks WHERE user_id=?",
-            "DELETE FROM schedule_entity_snapshot WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id=?)",
-            "DELETE FROM schedules WHERE user_id=?",
+            "DELETE FROM photos WHERE user_id=? AND track_id=?",
+            "DELETE FROM schedule_task_items WHERE schedule_task_id IN (SELECT id FROM schedule_tasks WHERE user_id=? AND track_id=?)",
+            "DELETE FROM schedule_tasks WHERE user_id=? AND track_id=?",
+            "DELETE FROM schedule_entity_snapshot WHERE schedule_id IN (SELECT id FROM schedules WHERE user_id=? AND track_id=?)",
+            "DELETE FROM schedules WHERE user_id=? AND track_id=?",
         ] {
             sqlx::query(sql)
                 .bind(current_user_id())
+                .bind(current_track_id())
                 .execute(&mut *tx)
                 .await
                 .map_err(database)?;
         }
     }
-    sqlx::query("DELETE FROM tags WHERE user_id=? AND NOT EXISTS(SELECT 1 FROM entity_tags WHERE tag_id=tags.id) AND NOT EXISTS(SELECT 1 FROM task_preset_tags WHERE tag_id=tags.id)")
-        .bind(current_user_id()).execute(&mut *tx).await.map_err(database)?;
+    sqlx::query("DELETE FROM tags WHERE user_id=? AND track_id=? AND NOT EXISTS(SELECT 1 FROM entity_tags WHERE tag_id=tags.id) AND NOT EXISTS(SELECT 1 FROM task_preset_tags WHERE tag_id=tags.id)")
+        .bind(current_user_id()).bind(current_track_id()).execute(&mut *tx).await.map_err(database)?;
     tx.commit().await.map_err(database)?;
     if cleanup_reset_photos(pool, root).await.is_err() {
         tracing::warn!(

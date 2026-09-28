@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { Surface, Input, Select } from '../shared/ui';
+import { Surface, Input } from '../shared/ui';
 import type { PresetItem } from '../../api/taskPresets';
 import { IconButton } from '../shared/IconButton';
+import { DropdownSelect } from '../shared/DropdownSelect';
 import { types } from './itemTypes';
 
 export type ItemDraft = { key: string; item: PresetItem };
@@ -48,25 +49,19 @@ export function PresetItemsEditor({
                 onChange={(event) => change(key, { label: event.target.value })}
               />
             </label>
-            <label>
-              {tr('PresetItemsEditor.type')}
-              <Select
-                value={item.item_type}
-                onChange={(event) =>
-                  change(key, {
-                    item_type: event.target.value as PresetItem['item_type'],
-                    default_value: null,
-                    unit: '',
-                  })
-                }
-              >
-                {Object.entries(types).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-            </label>
+            <DropdownSelect
+              label={tr('PresetItemsEditor.type')}
+              disabled={disabled}
+              value={item.item_type}
+              options={Object.entries(types).map(([value, label]) => ({ value, label }))}
+              onChange={(value) =>
+                change(key, {
+                  item_type: value as PresetItem['item_type'],
+                  default_value: null,
+                  unit: '',
+                })
+              }
+            />
             <label>
               <Input
                 type="checkbox"

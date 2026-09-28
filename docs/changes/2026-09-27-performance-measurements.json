@@ -1,0 +1,1408 @@
+{
+  "date": "2026-09-27",
+  "notes": [
+    "Synthetic fixtures, real product React components, production profiling build; not field INP/LCP.",
+    "API: isolated SQLite database, debug Rust build, 1000 schedules with 3 tasks each, 100 on selected day.",
+    "Browser run 1 baseline then cached; run 2 reverse count/order. Each steady median uses 4 and 7 commits respectively.",
+    "40 ms uses setTimeout in mock fetch; includes browser timer scheduling, not real WAN measurement.",
+    "Formatter experiment fixed to Asia/Tokyo, fixture-only; not production-ready multi-zone implementation.",
+    "Other task concurrently changed CSS and server DTOs; API measures binary built before later changes. Render source hashes collected at report time."
+  ],
+  "versions": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "vite": "7.3.6"
+  },
+  "browserRun1": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "viewport": [
+      3072,
+      1594
+    ],
+    "renders": [
+      {
+        "count": 10,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 1,
+        "nodes": 951,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 6.800000000745058,
+            "at": 104.80000000074506
+          },
+          {
+            "phase": "update",
+            "duration": 20,
+            "at": 184.09999999776483
+          }
+        ],
+        "steady": {
+          "n": 4,
+          "median": 5.399999998509884,
+          "p95": 6.400000002235174,
+          "max": 6.400000002235174
+        }
+      },
+      {
+        "count": 10,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": true,
+        "requests": 1,
+        "nodes": 951,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 0.8000000007450581,
+            "at": 4697.800000000745
+          },
+          {
+            "phase": "update",
+            "duration": 7.599999997764826,
+            "at": 4707.800000000745
+          }
+        ],
+        "steady": {
+          "n": 4,
+          "median": 3.9999999962747097,
+          "p95": 4.799999997019768,
+          "max": 4.799999997019768
+        }
+      },
+      {
+        "count": 50,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 3,
+        "nodes": 4351,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 0.7999999970197678,
+            "at": 9316.099999997765
+          },
+          {
+            "phase": "update",
+            "duration": 38.30000000074506,
+            "at": 9358.099999997765
+          }
+        ],
+        "steady": {
+          "n": 4,
+          "median": 20.19999998807907,
+          "p95": 20.699999999254942,
+          "max": 20.699999999254942
+        }
+      },
+      {
+        "count": 50,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": true,
+        "requests": 3,
+        "nodes": 4351,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 0.8999999985098839,
+            "at": 13932.199999999255
+          },
+          {
+            "phase": "update",
+            "duration": 30.800000000745058,
+            "at": 13965.699999999255
+          }
+        ],
+        "steady": {
+          "n": 4,
+          "median": 11.699999995529652,
+          "p95": 13.299999997019768,
+          "max": 13.299999997019768
+        }
+      },
+      {
+        "count": 100,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 5,
+        "nodes": 8601,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 0.8000000007450581,
+            "at": 18551.89999999851
+          },
+          {
+            "phase": "update",
+            "duration": 63.00000000372529,
+            "at": 18620.39999999851
+          }
+        ],
+        "steady": {
+          "n": 4,
+          "median": 33.899999998509884,
+          "p95": 34.99999998137355,
+          "max": 34.99999998137355
+        }
+      },
+      {
+        "count": 100,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": true,
+        "requests": 5,
+        "nodes": 8601,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.1000000014901161,
+            "at": 23166
+          },
+          {
+            "phase": "update",
+            "duration": 46.69999999180436,
+            "at": 23217.5
+          }
+        ],
+        "steady": {
+          "n": 4,
+          "median": 21.400000005960464,
+          "p95": 30.00000000372529,
+          "max": 30.00000000372529
+        }
+      }
+    ],
+    "appearance": [
+      {
+        "count": 10,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 0.6999999992549419,
+        "p95": 0.9000000022351742,
+        "max": 0.9000000022351742
+      },
+      {
+        "count": 10,
+        "cachedFormatters": true,
+        "n": 12,
+        "median": 0,
+        "p95": 0.10000000149011612,
+        "max": 0.10000000149011612
+      },
+      {
+        "count": 50,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 3.199999999254942,
+        "p95": 3.699999999254942,
+        "max": 3.699999999254942
+      },
+      {
+        "count": 50,
+        "cachedFormatters": true,
+        "n": 12,
+        "median": 0.19999999925494194,
+        "p95": 0.5,
+        "max": 0.5
+      },
+      {
+        "count": 100,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 6.399999998509884,
+        "p95": 7.799999997019768,
+        "max": 7.799999997019768
+      },
+      {
+        "count": 100,
+        "cachedFormatters": true,
+        "n": 12,
+        "median": 0.3999999985098839,
+        "p95": 0.4000000022351742,
+        "max": 0.4000000022351742
+      }
+    ],
+    "calendar": [
+      {
+        "count": 100,
+        "layout": {
+          "n": 6,
+          "median": 0.19999999925494194,
+          "p95": 0.3999999985098839,
+          "max": 0.3999999985098839
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3.900000002235174,
+            "at": 27956.199999999255
+          },
+          {
+            "phase": "update",
+            "duration": 1.800000000745058,
+            "at": 27960.699999999255
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 1000,
+        "layout": {
+          "n": 6,
+          "median": 1.5,
+          "p95": 1.699999999254942,
+          "max": 1.699999999254942
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 2.900000002235174,
+            "at": 28986.199999999255
+          },
+          {
+            "phase": "update",
+            "duration": 3,
+            "at": 28995.199999999255
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 5000,
+        "layout": {
+          "n": 6,
+          "median": 15.100000001490116,
+          "p95": 15.5,
+          "max": 15.5
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 2.900000002235174,
+            "at": 30132.89999999851
+          },
+          {
+            "phase": "update",
+            "duration": 17.099999997764826,
+            "at": 30167.099999997765
+          }
+        ],
+        "nodes": 733
+      }
+    ],
+    "requests": [
+      {
+        "count": 100,
+        "simulatedLatencyMs": 0,
+        "firstMs": 0.3999999985098839,
+        "revisitMs": 0.19999999925494194,
+        "totalCalls": 10
+      },
+      {
+        "count": 100,
+        "simulatedLatencyMs": 40,
+        "firstMs": 232.80000000074506,
+        "revisitMs": 234.69999999925494,
+        "totalCalls": 10
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 0,
+        "firstMs": 2.399999998509884,
+        "revisitMs": 2.100000001490116,
+        "totalCalls": 100
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 40,
+        "firstMs": 2340.39999999851,
+        "revisitMs": 2333,
+        "totalCalls": 100
+      }
+    ]
+  },
+  "browserRun2": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "viewport": [
+      3072,
+      1594
+    ],
+    "renders": [
+      {
+        "count": 100,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": true,
+        "requests": 5,
+        "nodes": 8601,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 5.799999997019768,
+            "at": 58.69999999925494
+          },
+          {
+            "phase": "update",
+            "duration": 92.09999999031425,
+            "at": 177.80000000074506
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 26.200000014156103,
+          "p95": 29.600000012665987,
+          "max": 29.600000012665987
+        }
+      },
+      {
+        "count": 100,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 5,
+        "nodes": 8601,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.5,
+            "at": 7662.300000000745
+          },
+          {
+            "phase": "update",
+            "duration": 73.70000000670552,
+            "at": 7743.599999997765
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 32.399999994784594,
+          "p95": 34.900000002235174,
+          "max": 34.900000002235174
+        }
+      },
+      {
+        "count": 50,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": true,
+        "requests": 3,
+        "nodes": 4351,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.5,
+            "at": 15276.300000000745
+          },
+          {
+            "phase": "update",
+            "duration": 22.799999997019768,
+            "at": 15302.099999997765
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 8.50000000372529,
+          "p95": 9.699999999254942,
+          "max": 9.699999999254942
+        }
+      },
+      {
+        "count": 50,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 3,
+        "nodes": 4351,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1,
+            "at": 22885.89999999851
+          },
+          {
+            "phase": "update",
+            "duration": 29.600000005215406,
+            "at": 22918.300000000745
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 14.399999998509884,
+          "p95": 18.599999994039536,
+          "max": 18.599999994039536
+        }
+      },
+      {
+        "count": 10,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": true,
+        "requests": 1,
+        "nodes": 951,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.2000000029802322,
+            "at": 30507.300000000745
+          },
+          {
+            "phase": "update",
+            "duration": 6.600000001490116,
+            "at": 30514.699999999255
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 2.2000000029802322,
+          "p95": 2.900000002235174,
+          "max": 2.900000002235174
+        }
+      },
+      {
+        "count": 10,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 1,
+        "nodes": 951,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.1000000014901161,
+            "at": 38117.800000000745
+          },
+          {
+            "phase": "update",
+            "duration": 6.5,
+            "at": 38125.199999999255
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 4.400000002235174,
+          "p95": 5.399999998509884,
+          "max": 5.399999998509884
+        }
+      }
+    ],
+    "appearance": [
+      {
+        "count": 10,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 0.5,
+        "p95": 0.6999999992549419,
+        "max": 0.6999999992549419
+      },
+      {
+        "count": 10,
+        "cachedFormatters": true,
+        "n": 12,
+        "median": 0,
+        "p95": 0.10000000149011612,
+        "max": 0.10000000149011612
+      },
+      {
+        "count": 50,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 3.100000001490116,
+        "p95": 3.5,
+        "max": 3.5
+      },
+      {
+        "count": 50,
+        "cachedFormatters": true,
+        "n": 12,
+        "median": 0.19999999925494194,
+        "p95": 0.5,
+        "max": 0.5
+      },
+      {
+        "count": 100,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 6.300000000745058,
+        "p95": 7.599999997764826,
+        "max": 7.599999997764826
+      },
+      {
+        "count": 100,
+        "cachedFormatters": true,
+        "n": 12,
+        "median": 0.3999999985098839,
+        "p95": 0.6000000014901161,
+        "max": 0.6000000014901161
+      }
+    ],
+    "calendar": [
+      {
+        "count": 100,
+        "layout": {
+          "n": 6,
+          "median": 0.20000000298023224,
+          "p95": 0.30000000074505806,
+          "max": 0.30000000074505806
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3.100000001490116,
+            "at": 45907.5
+          },
+          {
+            "phase": "update",
+            "duration": 1.9000000022351742,
+            "at": 45912
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 1000,
+        "layout": {
+          "n": 6,
+          "median": 1.699999999254942,
+          "p95": 1.800000000745058,
+          "max": 1.800000000745058
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 2.800000000745058,
+            "at": 46947.5
+          },
+          {
+            "phase": "update",
+            "duration": 3.399999998509884,
+            "at": 46956.39999999851
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 5000,
+        "layout": {
+          "n": 6,
+          "median": 15.100000001490116,
+          "p95": 15.200000002980232,
+          "max": 15.200000002980232
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3.5000000037252903,
+            "at": 48088.599999997765
+          },
+          {
+            "phase": "update",
+            "duration": 19.5,
+            "at": 48124.5
+          }
+        ],
+        "nodes": 733
+      }
+    ],
+    "requests": [
+      {
+        "count": 100,
+        "simulatedLatencyMs": 0,
+        "firstMs": 0.6000000014901161,
+        "revisitMs": 0.19999999925494194,
+        "totalCalls": 10
+      },
+      {
+        "count": 100,
+        "simulatedLatencyMs": 40,
+        "firstMs": 233.30000000074506,
+        "revisitMs": 233.39999999850988,
+        "totalCalls": 10
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 0,
+        "firstMs": 2.199999999254942,
+        "revisitMs": 2.2000000029802322,
+        "totalCalls": 100
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 40,
+        "firstMs": 2329.7999999970198,
+        "revisitMs": 2331.7000000029802,
+        "totalCalls": 100
+      }
+    ]
+  },
+  "api": [
+    {
+      "kind": "day-details",
+      "limit": 20,
+      "total": 100,
+      "pages": 5,
+      "fullRangeMs": {
+        "median": 32.16120000000001,
+        "p95": 33.76070000000027,
+        "samples": 7
+      },
+      "pageMs": {
+        "median": 6.4628999999999905,
+        "p95": 7.191000000000258,
+        "samples": 40
+      },
+      "bytes": 189599
+    },
+    {
+      "kind": "day-details",
+      "limit": 100,
+      "total": 100,
+      "pages": 1,
+      "fullRangeMs": {
+        "median": 21.284400000000005,
+        "p95": 21.646499999999833,
+        "samples": 7
+      },
+      "pageMs": {
+        "median": 21.421299999999974,
+        "p95": 21.640300000000025,
+        "samples": 8
+      },
+      "bytes": 189352
+    },
+    {
+      "kind": "year-summary",
+      "limit": 20,
+      "total": 1000,
+      "pages": 50,
+      "fullRangeMs": {
+        "median": 110.53620000000046,
+        "p95": 112.58469999999988,
+        "samples": 7
+      },
+      "pageMs": {
+        "median": 2.1689000000005763,
+        "p95": 2.6008999999999105,
+        "samples": 400
+      },
+      "bytes": 462084
+    },
+    {
+      "kind": "year-summary",
+      "limit": 100,
+      "total": 1000,
+      "pages": 10,
+      "fullRangeMs": {
+        "median": 57.835799999999836,
+        "p95": 58.261099999999715,
+        "samples": 7
+      },
+      "pageMs": {
+        "median": 5.707999999999629,
+        "p95": 6.3059000000002925,
+        "samples": 80
+      },
+      "bytes": 459538
+    },
+    {
+      "kind": "search",
+      "limit": 20,
+      "total": 1000,
+      "pages": 1,
+      "fullRangeMs": {
+        "median": 1.9534000000003289,
+        "p95": 2.5628999999998996,
+        "samples": 7
+      },
+      "pageMs": {
+        "median": 1.9996000000001004,
+        "p95": 2.5573999999996886,
+        "samples": 8
+      },
+      "bytes": 9242
+    },
+    {
+      "kind": "search",
+      "limit": 100,
+      "total": 1000,
+      "pages": 1,
+      "fullRangeMs": {
+        "median": 5.625199999999495,
+        "p95": 5.724200000000565,
+        "samples": 7
+      },
+      "pageMs": {
+        "median": 5.619200000000092,
+        "p95": 5.718600000000151,
+        "samples": 8
+      },
+      "bytes": 45963
+    }
+  ],
+  "bundle": {
+    "modules": [
+      {
+        "id": "frontend/node_modules/react-dom/cjs/react-dom-client.production.js",
+        "bytes": 644593
+      },
+      {
+        "id": "frontend/node_modules/i18next/dist/esm/i18next.js",
+        "bytes": 82773
+      },
+      {
+        "id": "frontend/src/i18n/locales/en.json",
+        "bytes": 37249
+      },
+      {
+        "id": "frontend/src/i18n/locales/ko.json",
+        "bytes": 30701
+      },
+      {
+        "id": "frontend/src/i18n/locales/ja.json",
+        "bytes": 30533
+      },
+      {
+        "id": "frontend/node_modules/react/cjs/react.production.js",
+        "bytes": 19185
+      },
+      {
+        "id": "frontend/src/features/schedules/ScheduleEditor.tsx",
+        "bytes": 17669
+      },
+      {
+        "id": "frontend/src/features/workspace/Calendar.tsx",
+        "bytes": 12494
+      },
+      {
+        "id": "frontend/src/features/schedules/TimeDial.tsx",
+        "bytes": 11894
+      },
+      {
+        "id": "frontend/node_modules/scheduler/cjs/scheduler.production.js",
+        "bytes": 11134
+      },
+      {
+        "id": "frontend/src/features/schedules/TaskExecution.tsx",
+        "bytes": 10893
+      },
+      {
+        "id": "frontend/src/features/workspace/Today.tsx",
+        "bytes": 10794
+      },
+      {
+        "id": "frontend/src/App.tsx",
+        "bytes": 10745
+      },
+      {
+        "id": "frontend/src/features/workspace/TodayScheduleCard.tsx",
+        "bytes": 10626
+      },
+      {
+        "id": "frontend/src/features/workspace/Sidebar.tsx",
+        "bytes": 10084
+      },
+      {
+        "id": "frontend/src/features/works/WorkTasks.tsx",
+        "bytes": 9790
+      },
+      {
+        "id": "frontend/src/features/workspace/SavedScheduleCard.tsx",
+        "bytes": 9736
+      },
+      {
+        "id": "frontend/src/features/sticky/StickyWorkspace.tsx",
+        "bytes": 9611
+      },
+      {
+        "id": "frontend/src/features/tasks/TaskPresetListView.tsx",
+        "bytes": 9291
+      },
+      {
+        "id": "frontend/src/features/works/WorkListView.tsx",
+        "bytes": 8246
+      },
+      {
+        "id": "frontend/node_modules/react-dom/cjs/react-dom.production.js",
+        "bytes": 7918
+      },
+      {
+        "id": "frontend/src/features/works/WorkEditor.tsx",
+        "bytes": 7666
+      },
+      {
+        "id": "frontend/src/api/schedules.ts",
+        "bytes": 7126
+      },
+      {
+        "id": "frontend/src/features/schedules/Schedules.tsx",
+        "bytes": 6917
+      },
+      {
+        "id": "frontend/src/features/tasks/TaskPresetEditor.tsx",
+        "bytes": 6819
+      },
+      {
+        "id": "frontend/src/features/schedules/Picker.tsx",
+        "bytes": 6703
+      },
+      {
+        "id": "frontend/node_modules/react-i18next/dist/es/useTranslation.js",
+        "bytes": 6698
+      },
+      {
+        "id": "frontend/src/features/schedules/Photos.tsx",
+        "bytes": 6645
+      },
+      {
+        "id": "frontend/src/features/workspace/TodayDial.tsx",
+        "bytes": 6600
+      },
+      {
+        "id": "frontend/src/features/sticky/StickyWindow.tsx",
+        "bytes": 6523
+      },
+      {
+        "id": "frontend/src/api/push.ts",
+        "bytes": 6166
+      },
+      {
+        "id": "frontend/src/features/works/DetailKindInput.tsx",
+        "bytes": 6053
+      },
+      {
+        "id": "frontend/src/features/schedules/ScheduleSearch.tsx",
+        "bytes": 6010
+      },
+      {
+        "id": "frontend/src/features/shared/DropdownSelect.tsx",
+        "bytes": 5951
+      },
+      {
+        "id": "frontend/src/features/schedules/ScheduleTaskRows.tsx",
+        "bytes": 5942
+      },
+      {
+        "id": "frontend/src/features/tasks/PresetItemsEditor.tsx",
+        "bytes": 5339
+      },
+      {
+        "id": "frontend/src/features/sticky/StickySchedules.tsx",
+        "bytes": 5025
+      },
+      {
+        "id": "frontend/src/features/workspace/useCalendarTransition.ts",
+        "bytes": 4890
+      },
+      {
+        "id": "frontend/src/features/workspace/CalendarDatePicker.tsx",
+        "bytes": 4812
+      },
+      {
+        "id": "frontend/src/features/shared/MemoButton.tsx",
+        "bytes": 4687
+      },
+      {
+        "id": "frontend/src/features/settings/SettingsProvider.tsx",
+        "bytes": 4624
+      },
+      {
+        "id": "frontend/src/features/shared/useMemoAutosave.ts",
+        "bytes": 4434
+      },
+      {
+        "id": "frontend/src/features/schedules/Reminders.tsx",
+        "bytes": 4323
+      },
+      {
+        "id": "frontend/src/features/shared/PresetModal.tsx",
+        "bytes": 4142
+      },
+      {
+        "id": "frontend/src/features/sticky/StickyTray.tsx",
+        "bytes": 4136
+      },
+      {
+        "id": "frontend/src/features/works/WorkDetail.tsx",
+        "bytes": 4119
+      },
+      {
+        "id": "frontend/src/features/workspace/CalendarGrid.tsx",
+        "bytes": 4083
+      },
+      {
+        "id": "frontend/src/features/tasks/TaskPresetDetail.tsx",
+        "bytes": 3915
+      },
+      {
+        "id": "frontend/src/features/shared/MemoPopover.tsx",
+        "bytes": 3623
+      },
+      {
+        "id": "frontend/src/features/schedules/TaskNameInput.tsx",
+        "bytes": 3566
+      },
+      {
+        "id": "frontend/src/features/schedules/useScheduleTaskDraft.ts",
+        "bytes": 3462
+      },
+      {
+        "id": "frontend/src/features/settings/DataReset.tsx",
+        "bytes": 3386
+      },
+      {
+        "id": "frontend/src/features/sticky/stickyGenie.ts",
+        "bytes": 3323
+      },
+      {
+        "id": "frontend/src/features/settings/SettingsFields.tsx",
+        "bytes": 3318
+      },
+      {
+        "id": "frontend/src/features/settings/Settings.tsx",
+        "bytes": 3203
+      },
+      {
+        "id": "frontend/src/features/auth/AccountMenu.tsx",
+        "bytes": 3197
+      },
+      {
+        "id": "frontend/src/api/taskPresets.ts",
+        "bytes": 3060
+      },
+      {
+        "id": "frontend/src/features/schedules/PushSettings.tsx",
+        "bytes": 2695
+      },
+      {
+        "id": "frontend/src/features/shared/SwipeDelete.tsx",
+        "bytes": 2645
+      },
+      {
+        "id": "frontend/src/i18n/index.ts",
+        "bytes": 2551
+      },
+      {
+        "id": "frontend/src/api/client.ts",
+        "bytes": 2410
+      },
+      {
+        "id": "frontend/src/features/schedules/ReminderSettings.tsx",
+        "bytes": 2352
+      },
+      {
+        "id": "frontend/src/features/schedules/DialFace.tsx",
+        "bytes": 2348
+      },
+      {
+        "id": "frontend/node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js",
+        "bytes": 2342
+      },
+      {
+        "id": "frontend/src/features/shared/ui.tsx",
+        "bytes": 2153
+      },
+      {
+        "id": "frontend/node_modules/react-i18next/dist/es/utils.js",
+        "bytes": 2064
+      },
+      {
+        "id": "frontend/src/api/works.ts",
+        "bytes": 2054
+      },
+      {
+        "id": "frontend/src/features/shared/MemoEditor.tsx",
+        "bytes": 1993
+      },
+      {
+        "id": "frontend/src/api/photos.ts",
+        "bytes": 1979
+      },
+      {
+        "id": "frontend/src/features/shared/usePopupExit.ts",
+        "bytes": 1771
+      },
+      {
+        "id": "frontend/src/features/shared/UnmanagedSuggestions.tsx",
+        "bytes": 1697
+      },
+      {
+        "id": "frontend/src/api/settings.ts",
+        "bytes": 1658
+      },
+      {
+        "id": "frontend/src/features/shared/Toast.tsx",
+        "bytes": 1610
+      },
+      {
+        "id": "frontend/src/features/shared/ActionIcon.tsx",
+        "bytes": 1526
+      },
+      {
+        "id": "frontend/src/features/workspace/scheduleAppearance.ts",
+        "bytes": 1523
+      },
+      {
+        "id": "frontend/src/features/schedules/AddTaskPicker.tsx",
+        "bytes": 1439
+      },
+      {
+        "id": "frontend/src/features/workspace/workspaceRoute.ts",
+        "bytes": 1412
+      },
+      {
+        "id": "frontend/src/features/schedules/timeRange.ts",
+        "bytes": 1379
+      },
+      {
+        "id": "frontend/src/features/sticky/stickyState.ts",
+        "bytes": 1304
+      },
+      {
+        "id": "frontend/node_modules/react/cjs/react-jsx-runtime.production.js",
+        "bytes": 1294
+      },
+      {
+        "id": "frontend/src/features/shared/memoPlacement.ts",
+        "bytes": 1256
+      },
+      {
+        "id": "frontend/src/features/shared/TaskParameterInputs.tsx",
+        "bytes": 1243
+      },
+      {
+        "id": "frontend/src/features/schedules/ScheduleSearchControl.tsx",
+        "bytes": 1220
+      },
+      {
+        "id": "frontend/src/features/shared/ScheduleCardActions.tsx",
+        "bytes": 1205
+      },
+      {
+        "id": "frontend/src/api/scheduleReads.ts",
+        "bytes": 1176
+      },
+      {
+        "id": "\u0000vite/modulepreload-polyfill.js",
+        "bytes": 1168
+      },
+      {
+        "id": "frontend/src/features/workspace/preview.ts",
+        "bytes": 1136
+      },
+      {
+        "id": "frontend/src/features/auth/AccountBoundary.tsx",
+        "bytes": 1126
+      },
+      {
+        "id": "frontend/src/features/schedules/ScheduleColorPicker.tsx",
+        "bytes": 1122
+      },
+      {
+        "id": "frontend/src/features/workspace/calendarLayout.ts",
+        "bytes": 1104
+      },
+      {
+        "id": "frontend/src/features/workspace/useToday.ts",
+        "bytes": 1041
+      },
+      {
+        "id": "frontend/src/features/shared/taskParameters.ts",
+        "bytes": 1030
+      },
+      {
+        "id": "frontend/src/features/shared/IconButton.tsx",
+        "bytes": 984
+      },
+      {
+        "id": "frontend/src/features/shared/WorkspaceHeader.tsx",
+        "bytes": 802
+      },
+      {
+        "id": "frontend/src/api/workTasks.ts",
+        "bytes": 786
+      },
+      {
+        "id": "frontend/src/features/shared/TagInput.tsx",
+        "bytes": 732
+      },
+      {
+        "id": "frontend/src/features/shared/PresetMemoButton.tsx",
+        "bytes": 720
+      },
+      {
+        "id": "frontend/src/features/works/Requirements.tsx",
+        "bytes": 714
+      },
+      {
+        "id": "frontend/node_modules/react-i18next/dist/es/unescape.js",
+        "bytes": 605
+      },
+      {
+        "id": "frontend/src/features/workspace/progress.ts",
+        "bytes": 588
+      },
+      {
+        "id": "frontend/src/api/auth.ts",
+        "bytes": 581
+      },
+      {
+        "id": "frontend/src/features/shared/useNames.ts",
+        "bytes": 551
+      },
+      {
+        "id": "frontend/src/features/works/fields.ts",
+        "bytes": 546
+      },
+      {
+        "id": "frontend/src/features/shared/form.ts",
+        "bytes": 522
+      },
+      {
+        "id": "frontend/node_modules/react-dom/index.js",
+        "bytes": 520
+      },
+      {
+        "id": "frontend/node_modules/react-dom/client.js",
+        "bytes": 512
+      },
+      {
+        "id": "frontend/src/features/useEditorActive.ts",
+        "bytes": 459
+      },
+      {
+        "id": "frontend/src/api/reminders.ts",
+        "bytes": 449
+      },
+      {
+        "id": "frontend/src/api/unmanagedPresets.ts",
+        "bytes": 440
+      },
+      {
+        "id": "frontend/node_modules/react-i18next/dist/es/defaults.js",
+        "bytes": 437
+      },
+      {
+        "id": "frontend/src/features/shared/ErrorBox.tsx",
+        "bytes": 411
+      },
+      {
+        "id": "frontend/src/features/shared/useMobileLayout.ts",
+        "bytes": 399
+      },
+      {
+        "id": "frontend/node_modules/react-i18next/dist/es/context.js",
+        "bytes": 346
+      },
+      {
+        "id": "frontend/src/api/scheduleChanges.ts",
+        "bytes": 303
+      },
+      {
+        "id": "frontend/src/api/reminderFields.ts",
+        "bytes": 263
+      },
+      {
+        "id": "frontend/src/i18n/errors.ts",
+        "bytes": 251
+      },
+      {
+        "id": "frontend/src/api/names.ts",
+        "bytes": 245
+      },
+      {
+        "id": "frontend/src/features/settings/settingsContext.ts",
+        "bytes": 242
+      },
+      {
+        "id": "frontend/node_modules/react/jsx-runtime.js",
+        "bytes": 239
+      },
+      {
+        "id": "frontend/node_modules/scheduler/index.js",
+        "bytes": 226
+      },
+      {
+        "id": "frontend/node_modules/use-sync-external-store/shim/index.js",
+        "bytes": 206
+      },
+      {
+        "id": "frontend/src/main.tsx",
+        "bytes": 195
+      },
+      {
+        "id": "frontend/node_modules/react/index.js",
+        "bytes": 194
+      },
+      {
+        "id": "frontend/src/features/tasks/itemTypes.ts",
+        "bytes": 188
+      },
+      {
+        "id": "frontend/src/features/schedules/dialGeometry.ts",
+        "bytes": 164
+      },
+      {
+        "id": "frontend/src/features/schedules/scheduleCompletion.ts",
+        "bytes": 151
+      },
+      {
+        "id": "frontend/node_modules/react-i18next/dist/es/initReactI18next.js",
+        "bytes": 136
+      },
+      {
+        "id": "frontend/src/api/scheduleColors.ts",
+        "bytes": 114
+      },
+      {
+        "id": "frontend/node_modules/react-i18next/dist/es/i18nInstance.js",
+        "bytes": 113
+      },
+      {
+        "id": "\u0000frontend/node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js?commonjs-exports",
+        "bytes": 45
+      },
+      {
+        "id": "\u0000frontend/node_modules/react/jsx-runtime.js?commonjs-es-import",
+        "bytes": 44
+      },
+      {
+        "id": "\u0000frontend/node_modules/react-dom/index.js?commonjs-es-import",
+        "bytes": 40
+      },
+      {
+        "id": "\u0000frontend/node_modules/react/cjs/react-jsx-runtime.production.js?commonjs-exports",
+        "bytes": 36
+      },
+      {
+        "id": "\u0000frontend/node_modules/react-dom/client.js?commonjs-es-import",
+        "bytes": 36
+      },
+      {
+        "id": "\u0000frontend/node_modules/react-dom/cjs/react-dom-client.production.js?commonjs-exports",
+        "bytes": 35
+      },
+      {
+        "id": "\u0000frontend/node_modules/react/index.js?commonjs-es-import",
+        "bytes": 34
+      },
+      {
+        "id": "\u0000frontend/node_modules/use-sync-external-store/shim/index.js?commonjs-es-import",
+        "bytes": 32
+      },
+      {
+        "id": "\u0000frontend/node_modules/react/jsx-runtime.js?commonjs-module",
+        "bytes": 31
+      },
+      {
+        "id": "\u0000frontend/node_modules/scheduler/index.js?commonjs-module",
+        "bytes": 30
+      },
+      {
+        "id": "\u0000frontend/node_modules/scheduler/cjs/scheduler.production.js?commonjs-exports",
+        "bytes": 30
+      },
+      {
+        "id": "\u0000frontend/node_modules/react-dom/index.js?commonjs-module",
+        "bytes": 29
+      },
+      {
+        "id": "\u0000frontend/node_modules/react-dom/cjs/react-dom.production.js?commonjs-exports",
+        "bytes": 29
+      },
+      {
+        "id": "\u0000frontend/node_modules/react-dom/client.js?commonjs-module",
+        "bytes": 27
+      },
+      {
+        "id": "\u0000frontend/node_modules/react/index.js?commonjs-module",
+        "bytes": 26
+      },
+      {
+        "id": "\u0000frontend/node_modules/react/cjs/react.production.js?commonjs-exports",
+        "bytes": 26
+      },
+      {
+        "id": "\u0000frontend/node_modules/use-sync-external-store/shim/index.js?commonjs-module",
+        "bytes": 25
+      },
+      {
+        "id": "frontend/src/tokens.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/styles.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/design-system.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/shared/workspace-header.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/settings/settings.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/sticky/sticky.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/settings/preferences.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/shared/toast.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/auth/account-menu.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/shared/customization.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/schedules/search.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/schedules/schedules.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/src/features/workspace/calendar.css",
+        "bytes": 0
+      },
+      {
+        "id": "frontend/index.html",
+        "bytes": 0
+      }
+    ],
+    "assets": [
+      {
+        "file": "index-B9C60nvX.css",
+        "bytes": 97941,
+        "gzip": 18634
+      },
+      {
+        "file": "index-CdOlPKAt.js",
+        "bytes": 570347,
+        "gzip": 173743
+      }
+    ]
+  },
+  "sourceHashes": {
+    "frontend/src/features/workspace/Today.tsx": "7aee4ceb6166db3a2cb7403a653dd211e132c05313e759a7df961ba227928637",
+    "frontend/src/features/workspace/TodayScheduleCard.tsx": "e9781bbec4ff3ff599597d688922ab559acb23ad0a6668c7a2886c23c605487d",
+    "frontend/src/features/workspace/TodayDial.tsx": "07d589f4733ece282c2dca97075b492a0b1d2e2485fd2312bed84146ff1bea1f",
+    "frontend/src/features/workspace/scheduleAppearance.ts": "3c3069ae3bdfb92e6c5740ab86bf7171c9ad266855b28135b32b238db625f17e",
+    "frontend/src/features/schedules/timeRange.ts": "4e7924819510a103f961d1a659d7879f234fc6c7eba37e462d35e53c3d07ee5d",
+    "frontend/src/features/workspace/calendarLayout.ts": "dac51a10159564e50520c2be69e9acd9fe9a39b948e0edb652bce90e2aedef58",
+    "frontend/src/features/workspace/CalendarGrid.tsx": "64b959d8f09b72cf9393b070d08e1979d635caf422f9cef9138fff6963bbc3af",
+    "frontend/src/api/schedules.ts": "a12a4e58a7864ea3f310085db33d4fad423d700f6692b58c1da3c872e8ca86d7",
+    "frontend/src/api/scheduleReads.ts": "ea2ad068472711bdf6991a03003fba91b0066f0c8ec682ced470994289e16593"
+  },
+  "harness": {
+    "build.mjs": "import { build } from '../../frontend/node_modules/vite/dist/node/index.js';\nimport fs from 'node:fs';\nimport { gzipSync } from 'node:zlib';\nconst root = 'C:/Git/memo';\nconst base = root + '/test-results/performance-audit';\nconst modules = [];\nawait build({configFile:false,root:root+'/frontend',build:{outDir:base+'/app-build',emptyOutDir:true},plugins:[{name:'sizes',generateBundle(_,bundle){for(const chunk of Object.values(bundle)) if(chunk.type==='chunk') for(const [id,m] of Object.entries(chunk.modules)) modules.push({id:id.replace(root+'/',''),bytes:m.renderedLength});}}]});\nfs.writeFileSync(base+'/bundle.json',JSON.stringify({modules:modules.sort((a,b)=>b.bytes-a.bytes),assets:fs.readdirSync(base+'/app-build/assets').map(file=>{const b=fs.readFileSync(base+'/app-build/assets/'+file);return {file,bytes:b.length,gzip:gzipSync(b).length};})},null,2));\nawait build({configFile:false,root:base,resolve:{alias:[{find:'react-dom/client',replacement:root+'/frontend/node_modules/react-dom/profiling.js'},{find:'react',replacement:root+'/frontend/node_modules/react'},{find:'react-dom',replacement:root+'/frontend/node_modules/react-dom'}]},build:{outDir:base+'/dist',emptyOutDir:true},plugins:[{name:'instrument',enforce:'pre',transform(code,id){if(id.endsWith('/scheduleAppearance.ts')) return code.replace(\"import { tr }\", \"import { tr }\").replace('now.toLocaleTimeString(', 'window.auditTime(now, ').replace('const date = dateInZone(item.time_zone, now);','const date = window.auditDate(item.time_zone, now, dateInZone);');}}]});\n",
+    "main.tsx": "import React, { Profiler } from 'react';\nimport { createRoot } from 'react-dom/client';\nimport { Today } from '../../frontend/src/features/workspace/Today';\nimport { Calendar } from '../../frontend/src/features/workspace/Calendar';\nimport { scheduleAppearance } from '../../frontend/src/features/workspace/scheduleAppearance';\nimport { calendarWeeks } from '../../frontend/src/features/workspace/calendarLayout';\nimport { getRangeScheduleSummaries } from '../../frontend/src/api/schedules';\nimport { emptyFields } from '../../frontend/src/api/works';\nimport i18n from '../../frontend/src/i18n';\nimport '../../frontend/src/styles.css';\nimport '../../frontend/src/design-system.css';\nconst realFetch=window.fetch.bind(window), sleep=(ms)=>new Promise(r=>setTimeout(r,ms));\nconst root=createRoot(document.getElementById('root')!);\nconst results:any={userAgent:navigator.userAgent,viewport:[innerWidth,innerHeight],renders:[],appearance:[],calendar:[],requests:[]};\nlet items:any[]=[],calls=0,latency=0,commits:any[]=[],cached=false;\nconst df=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'});\nconst tf=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hourCycle:'h23',hour:'2-digit',minute:'2-digit'});\nwindow.auditTime=(now,locale,opts)=>cached?tf.format(now):now.toLocaleTimeString(locale,opts);\nwindow.auditDate=(zone,now,original)=>{if(!cached)return original(zone,now);const parts=df.formatToParts(now), part=t=>parts.find(p=>p.type===t)!.value;return `${part('year')}-${part('month')}-${part('day')}`;};\nwindow.fetch=async (url,options)=>{const u=new URL(String(url),location.href);if(!u.pathname.startsWith('/api/'))return realFetch(url,options);calls++;if(latency)await sleep(latency);if(u.pathname==='/api/schedules'){const offset=Number(u.searchParams.get('offset')||0),limit=Number(u.searchParams.get('limit')||20);return new Response(JSON.stringify({items:items.slice(offset,offset+limit),total:items.length,offset,limit,revision:1}),{headers:{'Content-Type':'application/json'}});}return new Response(JSON.stringify({items:[],total:0,limit:20,offset:0}),{headers:{'Content-Type':'application/json'}});};\nconst make=(n,tasks=3)=>Array.from({length:n},(_,i)=>({id:'s'+i,entity_id:'e',entity_name:'Work '+i,title:'Work '+i,scheduled_date:'2026-09-27',end_date:'2026-09-27',start_time:'09:00',end_time:'10:00',time_zone:'Asia/Tokyo',status:'planned',notes:'',created_at:'',updated_at:'',entity_snapshot:{...emptyFields,name:'Work '+i},tasks:Array.from({length:tasks},(_,j)=>({id:`t${i}-${j}`,status:'pending',execution_notes:'',name_snapshot:'Task '+j,default_notes_snapshot:'',source_task_preset_version:1,items:[]}))}));\nconst stats=(a)=>{const s=[...a].sort((a,b)=>a-b);return {n:s.length,median:s[Math.floor(s.length/2)]??0,p95:s[Math.min(s.length-1,Math.ceil(s.length*.95)-1)]??0,max:s.at(-1)??0};};\nconst onRender=(id,phase,duration,base,start,commit)=>commits.push({phase,duration,at:performance.now()});\nasync function run(){await i18n.changeLanguage('ko');\nfor(const count of [100,50,10]) for(const cache of [true,false]){cached=cache;items=make(count);calls=0;commits=[];const start=performance.now();root.render(<Profiler id=\"Today\" onRender={onRender}><Today key={`${count}-${cache}`} today=\"2026-09-27\" timeZone=\"Asia/Tokyo\"/></Profiler>);await sleep(7500);const steady=commits.filter(c=>c.at>start+800);results.renders.push({count,tasksPerSchedule:3,cachedFormatters:cache,requests:calls,nodes:document.getElementById('root')!.querySelectorAll('*').length,initial:commits.filter(c=>c.at<=start+800),steady:stats(steady.map(c=>c.duration))});document.getElementById('status')!.textContent=JSON.stringify(results,null,2);root.render(null);await sleep(100);}\nfor(const count of [10,50,100]){items=make(count);for(const cache of [false,true]){cached=cache;const times=[];for(let r=0;r<15;r++){const t=performance.now();for(const item of items)scheduleAppearance(item,new Date('2026-09-27T04:00:00Z'));times.push(performance.now()-t);}results.appearance.push({count,cachedFormatters:cache,...stats(times.slice(3))});}}\nfor(const count of [100,1000,5000]){items=make(count,0).map((x,i)=>({...x,scheduled_date:`2026-${String(1+i%12).padStart(2,'0')}-15`,end_date:`2026-${String(1+i%12).padStart(2,'0')}-15`}));const times=[];for(let r=0;r<8;r++){const start=performance.now();for(let m=1;m<=12;m++)calendarWeeks(`2026-${String(m).padStart(2,'0')}`,items);times.push(performance.now()-start);}commits=[];root.render(<Profiler id=\"Calendar\" onRender={onRender}><Calendar key={count} today=\"2026-09-27\" mode=\"year\"/></Profiler>);await sleep(900);results.calendar.push({count,layout:stats(times.slice(2)),commits,nodes:document.getElementById('root')!.querySelectorAll('*').length});root.render(null);await sleep(100);}\nfor(const count of [100,1000]){items=make(count,0);for(const delay of [0,40]){latency=delay;calls=0;const start=performance.now();await getRangeScheduleSummaries('2026-01-01','2026-12-31');const first=performance.now()-start;const again=performance.now();await getRangeScheduleSummaries('2026-01-01','2026-12-31');results.requests.push({count,simulatedLatencyMs:delay,firstMs:first,revisitMs:performance.now()-again,totalCalls:calls});}}latency=0;\ndocument.getElementById('status')!.textContent='COMPLETE\\n'+JSON.stringify(results,null,2);await realFetch('/results',{method:'POST',body:JSON.stringify(results,null,2)});}\nrun().catch(async e=>{document.getElementById('status')!.textContent=e.stack;await realFetch('/results',{method:'POST',body:JSON.stringify({error:e.stack,partial:results})});});\n",
+    "server.mjs": "import http from 'node:http';import fs from 'node:fs';import path from 'node:path';\nconst base='C:/Git/memo/test-results/performance-audit';\nhttp.createServer(async(req,res)=>{if(req.url==='/results'&&req.method==='POST'){let body='';for await(const chunk of req)body+=chunk;fs.writeFileSync(base+'/browser-results.json',body);res.end('ok');return;}const url=new URL(req.url,'http://localhost');const file=path.join(base,'dist',url.pathname==='/'?'index.html':url.pathname);if(!file.startsWith(path.join(base,'dist'))||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(fs.readFileSync(file));}).listen(15180,'127.0.0.1',()=>console.log('Audit http://127.0.0.1:15180'));\n",
+    "api.mjs": "import fs from 'node:fs';\nconst base='http://127.0.0.1:3010';\nasync function request(url,body){const r=await fetch(base+url,{method:body?'POST':'GET',headers:{'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});const text=await r.text();if(!r.ok)throw new Error(r.status+' '+text);return {json:JSON.parse(text),bytes:Buffer.byteLength(text)};}\nlet {json:page}=await request('/api/schedules');\nfor(let i=page.total;i<1000;i++){const day=i<100?'2026-09-27':`2026-${String(i%12+1).padStart(2,'0')}-15`;await request('/api/schedules',{entity_name:'Audit Work',title:'Audit '+i,scheduled_date:day,end_date:day,start_time:'09:00',end_time:'10:00',time_zone:'Asia/Tokyo',task_preset_ids:[{name:'Audit Task A'},{name:'Audit Task B'},{name:'Audit Task C'}]});if(i%200===0)console.log('seeded',i+1);}\nconst stats=a=>{a.sort((x,y)=>x-y);return {median:a[Math.floor(a.length/2)],p95:a[Math.ceil(a.length*.95)-1],samples:a.length};};\nconst output=[];\nfor(const kind of ['day-details','year-summary','search'])for(const limit of [20,100]){const times=[],single=[],bytes=[];let pages=0,total=0;for(let run=0;run<8;run++){const start=performance.now();let offset=0,revision,transferred=0;pages=0;do{const q=new URLSearchParams({limit:String(limit),offset:String(offset),...(kind==='day-details'?{date:'2026-09-27',include_details:'true'}:kind==='year-summary'?{from:'2026-01-01',to:'2026-12-31'}:{q:'Audit'}),...(revision===undefined?{}:{revision:String(revision)})});const t=performance.now();const r=await request('/api/schedules?'+q);single.push(performance.now()-t);transferred+=r.bytes;total=r.json.total;revision=r.json.revision;offset+=r.json.items.length;pages++;if(kind==='search')break;}while(offset<total);if(run>0){times.push(performance.now()-start);bytes.push(transferred);}}output.push({kind,limit,total,pages,fullRangeMs:stats(times),pageMs:stats(single),bytes:bytes[0]});}\nfs.writeFileSync('C:/Git/memo/test-results/performance-audit/api-results.json',JSON.stringify(output,null,2));console.log(JSON.stringify(output,null,2));\n",
+    "index.html": "<!doctype html><html><head><meta charset=\"UTF-8\"><title>Isolated performance audit</title></head><body><pre id=\"status\">Running isolated synthetic benchmark…</pre><div id=\"root\"></div><script type=\"module\" src=\"/main.tsx\"></script></body></html>\n"
+  }
+}

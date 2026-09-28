@@ -45,8 +45,12 @@ pub async fn list(
     service::list(&state.pool, query).await.map(Json)
 }
 
-pub async fn reminders(State(state): State<AppState>) -> Result<Json<Value>> {
-    service::reminders(&state.pool).await.map(Json)
+pub async fn reminders(
+    State(state): State<AppState>,
+    query: std::result::Result<Query<service::ReminderQuery>, QueryRejection>,
+) -> Result<Json<Value>> {
+    let Query(query) = query.map_err(|_| ApiError::InvalidInput)?;
+    service::reminders(&state.pool, query).await.map(Json)
 }
 
 pub async fn delete(State(state): State<AppState>, Path(id): Path<String>) -> Result<StatusCode> {

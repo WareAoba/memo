@@ -1,3 +1,4 @@
+import { publishScheduleChange } from './scheduleChanges';
 import { requestJson, record } from './client';
 import { LocalizedError } from '../i18n/errors';
 import { currentLanguage, type Language } from '../i18n';
@@ -58,6 +59,6 @@ export const patchSettings = async (patch: Partial<UserSettings>) =>
 export type ResetTarget = 'schedules' | 'works' | 'tasks';
 export async function resetData(target: ResetTarget) {
   await requestJson('/api/settings/reset', 'POST', { target, confirmation: target });
-  window.dispatchEvent(new Event('schedules-changed'));
+  publishScheduleChange({ kind: 'reset' });
   window.dispatchEvent(new Event('data-reset'));
 }

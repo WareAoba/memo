@@ -3,14 +3,18 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { ScheduleEditor, ScheduleView } from './Schedules';
 import { listWorks, emptyFields } from '../../api/works';
 import { listTaskPresets } from '../../api/taskPresets';
-import { getWorkTasks } from '../../api/workTasks';
-import { getSchedule, saveSchedule, type ScheduleDetail } from '../../api/schedules';
+import {
+  getSchedule,
+  saveSchedule,
+  completeSchedule,
+  reopenSchedule,
+  type ScheduleDetail,
+} from '../../api/schedules';
 vi.mock('../../api/works', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../api/works')>()),
   listWorks: vi.fn(),
 }));
 vi.mock('../../api/taskPresets');
-vi.mock('../../api/workTasks');
 vi.mock('../../api/schedules');
 const saved: ScheduleDetail = {
   id: 's',
@@ -39,12 +43,58 @@ beforeEach(() => {
   vi.mocked(listTaskPresets).mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
 });
 afterEach(() => vi.resetAllMocks());
+it('starts without a time range and accepts the typed work without a use action', async () => {
+  render(<ScheduleEditor />);
+  expect(screen.getByRole('button', { name: '시작 —' })).toBeVisible();
+  expect(screen.getByRole('button', { name: '종료 —' })).toBeVisible();
+  fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
+    target: { value: '직접 입력' },
+  });
+  await waitFor(() => expect(screen.getByRole('button', { name: '스케줄 저장' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  expect(saveSchedule).not.toHaveBeenCalled();
+  expect(screen.getByRole('alert')).toHaveTextContent('종료 날짜와 시간');
+  expect(screen.queryByRole('button', { name: /사용/ })).not.toBeInTheDocument();
+});
+
+function setTestTimes() {
+  // New schedules deliberately have no defaults; select the test's 09:00–10:00 range.
+  const end = screen.getByRole('slider', { name: '종료 시간', hidden: true });
+  const start = screen.getByRole('slider', { name: '시작 시간', hidden: true });
+  for (let i = 0; i < 10; i++) fireEvent.keyDown(end, { key: 'PageUp' });
+  for (let i = 0; i < 9; i++) fireEvent.keyDown(start, { key: 'PageUp' });
+}
+function pickTime(label: string, time: string) {
+  fireEvent.click(screen.getByRole('button', { name: label }));
+  const [hour, minute] = time.split(':');
+  fireEvent.click(
+    within(screen.getByRole('listbox', { name: '시' })).getByRole('option', { name: hour }),
+  );
+  fireEvent.click(
+    within(screen.getByRole('listbox', { name: '분' })).getByRole('option', { name: minute }),
+  );
+  fireEvent.click(screen.getByRole('button', { name: '적용' }));
+}
+async function pickDate(label: string, date: string) {
+  fireEvent.click(screen.getByRole('button', { name: label }));
+  const popup = screen.getByRole('dialog', { name: '날짜 선택' });
+  const selected = popup.querySelector('[aria-pressed="true"]')!.getAttribute('data-date')!;
+  const monthNumber = (value: string) => Number(value.slice(0, 4)) * 12 + Number(value.slice(5, 7));
+  const delta = monthNumber(date) - monthNumber(selected);
+  for (let i = 0; i < Math.abs(delta); i++)
+    fireEvent.click(within(popup).getByRole('button', { name: delta > 0 ? '다음 달' : '이전 달' }));
+  fireEvent.click(popup.querySelector('[data-date="' + date + '"]')!);
+  await waitFor(() =>
+    expect(screen.queryByRole('dialog', { name: '날짜 선택' })).not.toBeInTheDocument(),
+  );
+}
+
 it('loads and saves the independent schedule color with no snapshot changes', async () => {
   vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor initial={{ ...saved, color: 'red' }} />);
   expect(screen.getByRole('radio', { name: '빨강' })).toBeChecked();
   fireEvent.click(screen.getByRole('radio', { name: '파랑' }));
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   await waitFor(() =>
     expect(saveSchedule).toHaveBeenCalledWith(expect.objectContaining({ color: 'blue' }), 's'),
   );
@@ -55,28 +105,33 @@ it('saves the schedule work memo inline and preserves a failed draft', async () 
   vi.mocked(saveSchedule)
     .mockRejectedValueOnce(new Error('저장 실패'))
     .mockResolvedValueOnce({ ...saved, notes: '오늘 집중이 잘 됐다' });
-  render(<ScheduleView id="s" edit={false} />);
-  fireEvent.change(await screen.findByLabelText('워크 메모'), {
+  render(<ScheduleView id="s" edit={false} onClose={vi.fn()} />);
+  fireEvent.change(await screen.findByLabelText('메모'), {
     target: { value: '오늘 집중이 잘 됐다' },
   });
-  fireEvent.blur(screen.getByLabelText('워크 메모'));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   expect(await screen.findByText('저장 실패')).toBeVisible();
-  expect(screen.getByLabelText('워크 메모')).toHaveValue('오늘 집중이 잘 됐다');
-  fireEvent.blur(screen.getByLabelText('워크 메모'));
-  expect(await screen.findByText('메모를 저장했습니다.')).toBeVisible();
-  expect(saveSchedule).toHaveBeenLastCalledWith({ notes: '오늘 집중이 잘 됐다' }, 's');
-  expect(screen.getByLabelText('워크 메모')).toHaveValue('오늘 집중이 잘 됐다');
+  expect(screen.getByLabelText('메모')).toHaveValue('오늘 집중이 잘 됐다');
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() => expect(saveSchedule).toHaveBeenCalledTimes(2));
+  expect(saveSchedule).toHaveBeenLastCalledWith(
+    expect.objectContaining({ notes: '오늘 집중이 잘 됐다' }),
+    's',
+  );
+  expect(screen.getByLabelText('메모')).toHaveValue('오늘 집중이 잘 됐다');
 });
 it('composes per-task parameter values and notes without changing the source preset', async () => {
-  vi.mocked(getWorkTasks).mockResolvedValue([
-    { id: 't', name: '단어 [n=5]개 외우기', archived: false, position: 0 },
-  ]);
   vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor />);
+  setTestTimes();
   fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
     target: { value: 'Work' },
   });
   fireEvent.click(await screen.findByRole('button', { name: 'Work 선택' }));
+  fireEvent.click(screen.getByRole('button', { name: '태스크 추가...' }));
+  fireEvent.change(screen.getByRole('combobox', { name: '태스크 이름' }), {
+    target: { value: '단어 [n=5]개 외우기' },
+  });
   expect(await screen.findByLabelText('n')).toHaveValue('5');
   fireEvent.change(screen.getByLabelText('n'), { target: { value: '10' } });
   fireEvent.click(screen.getByRole('button', { name: '단어 [n=5]개 외우기 메모' }));
@@ -86,45 +141,49 @@ it('composes per-task parameter values and notes without changing the source pre
   fireEvent.click(screen.getByRole('button', { name: '메모 닫기' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(saveSchedule).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   await waitFor(() =>
     expect(saveSchedule).toHaveBeenCalledWith(
       expect.objectContaining({
-        task_preset_ids: ['t'],
-        task_customizations: { t: { parameters: { n: '10' }, execution_notes: '예문도 기록' } },
+        task_preset_ids: ['name:단어 [n=5]개 외우기'],
+        task_customizations: {
+          'name:단어 [n=5]개 외우기': { parameters: { n: '10' }, execution_notes: '예문도 기록' },
+        },
       }),
       undefined,
     ),
   );
 });
-it('selects active defaults, reorders and preserves form on failed save', async () => {
-  vi.mocked(getWorkTasks).mockResolvedValue([
-    { id: 'a', name: 'A', archived: false, position: 0 },
-    { id: 'b', name: 'B', archived: false, position: 1 },
-    { id: 'c', name: 'Archived', archived: true, position: 2 },
-  ]);
+it('adds manual tasks, reorders and preserves form on failed save', async () => {
   vi.mocked(saveSchedule)
     .mockRejectedValueOnce(new Error('저장 실패'))
     .mockResolvedValueOnce(saved);
   render(<ScheduleEditor />);
-  expect(screen.getByRole('button', { name: '일정 저장' })).toBeDisabled();
+  setTestTimes();
+  expect(screen.getByRole('button', { name: '스케줄 저장' })).toBeDisabled();
   fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
     target: { value: 'Work' },
   });
   fireEvent.click(await screen.findByRole('button', { name: 'Work 선택' }));
+  for (const name of ['A', 'B']) {
+    fireEvent.click(screen.getByRole('button', { name: '태스크 추가...' }));
+    fireEvent.change(screen.getAllByRole('combobox', { name: '태스크 이름' }).at(-1)!, {
+      target: { value: name },
+    });
+  }
   fireEvent.click(await screen.findByRole('button', { name: 'B 위로' }));
   expect(screen.queryByText('Archived')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText(/^메모$/), { target: { value: 'keep' } });
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   expect(await screen.findByText('저장 실패')).toBeVisible();
   expect(screen.getByLabelText(/^메모$/)).toHaveValue('keep');
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   await waitFor(() =>
     expect(saveSchedule).toHaveBeenLastCalledWith(
       expect.objectContaining({
         entity_id: 'w',
         title: 'Work',
-        task_preset_ids: ['b', 'a'],
+        task_preset_ids: ['name:B', 'name:A'],
         notes: 'keep',
       }),
       undefined,
@@ -132,34 +191,35 @@ it('selects active defaults, reorders and preserves form on failed save', async 
   );
   await waitFor(() => expect(window.location.hash).toBe('#/schedules/s'));
 });
-it('failed default fetch blocks save and can be retried', async () => {
-  vi.mocked(getWorkTasks).mockRejectedValueOnce(new Error('기본값 실패')).mockResolvedValueOnce([]);
+it('choosing a work never adds tasks automatically', async () => {
+  vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor />);
+  setTestTimes();
   fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
     target: { value: 'Work' },
   });
   fireEvent.click(await screen.findByRole('button', { name: 'Work 선택' }));
-  expect(await screen.findByText('기본값 실패')).toBeVisible();
-  expect(screen.getByRole('button', { name: '일정 저장' })).toBeDisabled();
-  fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: '일정 저장' })).toBeEnabled());
+  expect(screen.queryByRole('combobox', { name: '태스크 이름' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ task_preset_ids: [] }),
+      undefined,
+    ),
+  );
 });
 it('rejects reversed times without sending edits and preserves snapshot fields', async () => {
   vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor initial={saved} />);
-  fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 일정/ }));
-  fireEvent.change(screen.getByLabelText('종료 날짜'), { target: { value: '2026-09-23' } });
-  fireEvent.change(screen.getByLabelText('종료 시간', { selector: 'input' }), {
-    target: { value: '08:00' },
-  });
-  fireEvent.submit(screen.getByRole('button', { name: '일정 저장' }).closest('form')!);
+  fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 스케줄/ }));
+  await pickDate('종료 날짜', '2026-09-23');
+  pickTime('종료 시간', '08:00');
+  fireEvent.submit(screen.getByRole('button', { name: '스케줄 저장' }).closest('form')!);
   expect(await screen.findByText('종료 날짜와 시간은 시작보다 늦어야 합니다.')).toBeVisible();
   expect(saveSchedule).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText('종료 날짜'), { target: { value: '2026-09-25' } });
-  fireEvent.change(screen.getByLabelText('종료 시간', { selector: 'input' }), {
-    target: { value: '11:00' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  await pickDate('종료 날짜', '2026-09-25');
+  pickTime('종료 시간', '11:00');
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   await waitFor(() => expect(saveSchedule).toHaveBeenCalled());
   expect(vi.mocked(saveSchedule).mock.calls[0]![0]).not.toHaveProperty('entity_id');
   expect(vi.mocked(saveSchedule).mock.calls[0]![0]).not.toHaveProperty('task_preset_ids');
@@ -167,13 +227,16 @@ it('rejects reversed times without sending edits and preserves snapshot fields',
 it('renders saved work snapshot without archive controls', async () => {
   vi.mocked(getSchedule).mockResolvedValue(saved);
   render(<ScheduleView id="s" edit={false} />);
-  expect(await screen.findByRole('heading', { name: 'Old Work' })).toBeVisible();
-  expect(screen.queryByRole('button', { name: '일정 보관' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: '일정 복원' })).not.toBeInTheDocument();
+  expect(await screen.findByText('Old Work')).toBeVisible();
+  const composition = document.querySelector('.schedule-compose')!;
+  expect(composition).toContainElement(screen.getByRole('region', { name: '태스크 실행' }));
+  expect(composition).toContainElement(screen.getByLabelText('메모'));
+  expect(document.querySelector('form form')).toBeNull();
+  expect(screen.queryByRole('button', { name: '스케줄 보관' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '스케줄 복원' })).not.toBeInTheDocument();
 });
 
 it('uses the app zone without a zone input and saves an overnight date range', async () => {
-  vi.mocked(getWorkTasks).mockResolvedValue([]);
   vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor timeZone="Pacific/Honolulu" />);
   expect(screen.queryByLabelText('시간대')).not.toBeInTheDocument();
@@ -181,18 +244,14 @@ it('uses the app zone without a zone input and saves an overnight date range', a
     target: { value: 'Work' },
   });
   fireEvent.click(await screen.findByRole('button', { name: 'Work 선택' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: '일정 저장' })).toBeEnabled());
-  fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 일정/ }));
-  expect(screen.getAllByRole('slider')).toHaveLength(2);
-  fireEvent.change(screen.getByLabelText('시작 날짜'), { target: { value: '2026-12-31' } });
-  fireEvent.change(screen.getByLabelText('종료 날짜'), { target: { value: '2027-01-02' } });
-  fireEvent.change(screen.getByLabelText('시작 시간', { selector: 'input' }), {
-    target: { value: '23:30' },
-  });
-  fireEvent.change(screen.getByLabelText('종료 시간', { selector: 'input' }), {
-    target: { value: '01:05' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /일정 저장/ }));
+  await waitFor(() => expect(screen.getByRole('button', { name: '스케줄 저장' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 스케줄/ }));
+  expect(screen.queryByTestId('time-dial')).not.toBeInTheDocument();
+  await pickDate('시작 날짜', '2026-12-31');
+  await pickDate('종료 날짜', '2027-01-02');
+  pickTime('시작 시간', '23:30');
+  pickTime('종료 시간', '01:05');
+  fireEvent.click(screen.getByRole('button', { name: /스케줄 저장/ }));
   await waitFor(() =>
     expect(saveSchedule).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -206,14 +265,15 @@ it('uses the app zone without a zone input and saves an overnight date range', a
     ),
   );
 });
-it('returning from multiple days restores the dial and a valid same-day interval', () => {
+it('returning from multiple days clears an invalid same-day range', () => {
   render(
     <ScheduleEditor
       initial={{ ...saved, end_date: '2026-09-25', start_time: '23:00', end_time: '01:00' }}
     />,
   );
-  expect(screen.getByLabelText('종료 날짜')).toHaveValue('2026-09-25');
-  fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 일정/ }));
+  expect(screen.queryByTestId('time-dial')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('종료 날짜')).toHaveTextContent('2026-09-25');
+  fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 스케줄/ }));
   expect(screen.queryByLabelText('종료 날짜')).not.toBeInTheDocument();
   expect(screen.getAllByRole('slider')).toHaveLength(2);
 });
@@ -222,7 +282,7 @@ it('ordinary edits have no archive field', async () => {
   vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor initial={saved} />);
   fireEvent.change(screen.getByLabelText(/^메모$/), { target: { value: 'notes only' } });
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   await waitFor(() => expect(saveSchedule).toHaveBeenCalled());
   expect(vi.mocked(saveSchedule).mock.calls[0]![0]).not.toHaveProperty('archived');
 });
@@ -244,9 +304,9 @@ it('hides work results until searched and shows why a non-name result matched', 
     limit: 20,
     offset: 0,
   });
-  vi.mocked(getWorkTasks).mockResolvedValue([]);
   render(<ScheduleEditor />);
-  expect(screen.queryByLabelText('일정 제목')).not.toBeInTheDocument();
+  setTestTimes();
+  expect(screen.queryByLabelText('스케줄 제목')).not.toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Research 선택' })).not.toBeInTheDocument();
   await new Promise((resolve) => setTimeout(resolve, 250));
   expect(listWorks).not.toHaveBeenCalled();
@@ -258,13 +318,12 @@ it('hides work results until searched and shows why a non-name result matched', 
   fireEvent.change(search, { target: { value: 'Basement' } });
   expect(await screen.findByText('Floor: Basement')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Research 선택' }));
-  await waitFor(() => expect(screen.getByRole('button', { name: '일정 저장' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: '스케줄 저장' })).toBeEnabled());
   expect(screen.getByText('Research')).toBeVisible();
 });
 
-it('flips to task groups, adds and removes tasks while retaining the time range', async () => {
+it('adds editable task rows with matching dropdowns while retaining the time range', async () => {
   vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(['학습'])));
-  vi.mocked(getWorkTasks).mockResolvedValue([]);
   vi.mocked(listTaskPresets).mockResolvedValue({
     items: [
       {
@@ -286,22 +345,26 @@ it('flips to task groups, adds and removes tasks while retaining the time range'
   });
   vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor />);
+  setTestTimes();
   fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
     target: { value: 'Work' },
   });
   fireEvent.click(await screen.findByRole('button', { name: 'Work 선택' }));
-  fireEvent.click(await screen.findByRole('button', { name: '태스크 추가' }));
-  expect(screen.queryByRole('slider')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '프리셋 찾아보기' }));
-  fireEvent.click(await screen.findByRole('button', { name: '학습' }));
-  fireEvent.click(await screen.findByRole('button', { name: '단어 복습 추가' }));
-  expect(screen.getByRole('button', { name: '단어 복습 추가됨' })).toBeDisabled();
+  fireEvent.click(await screen.findByRole('button', { name: '태스크 추가...' }));
+  fireEvent.change(screen.getByRole('combobox', { name: '태스크 이름' }), {
+    target: { value: '단어' },
+  });
+  fireEvent.click(await screen.findByRole('option', { name: '단어 복습' }));
+  expect(screen.getByRole('combobox', { name: '태스크 이름' })).toHaveValue('단어 복습');
   fireEvent.click(screen.getByRole('button', { name: '단어 복습 제거' }));
-  expect(screen.getByRole('button', { name: '단어 복습 추가' })).toBeEnabled();
-  fireEvent.click(screen.getByRole('button', { name: '단어 복습 추가' }));
-  fireEvent.click(screen.getByRole('button', { name: '시계판으로' }));
+  expect(screen.queryByRole('combobox', { name: '태스크 이름' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: '태스크 추가...' }));
+  fireEvent.change(screen.getByRole('combobox', { name: '태스크 이름' }), {
+    target: { value: '단어' },
+  });
+  fireEvent.click(await screen.findByRole('option', { name: '단어 복습' }));
   expect(screen.getByRole('slider', { name: '시작 시간' })).toHaveAttribute('aria-valuenow', '540');
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   await waitFor(() =>
     expect(saveSchedule).toHaveBeenCalledWith(
       expect.objectContaining({ task_preset_ids: ['a'], start_time: '09:00', end_time: '10:00' }),
@@ -323,10 +386,9 @@ it('saves custom reminder units and restores them while editing', async () => {
   fireEvent.change(screen.getByRole('spinbutton', { name: '리마인드 숫자' }), {
     target: { value: '2' },
   });
-  fireEvent.change(screen.getByRole('combobox', { name: '리마인드 단위' }), {
-    target: { value: 'days' },
-  });
-  fireEvent.click(screen.getByRole('button', { name: /일정 저장/ }));
+  fireEvent.click(screen.getByRole('combobox', { name: '리마인드 단위' }));
+  fireEvent.click(screen.getByRole('option', { name: '일' }));
+  fireEvent.click(screen.getByRole('button', { name: /스케줄 저장/ }));
   await waitFor(() =>
     expect(saveSchedule).toHaveBeenCalledWith(
       expect.objectContaining({ reminder_enabled: true, reminder_value: 2, reminder_unit: 'days' }),
@@ -339,17 +401,18 @@ it('hides dates for single-day editing and restores them only while multi-day is
   render(<ScheduleEditor initial={saved} />);
   expect(screen.queryByLabelText('시작 날짜')).not.toBeInTheDocument();
   expect(screen.queryByText(saved.scheduled_date)).not.toBeInTheDocument();
-  fireEvent.click(screen.getByLabelText('여러 날에 걸친 일정'));
-  expect(screen.getByLabelText('시작 날짜')).toHaveValue(saved.scheduled_date);
-  expect(screen.getByLabelText('종료 날짜')).toHaveValue('2026-09-25');
-  fireEvent.click(screen.getByLabelText('여러 날에 걸친 일정'));
+  fireEvent.click(screen.getByLabelText('여러 날에 걸친 스케줄'));
+  expect(screen.getByLabelText('시작 날짜')).toHaveTextContent(saved.scheduled_date);
+  expect(screen.queryByTestId('time-dial')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('종료 날짜')).toHaveTextContent('2026-09-25');
+  fireEvent.click(screen.getByLabelText('여러 날에 걸친 스케줄'));
   expect(screen.queryByLabelText('시작 날짜')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('종료 날짜')).not.toBeInTheDocument();
 });
 
 it('makes legacy midnight ends editable without saving them automatically', () => {
   render(<ScheduleEditor initial={{ ...saved, end_date: '2026-09-25', end_time: '00:00' }} />);
-  expect(screen.getByLabelText('종료 시간', { selector: 'input' })).toHaveValue('00:05');
+  expect(screen.getByRole('button', { name: '종료 시간' })).toHaveTextContent('00:05');
   expect(saveSchedule).not.toHaveBeenCalled();
 });
 
@@ -358,24 +421,23 @@ it('saves a directly entered work and task and preserves the draft after failure
     .mockRejectedValueOnce(new Error('저장 실패'))
     .mockResolvedValueOnce(saved);
   render(<ScheduleEditor />);
+  setTestTimes();
   fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
     target: { value: '새 워크' },
   });
-  fireEvent.click(screen.getByRole('button', { name: '“새 워크” 사용' }));
-  expect(getWorkTasks).not.toHaveBeenCalled();
+  expect(screen.queryByRole('button', { name: '“새 워크” 사용' })).not.toBeInTheDocument();
   expect(screen.getAllByRole('textbox', { name: '메모' })).toHaveLength(1);
   expect(screen.queryByRole('button', { name: '새 워크 메모' })).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: '워크 변경' })).toHaveTextContent('워크 변경');
-  fireEvent.click(screen.getByRole('button', { name: '태스크 추가' }));
-  fireEvent.change(screen.getByRole('textbox', { name: '태스크 이름' }), {
+  expect(screen.getByRole('textbox', { name: '워크 이름' })).toHaveValue('새 워크');
+  fireEvent.click(screen.getByRole('button', { name: '태스크 추가...' }));
+  fireEvent.change(screen.getByRole('combobox', { name: '태스크 이름' }), {
     target: { value: '새 태스크' },
   });
-  fireEvent.click(screen.getByRole('button', { name: '“새 태스크” 사용' }));
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   expect(await screen.findByText('저장 실패')).toBeVisible();
-  expect(screen.getByText('새 워크')).toBeVisible();
-  expect(screen.getByText('새 태스크')).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: '일정 저장' }));
+  expect(screen.getByRole('textbox', { name: '워크 이름' })).toHaveValue('새 워크');
+  expect(screen.getByRole('combobox', { name: '태스크 이름' })).toHaveValue('새 태스크');
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
   await waitFor(() => expect(saveSchedule).toHaveBeenCalledTimes(2));
   expect(saveSchedule).toHaveBeenLastCalledWith(
     expect.objectContaining({ entity_id: 'name:새 워크', task_preset_ids: ['name:새 태스크'] }),
@@ -394,6 +456,7 @@ it('keeps mobile work and time drafts when the clock is collapsed', async () => 
   );
   try {
     render(<ScheduleEditor />);
+    setTestTimes();
     const name = screen.getByRole('textbox', { name: '워크 이름' });
     const disclosure = document.querySelector('.schedule-time-disclosure')!;
     expect(name).toBeVisible();
@@ -411,4 +474,82 @@ it('keeps mobile work and time drafts when the clock is collapsed', async () => 
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it('places completion beside the work title and keeps only delete/save in the footer', async () => {
+  vi.mocked(getSchedule).mockResolvedValue(saved);
+  vi.mocked(completeSchedule).mockResolvedValue({ ...saved, status: 'completed' });
+  vi.mocked(reopenSchedule).mockResolvedValue(saved);
+  render(<ScheduleView id="s" modal onClose={vi.fn()} />);
+  const completion = await screen.findByRole('checkbox', { name: '스케줄 완료' });
+  expect(completion.closest('.schedule-work-title')).toHaveTextContent('Old Work');
+  expect(screen.queryByRole('button', { name: '스케줄 취소' })).not.toBeInTheDocument();
+  const footer = document.querySelector('.schedule-save')!;
+  expect(footer.querySelectorAll('button')).toHaveLength(2);
+  fireEvent.click(completion);
+  await waitFor(() => expect(completion).toBeChecked());
+  fireEvent.click(completion);
+  await waitFor(() => expect(reopenSchedule).toHaveBeenCalledWith('s'));
+});
+
+it('preserves manual parameter and memo drafts after choosing another work', async () => {
+  vi.mocked(saveSchedule).mockResolvedValue(saved);
+  render(<ScheduleEditor />);
+  setTestTimes();
+  fireEvent.click(screen.getByRole('button', { name: '태스크 추가...' }));
+  fireEvent.change(screen.getByRole('combobox', { name: '태스크 이름' }), {
+    target: { value: '읽기 [n=5]' },
+  });
+  fireEvent.change(screen.getByLabelText('n'), { target: { value: '12' } });
+  fireEvent.click(screen.getByRole('button', { name: '읽기 [n=5] 메모' }));
+  fireEvent.change(within(screen.getByRole('dialog')).getByLabelText('메모'), {
+    target: { value: '보존할 메모' },
+  });
+  fireEvent.click(screen.getByRole('button', { name: '메모 닫기' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
+    target: { value: 'Work' },
+  });
+  fireEvent.click(await screen.findByRole('button', { name: 'Work 선택' }));
+  expect(await screen.findByLabelText('n')).toHaveValue('12');
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task_preset_ids: ['name:읽기 [n=5]'],
+        task_customizations: {
+          'name:읽기 [n=5]': { parameters: { n: '12' }, execution_notes: '보존할 메모' },
+        },
+      }),
+      undefined,
+    ),
+  );
+});
+
+it('blocks duplicate task rows without losing either row and saves after removal', async () => {
+  vi.mocked(saveSchedule).mockResolvedValue(saved);
+  render(<ScheduleEditor />);
+  setTestTimes();
+  fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
+    target: { value: '새 워크' },
+  });
+  expect(screen.queryByRole('button', { name: '“새 워크” 사용' })).not.toBeInTheDocument();
+  for (let index = 0; index < 2; index++) {
+    fireEvent.click(screen.getByRole('button', { name: '태스크 추가...' }));
+    fireEvent.change(screen.getAllByRole('combobox', { name: '태스크 이름' })[index]!, {
+      target: { value: '읽기' },
+    });
+  }
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('중복 행');
+  expect(saveSchedule).not.toHaveBeenCalled();
+  expect(screen.getAllByRole('combobox', { name: '태스크 이름' })).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole('button', { name: '읽기 제거' })[0]!);
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ task_preset_ids: ['name:읽기'] }),
+      undefined,
+    ),
+  );
 });

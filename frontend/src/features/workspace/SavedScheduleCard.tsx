@@ -1,3 +1,4 @@
+import { toggleScheduleCompletion } from '../schedules/scheduleCompletion';
 import { SwipeDelete, DeleteButton } from '../shared/SwipeDelete';
 import { ScheduleCardActions } from '../shared/ScheduleCardActions';
 import { LocalizedError } from '../../i18n/errors';
@@ -7,18 +8,11 @@ import { Input, Button, ButtonLink } from '../shared/ui';
 import { PresetModal } from '../shared/PresetModal';
 import { TaskExecution } from '../schedules/TaskExecution';
 import { useRef, useState } from 'react';
-import {
-  updateTask,
-  saveSchedule,
-  deleteSchedule,
-  deleteScheduleTask,
-  completeSchedule,
-  reopenSchedule,
-} from '../../api/schedules';
+import { updateTask, saveSchedule, deleteSchedule, deleteScheduleTask } from '../../api/schedules';
 import { MemoButton } from '../shared/MemoButton';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
-import { progressOf, statusLabel } from './progress';
+import { progressOf } from './progress';
 import type { ScheduleDetail } from '../../api/schedules';
 import { Requirements } from '../works/Requirements';
 import { taskTone } from './preview';
@@ -83,6 +77,7 @@ export function SavedScheduleCard({
     <SwipeDelete label={value.entity_snapshot.name} onDelete={remove} disabled={busy || !onDelete}>
       <article
         className="work-block memo-preview schedule-card"
+        data-context-content
         data-schedule-color={value.color ?? 'none'}
       >
         {task && (
@@ -120,26 +115,20 @@ export function SavedScheduleCard({
                 : tr('Today.completeAllTasksInValue', { v1: value.entity_snapshot.name })
             }
             onChange={() => {
-              void change(async () =>
-                onChange?.(
-                  await (value.status === 'completed'
-                    ? reopenSchedule(value.id)
-                    : completeSchedule(value.id)),
-                ),
-              ).catch((e) => setError(message(e)));
+              void change(async () => onChange?.(await toggleScheduleCompletion(value))).catch(
+                (e) => setError(message(e)),
+              );
             }}
           />
           <div>
-            <div className="work-meta">
-              <span>{statusLabel(value.status)}</span>
-            </div>
-            <h2>
+            {value.status === 'cancelled' && <p>{tr('status.cancelled')}</p>}
+            <h2 className="schedule-card-title">
               <a href={'#/schedules/' + value.id}>{value.entity_snapshot.name}</a>
+              <span className="schedule-card-time">
+                {value.start_time} — {value.end_time}
+              </span>
             </h2>
             {value.title !== value.entity_snapshot.name && <p>{value.title}</p>}
-            <p className="work-time">
-              {value.start_time} — {value.end_time}
-            </p>
             {value.end_date !== value.scheduled_date && (
               <p>
                 {value.scheduled_date} — {value.end_date}
@@ -150,6 +139,8 @@ export function SavedScheduleCard({
             <ScheduleCardActions
               onDelete={onDelete ? remove : undefined}
               id={value.id}
+              color={value.color}
+              onColorSaved={onChange}
               label={value.entity_snapshot.name}
               value={value.notes}
               disabled={busy || !onChange}
@@ -177,6 +168,9 @@ export function SavedScheduleCard({
             </span>
           </div>
         </header>
+        {value.notes.trim() && (
+          <p className="schedule-card-memo">{value.notes.replace(/\s+/g, ' ').trim()}</p>
+        )}
         <Requirements value={value.entity_snapshot} />
         {count.skipped > 0 && <p>{tr('SavedScheduleCard.skippedValue', { v1: count.skipped })}</p>}
         <div className="task-blocks">
@@ -188,6 +182,7 @@ export function SavedScheduleCard({
               onDelete={() => removeTask(task.id)}
             >
               <div
+                data-context-content
                 className={`task-block memo-preview task-${taskTone(task.id)}${task.status === 'completed' ? ' is-complete' : ''}`}
               >
                 <Input
@@ -200,6 +195,8 @@ export function SavedScheduleCard({
                 />
                 <Button
                   variant="plain"
+                  data-context-action="edit"
+                  data-context-label={tr('App.edit')}
                   className="task-name task-detail-trigger"
                   aria-haspopup="dialog"
                   onClick={() => setEditing(task.id)}
@@ -235,7 +232,6 @@ export function SavedScheduleCard({
             </SwipeDelete>
           ))}
         </div>
-        {busy && <p role="status">{tr('Photos.saving')}</p>}
         {error && (
           <>
             <ErrorBox error={error} />

@@ -1,0 +1,224 @@
+@layer features {
+  .sticky-genie {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+  .sticky-launcher {
+    position: absolute;
+    right: 16px;
+  }
+  .sticky-layer {
+    position: fixed;
+    z-index: 20;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .sticky-window {
+    --sticky-heading-height: 28px;
+    position: absolute;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-popover);
+    overflow: hidden;
+  }
+  .sticky-heading {
+    --control-height: var(--sticky-heading-height);
+    --icon-size: 18px;
+    display: flex;
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--control-height);
+    z-index: 2;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    background: color-mix(in srgb, var(--schedule-color) 28%, var(--surface));
+  }
+  .sticky-window[data-schedule-color='none'] > .sticky-heading {
+    background: var(--surface-soft);
+  }
+  .sticky-heading,
+  .sticky-resize {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-fast) var(--ease-settle);
+  }
+  .sticky-window[data-sticky-active='true'] > :is(.sticky-heading, .sticky-resize) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  @media (hover: hover) {
+    .sticky-window:hover > :is(.sticky-heading, .sticky-resize) {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+  .sticky-drag {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border-radius: 0;
+    cursor: grab;
+    touch-action: none;
+  }
+  .sticky-body {
+    padding: 8px 12px 12px;
+    flex: 1;
+    min-height: 0;
+    margin-top: 0;
+    transition: margin-top var(--motion-fast) var(--ease-settle);
+    overflow: auto;
+  }
+  .sticky-window[data-sticky-active='true'] > .sticky-body,
+  .sticky-window:focus-within > .sticky-body {
+    margin-top: var(--sticky-heading-height);
+  }
+  @media (hover: hover) {
+    .sticky-window:hover > .sticky-body {
+      margin-top: var(--sticky-heading-height);
+    }
+  }
+  .sticky-window:focus-within > :is(.sticky-heading, .sticky-resize) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .sticky-body:has(textarea) {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .sticky-body textarea {
+    flex: 1;
+    min-height: 60px;
+    resize: none;
+  }
+  .sticky-resize {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 6px;
+    margin: 0;
+    border-radius: 0;
+    cursor: nwse-resize;
+    touch-action: none;
+    color: var(--muted);
+  }
+  .sticky-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    overflow-wrap: anywhere;
+  }
+  .sticky-check-row > span {
+    min-width: 0;
+  }
+  .sticky-check-row a {
+    min-width: 0;
+    text-align: left;
+  }
+  .sticky-schedule + .sticky-schedule {
+    border-top: 1px solid var(--line);
+    margin-top: 8px;
+  }
+  .sticky-list {
+    margin-top: 20px;
+  }
+  .sticky-list > div {
+    display: flex;
+    justify-content: space-between;
+  }
+  .sticky-tray {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    z-index: 4;
+    pointer-events: auto;
+    max-width: calc(100% - 24px);
+  }
+  .sticky-tray-menu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    overflow-y: auto;
+  }
+  .sticky-tray-menu .ui-menu-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .sticky-tray-menu .ui-menu-option span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .sticky-tray-empty {
+    margin: 0;
+    padding: 12px;
+    color: var(--muted);
+  }
+  .sticky-storage-error {
+    pointer-events: auto;
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 3;
+    max-width: 320px;
+  }
+  @media (max-width: 700px) {
+    .sticky-launcher {
+      right: 4px;
+      max-width: 96px;
+      font-size: 12px;
+    }
+  }
+  @media (pointer: coarse) {
+    .sticky-window {
+      --sticky-heading-height: 44px;
+    }
+    .sticky-resize {
+      width: 44px;
+      height: 44px;
+    }
+  }
+}
+@layer components {
+  .sticky-heading .sticky-control.ui-button {
+    width: var(--control-height);
+    height: var(--control-height);
+    min-height: var(--control-height);
+    color: var(--ink);
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .sticky-body textarea.ui-input {
+    border: 0;
+    background: transparent;
+    padding: 22px 0 0;
+  }
+  .sticky-heading .sticky-control.ui-button:hover {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  .sticky-tray-trigger.ui-button {
+    box-shadow: var(--shadow-popover);
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  .sticky-tray-menu .ui-menu-option {
+    justify-content: flex-start;
+  }
+}

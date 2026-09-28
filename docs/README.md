@@ -5,6 +5,8 @@
 | 목적 | 기준 문서 |
 | --- | --- |
 | 에이전트 작업 시작 | [AGENTS](../AGENTS.md) |
+| 작업별 변경 기록 | [CHANGES](CHANGES.md) |
+| 문서 기록 강제·훅·CI | [AGENT_HARNESS](AGENT_HARNESS.md) |
 | 설치·실행·검증 | [프로젝트 README](../README.md) |
 | 현재 구현 범위 | [STATUS](STATUS.md) |
 | 수정할 파일 찾기 | [CODE_MAP](CODE_MAP.md) |
@@ -19,3 +21,5 @@
 `VERIFICATION*.md`와 `CODE_REVIEW*.md`는 시점별 증거다. 특정 회귀나 과거 결정을 조사할 때만 읽고, 현재 상태는 STATUS에서 확인한다. 역사 문서를 이동하지 않아 기존 링크를 유지한다.
 
 - [앱 설정·초기화 계약](SETTINGS.md)
+
+- [트랙](TRACKS.md): 계정당 한도·데이터 격리·이전·앱 공통 알림·API 계약.

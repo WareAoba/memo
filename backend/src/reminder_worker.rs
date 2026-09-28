@@ -39,7 +39,7 @@ pub async fn deliver<T: PushTransport>(
     job: Job,
 ) -> Result<(), sqlx::Error> {
     // Re-read just before I/O; edits after this point are an unavoidable in-flight race.
-    let row=sqlx::query("SELECT d.subscription_id,d.attempts,s.id,s.title,s.scheduled_date,s.start_time,s.time_zone,s.reminder_version,s.reminder_start_at,p.endpoint,p.p256dh,p.auth,p.visible_until FROM push_deliveries d JOIN schedules s ON s.id=d.schedule_id JOIN push_subscriptions p ON p.id=d.subscription_id AND p.user_id=s.user_id WHERE d.id=? AND d.lease_token=? AND d.status='sending' AND s.reminder_version=d.reminder_version AND s.reminder_enabled=1 AND s.status IN ('planned','in_progress') AND s.reminder_at<=unixepoch() AND s.reminder_start_at>unixepoch() AND p.enabled=1 AND EXISTS(SELECT 1 FROM users u WHERE u.id=p.user_id AND COALESCE(json_extract(u.settings_json,'$.push_enabled'),1)=1)")
+    let row=sqlx::query("SELECT d.subscription_id,d.attempts,s.id,s.track_id,s.title,s.scheduled_date,s.start_time,s.time_zone,s.reminder_version,s.reminder_start_at,p.endpoint,p.p256dh,p.auth,p.visible_until FROM push_deliveries d JOIN schedules s ON s.id=d.schedule_id JOIN push_subscriptions p ON p.id=d.subscription_id AND p.user_id=s.user_id WHERE d.id=? AND d.lease_token=? AND d.status='sending' AND s.reminder_version=d.reminder_version AND s.reminder_enabled=1 AND s.status IN ('planned','in_progress') AND s.reminder_at<=unixepoch() AND s.reminder_start_at>unixepoch() AND p.enabled=1 AND EXISTS(SELECT 1 FROM users u WHERE u.id=p.user_id AND COALESCE(json_extract(u.settings_json,'$.push_enabled'),1)=1)")
         .bind(&job.id).bind(&job.token).fetch_optional(pool).await?;
     let Some(row) = row else {
         sqlx::query("UPDATE push_deliveries SET status='cancelled',lease_token=NULL,lease_until=NULL WHERE id=? AND lease_token=?")
@@ -54,7 +54,7 @@ pub async fn deliver<T: PushTransport>(
     let start = row.get::<i64, _>("reminder_start_at");
     let id = row.get::<String, _>("id");
     let version = row.get::<i64, _>("reminder_version");
-    let payload = json!({"type":"reminder","schedule_id":id,"reminder_version":version,"notification_id":format!("{id}:{version}"),"title":row.get::<String,_>("title"),"body":format!("{} · {} ({})",row.get::<String,_>("scheduled_date"),row.get::<String,_>("start_time"),row.get::<String,_>("time_zone")),"scheduled_date":row.get::<String,_>("scheduled_date"),"start_time":row.get::<String,_>("start_time"),"time_zone":row.get::<String,_>("time_zone"),"url":format!("/#/schedules/{id}"),"start_at":start});
+    let payload = json!({"type":"reminder","schedule_id":id,"reminder_version":version,"notification_id":format!("{id}:{version}"),"title":row.get::<String,_>("title"),"body":format!("{} · {} ({})",row.get::<String,_>("scheduled_date"),row.get::<String,_>("start_time"),row.get::<String,_>("time_zone")),"scheduled_date":row.get::<String,_>("scheduled_date"),"start_time":row.get::<String,_>("start_time"),"time_zone":row.get::<String,_>("time_zone"),"url":format!("/#/schedules/{id}?track={}",row.get::<String,_>("track_id")),"start_at":start});
     let target = Subscription {
         endpoint: row.get("endpoint"),
         keys: Keys {

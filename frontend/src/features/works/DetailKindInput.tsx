@@ -1,7 +1,8 @@
+import { observeAnchoredPopover } from '../shared/anchoredPopover';
+import { usePopupState } from '../shared/usePopupExit';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { ActionIcon } from '../shared/ActionIcon';
-import { Input, Button, MenuSurface, MenuOption } from '../shared/ui';
+import { DisclosureIcon, Input, Button, MenuSurface, MenuOption } from '../shared/ui';
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 
 export function DetailKindInput({
@@ -19,7 +20,7 @@ export function DetailKindInput({
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
   const popup = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen, toggle] = usePopupState(popup);
   const [manual, setManual] = useState(false);
   const [active, setActive] = useState(-1);
   const choices = ['', ...names];
@@ -29,25 +30,12 @@ export function DetailKindInput({
   useLayoutEffect(() => {
     if (!open || !popup.current || !input.current) return;
     const menu = popup.current;
-    // The top layer keeps the list outside the dialog's scrolling/clipping area.
-    menu.showPopover?.();
-    function position() {
-      const rect = input.current!.parentElement!.getBoundingClientRect();
-      const below = window.innerHeight - rect.bottom - 12;
-      const above = rect.top - 12;
-      const upwards = below < Math.min(menu.scrollHeight, 180) && above > below;
-      menu.style.width = `${rect.width}px`;
-      menu.style.left = `${rect.left}px`;
-      menu.style.maxHeight = `${Math.max(0, Math.min(180, upwards ? above : below))}px`;
-      menu.style.top = `${upwards ? rect.top - menu.offsetHeight - 5 : rect.bottom + 5}px`;
-    }
-    position();
-    window.addEventListener('resize', position);
-    document.addEventListener('scroll', position, true);
+    const stopPositioning = observeAnchoredPopover(menu, input.current.parentElement!, {
+      maxHeight: 180,
+      gap: 5,
+    });
     return () => {
-      window.removeEventListener('resize', position);
-      document.removeEventListener('scroll', position, true);
-      menu.hidePopover?.();
+      stopPositioning?.();
     };
   }, [open, names.length]);
   function choose(name: string) {
@@ -89,8 +77,7 @@ export function DetailKindInput({
           maxLength={100}
           placeholder=""
           value={value}
-          onFocus={() => !manual && setOpen(true)}
-          onClick={() => !manual && setOpen(true)}
+          onClick={() => !manual && toggle()}
           onChange={(e) => {
             if (!manual) return;
             onChange(e.target.value);
@@ -128,13 +115,12 @@ export function DetailKindInput({
           aria-controls={id + '-options'}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => {
-            const next = !open;
             input.current?.focus();
-            setOpen(next);
+            toggle();
             setActive(-1);
           }}
         >
-          <ActionIcon name="down" />
+          <DisclosureIcon />
         </Button>
       </div>
       {open && (
@@ -153,7 +139,8 @@ export function DetailKindInput({
               tabIndex={-1}
               id={id + '-option-' + index}
               key={name}
-              aria-selected={active === index || (active === -1 && value === name)}
+              aria-selected={value === name}
+              data-active={active === index}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => choose(name)}
             >

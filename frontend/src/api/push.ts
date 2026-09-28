@@ -1,5 +1,5 @@
 import { LocalizedError } from '../i18n/errors';
-import { tr, currentLanguage } from '../i18n';
+import { currentLanguage } from '../i18n';
 import { record, requestJson } from './client';
 
 export type PushState = {
@@ -140,15 +140,9 @@ export async function enablePush() {
   } catch (error) {
     const provider = new URL(subscription.endpoint).hostname;
     if (provider === 'jmt17.google.com')
-      throw new Error(tr('push.thisBrowserSTestPushServiceIsNotSupported'), { cause: error });
-    throw new Error(
-      tr('push.couldNotRegisterPushNotificationsValue', {
-        v1: error instanceof Error ? error.message : '',
-      }),
-      {
-        cause: error,
-      },
-    );
+      throw new LocalizedError('push.thisBrowserSTestPushServiceIsNotSupported', { cause: error });
+    if (error instanceof LocalizedError) throw error;
+    throw new LocalizedError('push.couldNotRegisterPushNotifications', { cause: error });
   }
   active = true;
   initialization = undefined;

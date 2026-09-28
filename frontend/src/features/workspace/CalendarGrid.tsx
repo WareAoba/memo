@@ -1,4 +1,6 @@
-import type { ScheduleDetail } from '../../api/schedules';
+import { ScheduleContextColor } from '../schedules/ScheduleContextColor';
+import { useTranslation } from 'react-i18next';
+import type { Schedule } from '../../api/schedules';
 import { tr, locale } from '../../i18n';
 import { fromDateKey } from './preview';
 import { Button } from '../shared/ui';
@@ -14,13 +16,14 @@ export function CalendarGrid({
   sixWeeks = false,
 }: {
   month: string;
-  items: ScheduleDetail[];
+  items: Schedule[];
   today: string;
   selected?: string;
   onSelect?: (date: string) => void;
   miniature?: boolean;
   sixWeeks?: boolean;
 }) {
+  useTranslation();
   const weeks = calendarWeeks(month, items);
   if (sixWeeks) while (weeks.length < 6) weeks.push({ dates: Array(7).fill(null), bars: [] });
   return (
@@ -99,14 +102,17 @@ export function CalendarGrid({
                   />
                 ) : (
                   <a
+                    data-context-content
+                    data-context-action="open"
                     key={schedule.id}
                     className={className}
                     style={style}
                     data-schedule-color={schedule.color ?? 'none'}
                     href={'#/schedules/' + schedule.id}
-                    title={schedule.title || schedule.entity_snapshot.name}
+                    title={schedule.title || schedule.entity_name || ''}
                   >
-                    {schedule.title || schedule.entity_snapshot.name}
+                    <ScheduleContextColor id={schedule.id} color={schedule.color} />
+                    {schedule.title || schedule.entity_name || ''}
                   </a>
                 );
               })}

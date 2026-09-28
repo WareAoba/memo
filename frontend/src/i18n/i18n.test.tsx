@@ -12,7 +12,6 @@ import i18n, {
 import ko from './locales/ko.json';
 import en from './locales/en.json';
 import ja from './locales/ja.json';
-import { LanguageSelect } from './LanguageSelect';
 import { LocalizedError } from './errors';
 import { ErrorBox } from '../features/shared/ErrorBox';
 import { message } from '../features/shared/form';
@@ -20,6 +19,8 @@ import { WorkEditor } from '../features/works/WorkEditor';
 import { emptyFields } from '../api/works';
 import { reminderUnits, reminderUnitLabel } from '../api/reminderFields';
 import { types } from '../features/tasks/itemTypes';
+import { ScheduleColorPicker } from '../features/schedules/ScheduleColorPicker';
+import { ScheduleSearchControl } from '../features/schedules/ScheduleSearchControl';
 
 afterEach(() => {
   localStorage.removeItem(languageStorageKey);
@@ -63,12 +64,13 @@ it('updates document language, title, calendar labels and constant options', asy
   expect(weekdays()).toEqual(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
   expect(monthLabel(9)).toBe('September');
   expect(types.checkbox).toBe('Checkbox');
-  expect(reminderUnits.weeks).toBe('weeks');
+  expect(reminderUnits.days).toBe('days');
+  expect(reminderUnits).not.toHaveProperty('weeks');
   expect(reminderUnitLabel('hours', 1)).toBe('hour');
   expect(reminderUnitLabel('hours', 2)).toBe('hours');
   await changeLanguage('ja');
   expect(types.checkbox).toBe('チェック');
-  expect(reminderUnits.weeks).toBe('週');
+  expect(reminderUnits.days).toBe('日');
   expect(monthLabel(9)).toBe('9月');
   expect(document.title).toBe('Preset — ワークとタスク');
 });
@@ -78,14 +80,13 @@ it('switches a mounted form and an existing error without losing user input', as
   const originalError = message(new LocalizedError('client.theServerRequestFailed'));
   render(
     <>
-      <LanguageSelect />
       <WorkEditor initial={emptyFields} embedded />
       <ErrorBox error={originalError} />
     </>,
   );
   const input = screen.getByRole('textbox', { name: '워크 이름 *' });
   fireEvent.change(input, { target: { value: '내 워크 / My work / 私のワーク' } });
-  fireEvent.change(screen.getByRole('combobox', { name: '언어' }), { target: { value: 'en' } });
+  await act(() => changeLanguage('en'));
   expect(await screen.findByRole('textbox', { name: 'Work name *' })).toBe(input);
   expect(input).toHaveValue('내 워크 / My work / 私のワーク');
   expect(screen.getByRole('alert')).toHaveTextContent('The server request failed.');
@@ -104,4 +105,40 @@ it('keeps interpolated user names as text rather than HTML', async () => {
   const { container } = render(<p>{tr('Picker.selectValue', { v1: name })}</p>);
   expect(container.querySelector('img')).toBeNull();
   expect(container).toHaveTextContent(`Select ${name}`);
+});
+
+it('updates independently mounted controls and fallback errors without clearing a search draft', async () => {
+  render(
+    <>
+      <ScheduleColorPicker value="none" onChange={() => {}} />
+      <ScheduleSearchControl />
+      <ErrorBox error={message(undefined)} />
+    </>,
+  );
+  const search = screen.getByRole('searchbox');
+  fireEvent.change(search, { target: { value: '내 일정 / My schedule' } });
+  for (const language of ['en', 'ja', 'ko'] as const) {
+    await act(() => changeLanguage(language));
+    expect(screen.getByRole('group', { name: tr('ScheduleColor.label') })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: tr('ScheduleColor.none') })).toBeChecked();
+    expect(screen.getByRole('searchbox', { name: tr('ScheduleSearch.searchSchedules') })).toBe(
+      search,
+    );
+    expect(search).toHaveValue('내 일정 / My schedule');
+    expect(screen.getByRole('alert')).toHaveTextContent(tr('form.requestFailedTryAgain'));
+  }
+});
+
+it('translates the design reference document title on language changes', async () => {
+  const title = document.querySelector('title')!;
+  title.setAttribute('data-i18n', 'design-reference.title');
+  try {
+    for (const language of ['en', 'ja', 'ko'] as const) {
+      await changeLanguage(language);
+      expect(document.title).toBe(tr('design-reference.title'));
+    }
+  } finally {
+    title.removeAttribute('data-i18n');
+    await changeLanguage('ko');
+  }
 });

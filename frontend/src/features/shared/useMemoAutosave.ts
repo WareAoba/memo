@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from 'react';
 import { message } from './form';
+import { currentTrackScope } from '../../api/trackScope';
+import { LocalizedError } from '../../i18n/errors';
 
 type Save = (text: string) => Promise<string | void>;
 export const MEMO_DEBOUNCE_MS = 600;
 
 /** Serializes writes so late responses never replace newer typing. */
 export class MemoAutosave {
+  private scope = currentTrackScope();
   private saved: string;
   private source: string;
   private timer?: ReturnType<typeof setTimeout>;
@@ -13,16 +16,19 @@ export class MemoAutosave {
   private drain = false;
   private changedAt = 0;
   private listeners = new Set<() => void>();
-  private state: { text: string; dirty: boolean; saving: boolean; error: string; saved: boolean };
+  private state: { text: string; dirty: boolean; saving: boolean; error: string };
   constructor(
     value: string,
     public save: Save,
     public disabled = false,
   ) {
     this.saved = this.source = value;
-    this.state = { text: value, dirty: false, saving: false, error: '', saved: false };
+    this.state = { text: value, dirty: false, saving: false, error: '' };
   }
   snapshot = () => this.state;
+  isCurrentTrack = () =>
+    this.scope.accountId === currentTrackScope().accountId &&
+    this.scope.trackId === currentTrackScope().trackId;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
     return () => {
@@ -48,7 +54,7 @@ export class MemoAutosave {
   }
   change = (text: string) => {
     this.changedAt = Date.now();
-    this.publish({ text, dirty: text !== this.saved, error: '', saved: false });
+    this.publish({ text, dirty: text !== this.saved, error: '' });
     this.schedule();
   };
   private schedule() {
@@ -72,20 +78,22 @@ export class MemoAutosave {
       try {
         while (this.state.dirty) {
           const text = this.state.text;
-          const result = await Promise.resolve().then(() => this.save(text));
+          const result = await Promise.resolve().then(() => {
+            if (!this.isCurrentTrack()) throw new LocalizedError('Tracks.changed');
+            return this.save(text);
+          });
           this.saved = result ?? text;
           const latest = this.state.text === text ? this.saved : this.state.text;
           this.publish({
             text: latest,
             dirty: latest !== this.saved,
-            saved: latest === this.saved,
           });
           if (!this.drain && this.state.dirty && Date.now() - this.changedAt < MEMO_DEBOUNCE_MS)
             break;
         }
         return !this.state.dirty;
       } catch (error) {
-        this.publish({ error: message(error), saved: false });
+        this.publish({ error: message(error) });
         return false;
       } finally {
         this.flight = undefined;
@@ -107,6 +115,15 @@ export class MemoAutosave {
 
 // Failed or in-flight drafts survive closing a detail view within this app session.
 const pendingEditors = new Map<string, MemoAutosave>();
+const mountedEditors = new Set<MemoAutosave>();
+export async function flushTrackMemos() {
+  const results = await Promise.all(
+    [...new Set([...pendingEditors.values(), ...mountedEditors])]
+      .filter((writer) => writer.isCurrentTrack())
+      .map((writer) => writer.flush()),
+  );
+  return results.every(Boolean);
+}
 function protectPendingEditors(event: BeforeUnloadEvent) {
   if (
     [...pendingEditors.values()].some(
@@ -117,7 +134,9 @@ function protectPendingEditors(event: BeforeUnloadEvent) {
     event.returnValue = '';
   }
 }
-export function useMemoAutosave(value: string, onSave: Save, disabled = false, draftKey?: string) {
+export function useMemoAutosave(value: string, onSave: Save, disabled = false, sourceKey?: string) {
+  const scope = currentTrackScope();
+  const draftKey = sourceKey ? `${scope.accountId}:${scope.trackId}:${sourceKey}` : undefined;
   const [writer] = useState(() => {
     const existing = draftKey ? pendingEditors.get(draftKey) : undefined;
     const result = existing ?? new MemoAutosave(value, onSave, disabled);
@@ -127,6 +146,7 @@ export function useMemoAutosave(value: string, onSave: Save, disabled = false, d
   const state = useSyncExternalStore(writer.subscribe, writer.snapshot, writer.snapshot);
   useLayoutEffect(() => writer.sync(value, onSave, disabled), [writer, value, onSave, disabled]);
   useEffect(() => {
+    mountedEditors.add(writer);
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (writer.snapshot().dirty || writer.snapshot().saving) {
         event.preventDefault();
@@ -135,6 +155,7 @@ export function useMemoAutosave(value: string, onSave: Save, disabled = false, d
     };
     window.addEventListener('beforeunload', draftKey ? protectPendingEditors : beforeUnload);
     return () => {
+      mountedEditors.delete(writer);
       if (!draftKey) window.removeEventListener('beforeunload', beforeUnload);
       writer.leave(() => {
         if (draftKey && pendingEditors.get(draftKey) === writer) pendingEditors.delete(draftKey);

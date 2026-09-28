@@ -10,7 +10,7 @@ it('groups memo and schedule edit controls inside a card without triggering comp
       <ScheduleCardActions id="s" label="워크" value="" onSave={vi.fn()} />
     </article>,
   );
-  const edit = screen.getByRole('link', { name: '일정 수정' });
+  const edit = screen.getByRole('link', { name: '스케줄 수정' });
   expect(edit).toHaveAttribute('href', '#/schedules/s/edit');
   fireEvent.click(edit);
   expect(card).not.toHaveBeenCalled();
@@ -24,4 +24,32 @@ it('renders neither memo nor schedule edit shortcuts on mobile', () => {
   render(<ScheduleCardActions id="s" label="워크" value="기존 메모" onSave={vi.fn()} />);
   expect(screen.queryByRole('button')).not.toBeInTheDocument();
   expect(screen.queryByRole('link')).not.toBeInTheDocument();
+});
+
+it('reserves the measured toolbar width plus a gap and tracks resize', () => {
+  let resize = () => {};
+  const disconnect = vi.fn();
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(callback: () => void) {
+        resize = callback;
+      }
+      observe() {}
+      disconnect = disconnect;
+    },
+  );
+  const { container, unmount } = render(
+    <article className="schedule-card">
+      <ScheduleCardActions id="s" label="워크" value="" onSave={vi.fn()} />
+    </article>,
+  );
+  const toolbar = container.querySelector('.schedule-hover-actions')!;
+  Object.defineProperty(toolbar, 'offsetWidth', { value: 280 });
+  resize();
+  expect(
+    container.querySelector('article')?.style.getPropertyValue('--schedule-actions-width'),
+  ).toBe('304px');
+  unmount();
+  expect(disconnect).toHaveBeenCalled();
 });

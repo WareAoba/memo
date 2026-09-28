@@ -1,17 +1,10 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { TaskPresetEditor, TaskPresetDetail, TaskPresetListView } from './TaskPresets';
-import {
-  archiveTaskPreset,
-  emptyFields,
-  getTaskPreset,
-  listTaskPresets,
-  saveTaskPreset,
-} from '../../api/taskPresets';
+import { emptyFields, getTaskPreset, listTaskPresets, saveTaskPreset } from '../../api/taskPresets';
 import type { TaskPreset } from '../../api/taskPresets';
 vi.mock('../../api/taskPresets', async (original) => ({
   ...(await original<typeof import('../../api/taskPresets')>()),
-  archiveTaskPreset: vi.fn(),
   getTaskPreset: vi.fn(),
   listTaskPresets: vi.fn(),
   saveTaskPreset: vi.fn(),
@@ -56,12 +49,17 @@ it('saves a memo directly in task detail on mobile without opening a popup', asy
   expect(await screen.findByLabelText('기본 메모')).toHaveValue('이전 메모');
   fireEvent.change(screen.getByLabelText('기본 메모'), { target: { value: '오늘의 기록' } });
   fireEvent.blur(screen.getByLabelText('기본 메모'));
-  expect(await screen.findByText('메모를 저장했습니다.')).toBeVisible();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(saveTaskPreset).toHaveBeenCalledWith({ default_notes: '오늘의 기록' }, preset.id);
   expect(screen.getByLabelText('기본 메모')).toHaveValue('오늘의 기록');
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });
-it('recovers a failed list and resets pagination on search and archive', async () => {
+it('recovers a failed list and resets pagination on search without an archive tab', async () => {
   vi.mocked(listTaskPresets)
     .mockRejectedValueOnce(new Error('연결 실패'))
     .mockResolvedValue({ items: [{ ...preset, item_count: 1 }], total: 49, offset: 0, limit: 20 });
@@ -92,17 +90,7 @@ it('recovers a failed list and resets pagination on search and archive', async (
       undefined,
     ),
   );
-  fireEvent.click(screen.getByRole('button', { name: '보관함' }));
-  await waitFor(() =>
-    expect(listTaskPresets).toHaveBeenLastCalledWith(
-      '학습',
-      true,
-      0,
-      expect.any(AbortSignal),
-      48,
-      undefined,
-    ),
-  );
+  expect(screen.queryByRole('button', { name: '보관함' })).not.toBeInTheDocument();
 });
 it('saves a task without details and retains input after failure', async () => {
   vi.mocked(saveTaskPreset)
@@ -153,7 +141,8 @@ it('edits all item types, reorders, deletes and keeps drafts after a failed save
   fireEvent.click(screen.getByRole('button', { name: '+ 항목 추가' }));
   const third = within(screen.getByRole('group', { name: '항목 3' }));
   fireEvent.change(third.getByLabelText('항목 이름'), { target: { value: '기록' } });
-  fireEvent.change(third.getByLabelText('종류'), { target: { value: 'text' } });
+  fireEvent.click(third.getByLabelText('종류'));
+  fireEvent.click(screen.getByRole('option', { name: '텍스트' }));
   fireEvent.change(third.getByLabelText('기본값'), { target: { value: '기본 기록' } });
   fireEvent.change(within(screen.getByRole('group', { name: '항목 1' })).getByLabelText('기본값'), {
     target: { value: '0.00' },
@@ -192,7 +181,8 @@ it('clears incompatible defaults and units when changing item type', async () =>
   vi.mocked(saveTaskPreset).mockResolvedValue(preset);
   render(<TaskPresetEditor initial={preset} id={preset.id} />);
   const item = within(screen.getByRole('group', { name: '항목 1' }));
-  fireEvent.change(item.getByLabelText('종류'), { target: { value: 'checkbox' } });
+  fireEvent.click(item.getByLabelText('종류'));
+  fireEvent.click(screen.getByRole('option', { name: '체크' }));
   expect(item.getByLabelText('기본값')).not.toBeChecked();
   expect(item.queryByLabelText('단위')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '태스크 저장' }));
@@ -213,20 +203,12 @@ it('shows saved definitions including zero and required fields', async () => {
   expect(screen.getByLabelText('필수')).toBeChecked();
   expect(screen.getByLabelText('단위')).toHaveValue('회');
 });
-it('archives and restores while showing errors without losing detail', async () => {
+it('has no task archive or restore actions', async () => {
   vi.mocked(getTaskPreset).mockResolvedValue(preset);
-  vi.mocked(archiveTaskPreset)
-    .mockRejectedValueOnce(new Error('보관 실패'))
-    .mockResolvedValueOnce();
-  vi.mocked(saveTaskPreset).mockResolvedValue({ ...preset, version: 3 });
-  render(<TaskPresetDetail id={preset.id} edit={false} />);
-  fireEvent.click(await screen.findByRole('button', { name: '태스크 보관' }));
-  expect(await screen.findByText('보관 실패')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '태스크 보관' }));
-  expect(await screen.findByText('보관된 태스크')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '태스크 복원' }));
-  expect(await screen.findByRole('button', { name: '태스크 보관' })).toBeEnabled();
-  expect(saveTaskPreset).toHaveBeenCalledWith({ archived: false }, preset.id);
+  render(<TaskPresetDetail id={preset.id} />);
+  await screen.findByLabelText('태스크 이름 *');
+  expect(screen.queryByRole('button', { name: '태스크 보관' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: '태스크 복원' })).not.toBeInTheDocument();
 });
 it('retries failed detail loading', async () => {
   vi.mocked(getTaskPreset)

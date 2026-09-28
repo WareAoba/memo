@@ -13,10 +13,12 @@ export function WorkspaceHeader({
 }) {
   return (
     <header className="workspace-page-header">
-      <div className="workspace-title-row">
-        {title}
-        {navigation && <div className="workspace-navigation-row">{navigation}</div>}
-      </div>
+      {(title || navigation) && (
+        <div className="workspace-title-row">
+          {title}
+          {navigation && <div className="workspace-navigation-row">{navigation}</div>}
+        </div>
+      )}
       {(tools || actions) && (
         <div className="workspace-toolbar-row">
           <div className="workspace-tools-row">{tools}</div>

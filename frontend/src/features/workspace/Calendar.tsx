@@ -1,4 +1,5 @@
 import { WorkspaceHeader } from '../shared/WorkspaceHeader';
+import { HorizontalNavigation } from '../shared/HorizontalNavigation';
 import { ScheduleSearchControl } from '../schedules/ScheduleSearchControl';
 import { CalendarDatePicker } from './CalendarDatePicker';
 import { useTranslation } from 'react-i18next';
@@ -6,11 +7,16 @@ import { tr, locale, weekdays, monthLabel } from '../../i18n';
 import { Button, Surface } from '../shared/ui';
 import { IconButton } from '../shared/IconButton';
 import { ActionIcon } from '../shared/ActionIcon';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { useCalendarTransition } from './useCalendarTransition';
 import { CalendarGrid } from './CalendarGrid';
 import './calendar.css';
-import { getRangeSchedules, type ScheduleDetail } from '../../api/schedules';
+import {
+  getRangeSchedules,
+  getRangeScheduleSummaries,
+  type Schedule,
+  type ScheduleDetail,
+} from '../../api/schedules';
 import { dateKey, fromDateKey, monthDays } from './preview';
 import { SavedScheduleCard } from './SavedScheduleCard';
 import { ErrorBox } from '../shared/ErrorBox';
@@ -23,13 +29,16 @@ const dateLabel = (date: string) =>
     weekday: 'long',
   });
 export type CalendarMode = 'day' | 'month' | 'year';
+export type CalendarNavigation = { changeMode: (mode: CalendarMode) => void };
 export function Calendar({
+  navigationRef,
   today,
   mode: controlledMode,
   onModeChange,
   onSelectedDateChange,
   revision = 0,
 }: {
+  navigationRef?: Ref<CalendarNavigation>;
   today: string;
   revision?: number;
   mode?: CalendarMode;
@@ -39,6 +48,27 @@ export function Calendar({
   useTranslation();
   const [localMode, setLocalMode] = useState<CalendarMode>('month');
   const mode = controlledMode ?? localMode;
+  const [selected, setSelected] = useState(today);
+  useEffect(() => {
+    onSelectedDateChange?.(selected);
+  }, [selected, onSelectedDateChange]);
+  const [month, setMonth] = useState(() => today.slice(0, 7));
+  const [result, setResult] = useState<
+    { range: string } & (
+      { detailed: true; items: ScheduleDetail[] } | { detailed: false; items: Schedule[] }
+    )
+  >();
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    const changed = () => setAttempt((value) => value + 1);
+    window.addEventListener('schedules-changed', changed);
+    return () => window.removeEventListener('schedules-changed', changed);
+  }, []);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const panel = useRef<HTMLElement>(null);
+  const dateTrigger = useRef<HTMLButtonElement>(null);
+  const prepare = useCalendarTransition(panel, `${mode}:${month}:${selected}`);
   function changeMode(next: CalendarMode, date = selected) {
     if (next === mode) return;
     prepare({ from: mode, to: next, date });
@@ -46,44 +76,46 @@ export function Calendar({
     setLocalMode(next);
     onModeChange?.(next);
   }
-  const [selected, setSelected] = useState(today);
-  useEffect(() => {
-    onSelectedDateChange?.(selected);
-  }, [selected, onSelectedDateChange]);
-  const [month, setMonth] = useState(() => today.slice(0, 7));
-  const [result, setResult] = useState<{ range: string; items: ScheduleDetail[] }>();
-  const [error, setError] = useState('');
-  const [attempt, setAttempt] = useState(0);
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const panel = useRef<HTMLElement>(null);
-  const dateTrigger = useRef<HTMLButtonElement>(null);
-  const prepare = useCalendarTransition(panel, `${mode}:${month}:${selected}`);
+  useImperativeHandle(navigationRef, () => ({ changeMode }));
   const cells = monthDays(fromDateKey(month + '-01'));
   const dates = cells.filter((d): d is string => d !== null);
   const first = dates[0]!;
   const last = dates[dates.length - 1]!;
-  const rangeStart = mode === 'year' ? month.slice(0, 4) + '-01-01' : first;
-  const rangeEnd = mode === 'year' ? month.slice(0, 4) + '-12-31' : last;
-  const range = `${rangeStart}/${rangeEnd}`;
+  const rangeStart =
+    mode === 'day' ? selected : mode === 'year' ? month.slice(0, 4) + '-01-01' : first;
+  const rangeEnd =
+    mode === 'day' ? selected : mode === 'year' ? month.slice(0, 4) + '-12-31' : last;
+  const detailed = mode === 'day';
+  const range = `${rangeStart}/${rangeEnd}/${detailed}`;
   useEffect(() => {
     const controller = new AbortController();
-    getRangeSchedules(rangeStart, rangeEnd, controller.signal)
-      .then((items) => {
-        if (!controller.signal.aborted) setResult({ range, items });
+    const load = detailed
+      ? getRangeSchedules(rangeStart, rangeEnd, controller.signal).then((items) => ({
+          range,
+          items,
+          detailed: true as const,
+        }))
+      : getRangeScheduleSummaries(rangeStart, rangeEnd, controller.signal).then((items) => ({
+          range,
+          items,
+          detailed: false as const,
+        }));
+    load
+      .then((next) => {
+        if (!controller.signal.aborted) {
+          setResult(next);
+          setError('');
+        }
       })
       .catch((e) => {
         if (!controller.signal.aborted) setError(message(e));
       });
     return () => controller.abort();
-  }, [rangeStart, rangeEnd, range, attempt, revision]);
-  const loadedBounds = result?.range.split('/');
-  const items =
-    result && loadedBounds && loadedBounds[0]! <= rangeStart && loadedBounds[1]! >= rangeEnd
-      ? result.items
-      : undefined;
-  const onDate = (date: string) =>
-    items?.filter((s) => s.scheduled_date <= date && s.end_date >= date) || [];
-  const list = onDate(selected);
+  }, [rangeStart, rangeEnd, range, detailed, attempt, revision]);
+  const items = result?.range === range ? result.items : undefined;
+  // Preserve known silhouettes during the next summary request; CalendarGrid clips by date.
+  const summaryItems = items ?? result?.items ?? [];
+  const list = result?.range === range && result.detailed ? result.items : [];
   function chooseMonth(next: string, date: string) {
     setError('');
     setMonth(next);
@@ -108,11 +140,7 @@ export function Calendar({
       <WorkspaceHeader
         title={<h1>{tr('Schedules.calendar')}</h1>}
         navigation={
-          <div
-            className="preset-switch calendar-view-switch"
-            role="group"
-            aria-label={tr('Sidebar.calendarViews')}
-          >
+          <HorizontalNavigation label={tr('Sidebar.calendarViews')}>
             {(['day', 'month', 'year'] as const).map((value) => (
               <Button
                 variant="plain"
@@ -123,7 +151,7 @@ export function Calendar({
                 {tr(`Calendar.${value}Tab`)}
               </Button>
             ))}
-          </div>
+          </HorizontalNavigation>
         }
         tools={<ScheduleSearchControl />}
       />
@@ -166,7 +194,7 @@ export function Calendar({
           </div>
           <CalendarGrid
             month={month}
-            items={items ?? []}
+            items={summaryItems}
             today={today}
             selected={selected}
             onSelect={(date) => {
@@ -224,7 +252,7 @@ export function Calendar({
                     <strong>{monthLabel(i + 1, true)}</strong>
                     {next === today.slice(0, 7) && <span>{tr('Calendar.thisMonth')}</span>}
                   </span>
-                  <CalendarGrid month={next} items={items ?? []} today={today} miniature />
+                  <CalendarGrid month={next} items={summaryItems} today={today} miniature />
                 </Button>
               );
             })}
@@ -240,7 +268,11 @@ export function Calendar({
           }}
         />
       )}
-      {!items && !error && <p role="status">{tr('Schedules.loadingSchedules')}</p>}
+      {!items && !error && (
+        <p className="calendar-loading" role="status">
+          {tr('Schedules.loadingSchedules')}
+        </p>
+      )}
       {mode === 'day' && (
         <Surface as="section" padding="compact" data-calendar-page className="calendar-day-panel">
           <div className="calendar-controls calendar-period-heading calendar-day-heading">
@@ -282,7 +314,7 @@ export function Calendar({
                       value={value}
                       onDelete={() =>
                         setResult((current) =>
-                          current
+                          current?.detailed
                             ? {
                                 ...current,
                                 items: current.items.filter((item) => item.id !== value.id),
@@ -292,7 +324,7 @@ export function Calendar({
                       }
                       onChange={(updated) =>
                         setResult((current) =>
-                          current
+                          current?.detailed
                             ? {
                                 ...current,
                                 items: current.items.map((s) =>

@@ -1,3 +1,4 @@
+import { usePopupState } from '../shared/usePopupExit';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Account } from '../../api/auth';
@@ -8,7 +9,8 @@ import './account-menu.css';
 
 export function AccountMenu({ account, onSettings }: { account: Account; onSettings: () => void }) {
   useTranslation();
-  const [open, setOpen] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
+  const [open, setOpen, toggle] = usePopupState(panel);
   const [failedPicture, setFailedPicture] = useState<string>();
   const container = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -19,7 +21,7 @@ export function AccountMenu({ account, onSettings }: { account: Account; onSetti
     };
     document.addEventListener('click', outside);
     return () => document.removeEventListener('click', outside);
-  }, [open]);
+  }, [open, setOpen]);
   const trigger = useRef<HTMLButtonElement>(null);
   const picture =
     account.picture?.startsWith('https://') && account.picture !== failedPicture
@@ -49,7 +51,7 @@ export function AccountMenu({ account, onSettings }: { account: Account; onSetti
         title={account.display_name}
         aria-expanded={open}
         aria-controls="account-panel"
-        onClick={() => setOpen(!open)}
+        onClick={() => toggle()}
       >
         <span className="account-avatar" aria-hidden="true">
           {picture ? (
@@ -66,7 +68,7 @@ export function AccountMenu({ account, onSettings }: { account: Account; onSetti
         <span className="account-name">{account.display_name}</span>
       </Button>
       {open && (
-        <MenuSurface id="account-panel" className="account-panel">
+        <MenuSurface ref={panel} id="account-panel" className="account-panel">
           <div className="account-details">
             <strong>{account.display_name}</strong>
             {account.email && <span>{account.email}</span>}

@@ -37,7 +37,8 @@ it.each(['work', 'task'] as const)(
     await screen.findByRole('button', { name: 'Study 선택' });
     expect(screen.getByText('Reference')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Study 메모' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '“Study” 사용' }));
+    expect(screen.queryByRole('button', { name: '“Study” 사용' })).not.toBeInTheDocument();
+    fireEvent.blur(input);
     expect(onPick).toHaveBeenLastCalledWith({ id: 'name:Study', name: 'Study' });
     fireEvent.change(input, { target: { value: 'Study' } });
     fireEvent.click(await screen.findByRole('button', { name: 'Study 선택' }));

@@ -4,7 +4,7 @@ import { scheduleAppearance } from './scheduleAppearance';
 import type { ScheduleDetail } from '../../api/schedules';
 import { DialFace } from '../schedules/DialFace';
 import { point } from '../schedules/dialGeometry';
-import { toMinutes } from '../schedules/timeRange';
+import { timeInZone, toMinutes } from '../schedules/timeRange';
 import '../schedules/schedules.css';
 
 export function TodayDial({
@@ -19,14 +19,7 @@ export function TodayDial({
   items?: ScheduleDetail[];
 }) {
   useTranslation();
-  const time = timeZone
-    ? now.toLocaleTimeString('en-GB', {
-        timeZone,
-        hourCycle: 'h23',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    : undefined;
+  const time = timeZone ? timeInZone(timeZone, now) : undefined;
   const current = time ? toMinutes(time) : undefined;
   const marker = point(current ?? 0, 138);
   const handStart = point(current ?? 0, 48);

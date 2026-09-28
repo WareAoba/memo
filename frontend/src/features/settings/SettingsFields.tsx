@@ -1,12 +1,15 @@
+import { useTranslation } from 'react-i18next';
 import { tr, type MessageKey } from '../../i18n';
 import type { UserSettings } from '../../api/settings';
-import { Input } from '../shared/ui';
+import { ActionIcon } from '../shared/ActionIcon';
+import { ToggleSwitch } from '../shared/ui';
 import { DropdownSelect } from '../shared/DropdownSelect';
 import { PushSettings } from '../schedules/PushSettings';
 import { useSettings } from './settingsContext';
 
 export type SettingsTab = 'general' | 'appearance' | 'scheduling' | 'notifications' | 'data';
 export function SettingsFields({ tab }: { tab: SettingsTab }) {
+  useTranslation();
   const { values, update, loaded } = useSettings();
   function choice<K extends keyof UserSettings>(
     key: K,
@@ -23,7 +26,18 @@ export function SettingsFields({ tab }: { tab: SettingsTab }) {
           const option = options.find(([value]) => String(value) === next);
           if (option) update({ [key]: option[0] });
         }}
-        options={options.map(([value, label]) => ({ value: String(value), label }))}
+        options={options.map(([value, label]) => ({
+          value: String(value),
+          label,
+          decoration:
+            key === 'theme' ? (
+              <ActionIcon
+                name={value === 'light' ? 'sun' : value === 'dark' ? 'moon' : 'monitor'}
+              />
+            ) : key === 'accent' ? (
+              <span className="ui-accent-swatch" data-accent={String(value)} />
+            ) : undefined,
+        }))}
       />
     );
   }
@@ -95,8 +109,7 @@ export function SettingsFields({ tab }: { tab: SettingsTab }) {
       {tab === 'notifications' && (
         <>
           <label className="settings-toggle">
-            <Input
-              type="checkbox"
+            <ToggleSwitch
               checked={values.push_enabled}
               onChange={(event) => update({ push_enabled: event.target.checked })}
             />

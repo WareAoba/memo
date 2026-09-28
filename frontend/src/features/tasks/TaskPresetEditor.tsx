@@ -2,7 +2,7 @@ import { UnmanagedSuggestions } from '../shared/UnmanagedSuggestions';
 import { ModalActions } from '../shared/PresetModal';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { PageHeader, Surface, Input, Textarea, Button } from '../shared/ui';
+import { DisclosureSummary, PageHeader, Surface, Input, Textarea, Button } from '../shared/ui';
 import { ActionIcon } from '../shared/ActionIcon';
 import { useId, useState } from 'react';
 import { useEditorActive } from '../useEditorActive';
@@ -128,7 +128,7 @@ export function TaskPresetEditor({
               />
             </label>
             <details className="inline-help wide">
-              <summary>{tr('UI.parameterHelp')}</summary>
+              <DisclosureSummary>{tr('UI.parameterHelp')}</DisclosureSummary>
               <p id={templateHint} className="hint">
                 {tr('TaskPresetEditor.useNOrCountToEnterValuesInA')}
               </p>
@@ -169,7 +169,7 @@ export function TaskPresetEditor({
               aria-busy={saving || undefined}
             >
               <ActionIcon name="save" />
-              {saving ? tr('Photos.saving') : tr('TaskPresetEditor.saveTask')}
+              {tr('TaskPresetEditor.saveTask')}
             </Button>
             {!embedded && (
               <Button

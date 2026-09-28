@@ -45,9 +45,11 @@ export function useCalendarTransition(root: RefObject<HTMLElement | null>, key: 
     const ghost = document.createElement('div');
     if (!viewport) ghost.className = root.current!.className;
     ghost.setAttribute('aria-hidden', 'true');
+    ghost.setAttribute('data-calendar-transition', '');
     ghost.setAttribute('inert', '');
     Object.assign(ghost.style, {
       position: viewport ? 'absolute' : 'fixed',
+      display: 'block',
       left: viewport ? '0' : `${bounds.left}px`,
       top: viewport ? '0' : `${bounds.top}px`,
       width: viewport ? '100%' : `${bounds.width}px`,
@@ -61,8 +63,19 @@ export function useCalendarTransition(root: RefObject<HTMLElement | null>, key: 
       overflow: 'hidden',
     });
     const copy = page.cloneNode(true) as HTMLElement;
+    // Layout containers and inherited zoom must match the source, not body defaults.
+    const sourceStyle = getComputedStyle(page);
+    const scale = viewport ? 1 : bounds.width / (page.offsetWidth || bounds.width);
+    ghost.style.fontSize = sourceStyle.fontSize;
+    ghost.style.lineHeight = sourceStyle.lineHeight;
     copy.querySelectorAll('[id]').forEach((element) => element.removeAttribute('id'));
-    Object.assign(copy.style, { width: '100%', height: '100%', margin: '0', flex: 'none' });
+    Object.assign(copy.style, {
+      width: `${100 / scale}%`,
+      height: `${100 / scale}%`,
+      margin: '0',
+      flex: 'none',
+      zoom: String(scale),
+    });
     ghost.append(copy);
     (viewport ?? document.body).append(ghost);
     // cloneNode does not copy scroll offsets from the visible year/day panel.
@@ -90,6 +103,7 @@ export function useCalendarTransition(root: RefObject<HTMLElement | null>, key: 
       ghost.remove();
       return;
     }
+    let zoomOut = false;
     let entering: Keyframe[];
     let leaving: Keyframe[];
     if ('direction' in transition) {
@@ -104,6 +118,7 @@ export function useCalendarTransition(root: RefObject<HTMLElement | null>, key: 
     } else {
       const rank = { day: 0, month: 1, year: 2 };
       const zoomIn = rank[transition.from] > rank[transition.to];
+      zoomOut = !zoomIn;
       const destination =
         cell(page, transition.to, transition.date)?.getBoundingClientRect() ?? target;
       const mapped = zoomIn ? origin : destination;
@@ -124,6 +139,7 @@ export function useCalendarTransition(root: RefObject<HTMLElement | null>, key: 
     }
     const style = getComputedStyle(page);
     const options = {
+      fill: 'both' as const,
       duration: parseFloat(style.getPropertyValue('--motion-slow')) || 560,
       easing: style.getPropertyValue('--ease-settle').trim() || 'cubic-bezier(.22,1,.36,1)',
     };
@@ -131,13 +147,30 @@ export function useCalendarTransition(root: RefObject<HTMLElement | null>, key: 
       entering.map((frame) => ({ ...frame, transformOrigin: 'top left' })),
       options,
     );
-    const outgoing = ghost.animate(leaving, options);
+    // Keep the shrinking page visible until it reaches its destination cell.
+    leaving.splice(1, 0, { opacity: zoomOut ? 1 : 0, offset: zoomOut ? 0.75 : 0.2 });
+    const outgoing = ghost.animate(
+      leaving,
+      zoomOut
+        ? {
+            ...options,
+            easing: style.getPropertyValue('--ease-exit').trim() || 'cubic-bezier(.4,0,.6,1)',
+          }
+        : options,
+    );
     const cleanup = () => {
+      // Detach before cancelling: cancellation restores the outgoing pixels.
+      ghost.remove();
       incoming.cancel();
       outgoing.cancel();
-      ghost.remove();
     };
-    outgoing.onfinish = cleanup;
+    // Either callback may run first. Never cancel an incoming animation one frame early.
+    let finished = 0;
+    const finish = () => {
+      if (++finished === 2) cleanup();
+    };
+    incoming.onfinish = finish;
+    outgoing.onfinish = finish;
     dispose.current = cleanup;
     return cleanup;
   }, [key, root]);

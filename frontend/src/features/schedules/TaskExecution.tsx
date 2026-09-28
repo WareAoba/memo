@@ -1,7 +1,7 @@
 import { DeleteButton } from '../shared/SwipeDelete';
 import { LocalizedError } from '../../i18n/errors';
 import { useTranslation } from 'react-i18next';
-import { tr, displayMessage } from '../../i18n';
+import { tr } from '../../i18n';
 import { Surface, Input, Button } from '../shared/ui';
 import { MemoEditor } from '../shared/MemoEditor';
 import { TaskParameterInputs } from '../shared/TaskParameterInputs';
@@ -50,7 +50,6 @@ export function TaskExecution({
   );
   const [memoPending, setMemoPending] = useState(false);
   const [error, setError] = useState('');
-  const [saved, setSaved] = useState('');
   const dirty =
     (allowRename &&
       (name !== template ||
@@ -62,10 +61,8 @@ export function TaskExecution({
     task.items.some((i) => draft[i.id] !== inputValue(i));
   async function run(operation: () => Promise<ScheduleDetail>) {
     setError('');
-    setSaved('');
     try {
       await mutate(operation);
-      setSaved('TaskExecution.saved');
       return true;
     } catch (e) {
       setError(message(e));
@@ -100,15 +97,17 @@ export function TaskExecution({
         {onDelete && (
           <DeleteButton label={task.name_snapshot} onDelete={onDelete} disabled={busy} />
         )}
-        <h2>{task.name_snapshot}</h2>
+        {!allowRename && <h2>{task.name_snapshot}</h2>}
       </div>
-      <p>{statusLabel(task.status)}</p>
+      {(task.status === 'in_progress' || task.status === 'skipped') && (
+        <p>{statusLabel(task.status)}</p>
+      )}
       {task.default_notes_snapshot && (
         <p className="preserve-lines">{task.default_notes_snapshot}</p>
       )}
       {locked && <p>{tr('TaskExecution.resumeTheScheduleToEditExecutionRecords')}</p>}
       <fieldset disabled={busy || locked} className="execution-fields">
-        <legend>{tr('TaskExecution.taskExecution')}</legend>
+        <legend className="sr-only">{tr('TaskExecution.taskExecution')}</legend>
         {allowRename && (
           <form
             onSubmit={(e) => {
@@ -187,7 +186,6 @@ export function TaskExecution({
                 type="checkbox"
                 checked={Boolean(draft[item.id])}
                 onChange={(e) => {
-                  setSaved('');
                   setDraft((d) => ({ ...d, [item.id]: e.target.checked }));
                 }}
               />
@@ -199,7 +197,6 @@ export function TaskExecution({
                 maxLength={5000}
                 value={String(draft[item.id] ?? '')}
                 onChange={(e) => {
-                  setSaved('');
                   setDraft((d) => ({ ...d, [item.id]: e.target.value }));
                 }}
               />
@@ -214,7 +211,6 @@ export function TaskExecution({
             </Button>
           </form>
         ))}
-        {dirty && <p role="status">{tr('TaskExecution.youHaveUnsavedInputSaveEachItemAndMemo')}</p>}
         <div className="work-task-actions">
           <Button
             variant="secondary"
@@ -264,9 +260,7 @@ export function TaskExecution({
           await mutate(() => updateTask(task.id, { execution_notes }));
         }}
       />
-      {busy && <p role="status">{tr('Photos.saving')}</p>}
       {error && <ErrorBox error={error} />}
-      {saved && <p role="status">{displayMessage(saved)}</p>}
       <Photos target={{ type: 'task', id: task.id }} locked={locked} />
     </Surface>
   );

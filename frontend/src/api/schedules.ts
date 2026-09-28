@@ -1,3 +1,6 @@
+import { publishScheduleChange } from './scheduleChanges';
+import { readSchedules } from './scheduleReads';
+import { currentTrackScope } from './trackScope';
 import { LocalizedError } from '../i18n/errors';
 import type { ReminderFields } from './reminderFields';
 import { emptyFields, type WorkFields } from './works';
@@ -18,6 +21,7 @@ export type ScheduleFields = ReminderFields & {
 export type Schedule = ScheduleFields & {
   id: string;
   entity_id: string | null;
+  entity_name?: string;
   status: string;
   created_at: string;
   updated_at: string;
@@ -46,6 +50,7 @@ export type ScheduleDetail = Schedule & {
 export function parseSchedule(v: unknown): Schedule {
   if (
     !record(v) ||
+    (v.entity_name !== undefined && typeof v.entity_name !== 'string') ||
     (v.color !== undefined && !scheduleColors.includes(v.color as ScheduleColor)) ||
     !(v.entity_id === null || typeof v.entity_id === 'string') ||
     ![
@@ -132,9 +137,24 @@ export async function listSchedules(date: string, offset: number, signal?: Abort
   );
 }
 export async function getSchedule(id: string, signal?: AbortSignal) {
-  return detail(
-    await requestJson('/api/schedules/' + encodeURIComponent(id), 'GET', undefined, signal),
+  return readSchedules(
+    `detail:${id}`,
+    async (sharedSignal) =>
+      detail(
+        await requestJson(
+          '/api/schedules/' + encodeURIComponent(id),
+          'GET',
+          undefined,
+          sharedSignal,
+        ),
+      ),
+    signal,
   );
+}
+function saved(value: unknown) {
+  const schedule = detail(value);
+  publishScheduleChange({ kind: 'saved', id: schedule.id, schedule });
+  return schedule;
 }
 export async function searchSchedules(q: string, offset: number, signal?: AbortSignal) {
   return parsePage(
@@ -163,7 +183,7 @@ export async function saveSchedule(
   },
   id?: string,
 ) {
-  return detail(
+  return saved(
     await requestJson(
       '/api/schedules' + (id ? '/' + encodeURIComponent(id) : ''),
       id ? 'PATCH' : 'POST',
@@ -183,21 +203,43 @@ export async function getDaySchedules(date: string, signal?: AbortSignal) {
   return getRangeSchedules(date, date, signal);
 }
 
-export async function getRangeSchedules(from: string, to: string, signal?: AbortSignal) {
+export function getRangeSchedules(from: string, to: string, signal?: AbortSignal) {
+  return readSchedules(
+    `details:${from}/${to}`,
+    (sharedSignal) => rangeSchedules(from, to, detail, true, sharedSignal),
+    signal,
+  );
+}
+export function getRangeScheduleSummaries(from: string, to: string, signal?: AbortSignal) {
+  return readSchedules(
+    `summary:${from}/${to}`,
+    (sharedSignal) => rangeSchedules(from, to, parseSchedule, false, sharedSignal),
+    signal,
+  );
+}
+async function rangeSchedules<T extends Schedule>(
+  from: string,
+  to: string,
+  parse: (value: unknown) => T,
+  includeDetails: boolean,
+  signal?: AbortSignal,
+): Promise<T[]> {
+  const scope = currentTrackScope();
   for (let attempt = 0; attempt < 3; attempt++) {
-    const items: ScheduleDetail[] = [];
+    const items: T[] = [];
     const ids = new Set<string>();
     let revision: number | undefined;
     let total: number | undefined;
     try {
       while (true) {
+        if (scope !== currentTrackScope()) throw new LocalizedError('Tracks.changed');
         const raw = await requestJson(
           '/api/schedules?' +
             new URLSearchParams({
               from,
               to,
-              include_details: 'true',
-              limit: '20',
+              include_details: String(includeDetails),
+              limit: '100',
               offset: String(items.length),
               ...(revision === undefined ? {} : { revision: String(revision) }),
             }),
@@ -205,7 +247,7 @@ export async function getRangeSchedules(from: string, to: string, signal?: Abort
           undefined,
           signal,
         );
-        const page = parsePage(raw, detail);
+        const page = parsePage(raw, parse);
         if (!record(raw) || !Number.isSafeInteger(raw.revision) || Number(raw.revision) < 0)
           throw new LocalizedError('schedules.couldNotReadTheScheduleListVersion');
         if (
@@ -246,23 +288,23 @@ export async function updateTask(
     parameters?: Record<string, string>;
   },
 ) {
-  return detail(
+  return saved(
     await requestJson('/api/schedule-tasks/' + encodeURIComponent(id), 'PATCH', changes),
   );
 }
 export async function updateItem(id: string, value: boolean | string | number | null) {
-  return detail(
+  return saved(
     await requestJson('/api/schedule-task-items/' + encodeURIComponent(id), 'PATCH', { value }),
   );
 }
 export async function updateScheduleStatus(id: string, status: string) {
-  return detail(
+  return saved(
     await requestJson('/api/schedules/' + encodeURIComponent(id) + '/status', 'PATCH', { status }),
   );
 }
 
 export async function completeSchedule(id: string) {
-  return detail(
+  return saved(
     await requestJson('/api/schedules/' + encodeURIComponent(id) + '/complete', 'POST', {}),
   );
 }
@@ -271,7 +313,7 @@ export async function addScheduleTask(
   taskPresetId: string,
   customization?: TaskCustomization,
 ) {
-  return detail(
+  return saved(
     await requestJson('/api/schedules/' + encodeURIComponent(id) + '/tasks', 'POST', {
       task_preset_id: presetReference(taskPresetId),
       ...customization,
@@ -280,13 +322,14 @@ export async function addScheduleTask(
 }
 
 export async function reopenSchedule(id: string) {
-  return detail(
+  return saved(
     await requestJson('/api/schedules/' + encodeURIComponent(id) + '/reopen', 'POST', {}),
   );
 }
 export async function deleteSchedule(id: string) {
   await requestJson('/api/schedules/' + encodeURIComponent(id), 'DELETE');
+  publishScheduleChange({ kind: 'deleted', id });
 }
 export async function deleteScheduleTask(id: string) {
-  return detail(await requestJson('/api/schedule-tasks/' + encodeURIComponent(id), 'DELETE'));
+  return saved(await requestJson('/api/schedule-tasks/' + encodeURIComponent(id), 'DELETE'));
 }

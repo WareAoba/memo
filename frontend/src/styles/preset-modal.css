@@ -95,6 +95,7 @@
     background: var(--backdrop);
   }
   .preset-modal-schedule {
+    height: min(900px, 90dvh);
     width: min(1080px, 92vw);
   }
   .modal-header {
@@ -199,7 +200,7 @@
     padding: var(--space-4) 0;
   }
   .preset-modal .time-dial {
-    max-width: 260px;
+    max-width: 420px;
   }
   .preset-modal .schedule-editor {
     padding-top: 0;

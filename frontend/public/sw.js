@@ -133,7 +133,10 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     (async () => {
       const url = new URL(event.notification.data?.url || '/', self.location.origin);
-      if (url.origin !== self.location.origin || !/^#\/schedules\/[a-f0-9-]+$/i.test(url.hash))
+      if (
+        url.origin !== self.location.origin ||
+        !/^#\/schedules\/[a-f0-9-]+(?:\?track=[a-f0-9-]+)?$/i.test(url.hash)
+      )
         return;
       for (const client of await self.clients.matchAll({
         type: 'window',

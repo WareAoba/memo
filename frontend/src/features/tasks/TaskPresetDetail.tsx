@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { Surface, Button } from '../shared/ui';
-import { ActionIcon } from '../shared/ActionIcon';
+import { Surface } from '../shared/ui';
 import { MemoEditor } from '../shared/MemoEditor';
 import { useEffect, useState } from 'react';
-import { archiveTaskPreset, getTaskPreset, saveTaskPreset } from '../../api/taskPresets';
+import { getTaskPreset, saveTaskPreset } from '../../api/taskPresets';
 import type { TaskPreset } from '../../api/taskPresets';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
@@ -41,22 +40,6 @@ export function TaskPresetDetail({
       window.clearTimeout(timer);
     };
   }, [id, attempt]);
-  async function archive() {
-    if (!value) return;
-    setBusy(true);
-    setError('');
-    try {
-      if (value.archived) setValue(await saveTaskPreset({ archived: false }, id));
-      else {
-        await archiveTaskPreset(id);
-        setValue({ ...value, archived: true, version: value.version + 1 });
-      }
-    } catch (e) {
-      setError(message(e));
-    } finally {
-      setBusy(false);
-    }
-  }
   if (!value)
     return error ? (
       <ErrorBox
@@ -71,7 +54,6 @@ export function TaskPresetDetail({
     );
   return (
     <>
-      {value.archived && <p className="eyebrow">{tr('TaskPresetDetail.archivedTask')}</p>}
       {!modal && (
         <nav className="breadcrumb">
           <a href="#/presets/tasks">{tr('TaskPresetDetail.tasks')}</a>
@@ -95,7 +77,6 @@ export function TaskPresetDetail({
           label={tr('TaskPresetDetail.defaultMemo')}
           value={value.default_notes}
           disabled={busy}
-          scope={tr('PresetMemoButton.defaultMemoForThePresetExistingScheduleRecordsWill')}
           onSave={async (default_notes) => {
             setBusy(true);
             try {
@@ -107,25 +88,8 @@ export function TaskPresetDetail({
             }
           }}
         />
-        <div className="tags">
-          {value.tags.map((tag) => (
-            <span className="tag" key={tag}>
-              {tag}
-            </span>
-          ))}
-        </div>
       </Surface>
       {error && <ErrorBox error={error} />}
-      <div className="actions">
-        <Button variant="ghost" disabled={busy} onClick={archive}>
-          <ActionIcon name="archive" />
-          {busy
-            ? tr('PushSettings.processing')
-            : value.archived
-              ? tr('TaskPresetDetail.restoreTask')
-              : tr('TaskPresetDetail.archiveTask')}
-        </Button>
-      </div>
     </>
   );
 }

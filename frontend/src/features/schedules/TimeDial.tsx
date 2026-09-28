@@ -1,9 +1,9 @@
 import { useSettings } from '../settings/settingsContext';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
+import { ActionIcon } from '../shared/ActionIcon';
 import { Button } from '../shared/ui';
 import { DialFace } from './DialFace';
-import { point } from './dialGeometry';
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
 import { changeRange, pointToMinutes, toMinutes, toTime } from './timeRange';
@@ -27,6 +27,8 @@ export function TimeDial({
 }: Props) {
   useTranslation();
   const step = useSettings().values.clock_step;
+  const [adjusting, setAdjusting] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [selected, setSelected] = useState<Endpoint>('start');
   const drag = useRef<{
     id: number;
@@ -37,10 +39,8 @@ export function TimeDial({
   } | null>(null);
   const face = useRef<HTMLDivElement>(null);
   const hint = useId();
-  const s = toMinutes(start),
-    e = toMinutes(end);
-  const a = point(s, 138),
-    b = point(e, 138);
+  const s = start ? toMinutes(start) : 0,
+    e = end ? toMinutes(end) : 0;
   const duration = independentEndpoints ? Math.max(0, daySpan * 1440 + e - s) : Math.max(0, e - s);
   function update(endpoint: Endpoint, minute: number) {
     if (disabled) return endpoint;
@@ -48,6 +48,14 @@ export function TimeDial({
       independentEndpoints && endpoint === 'end' ? step : 0,
       Math.min(1440 - step, Math.round(minute / step) * step),
     );
+    if (!start || !end) {
+      onChange({
+        start,
+        end,
+        [endpoint]: toTime(endpoint === 'end' ? Math.max(step, value) : value),
+      });
+      return endpoint;
+    }
     if (independentEndpoints) {
       onChange({ start, end, [endpoint]: toTime(value) });
       return endpoint;
@@ -84,6 +92,7 @@ export function TimeDial({
       previous: minute ?? (endpoint === 'start' ? s : e),
       position: handle ? (endpoint === 'start' ? s : e) : minute!,
     };
+    setDragging(true);
     setSelected(endpoint);
     face.current!.setPointerCapture(event.pointerId);
     if (!handle && minute !== null) update(endpoint, minute);
@@ -92,6 +101,7 @@ export function TimeDial({
     const current = drag.current;
     if (!current || current.id !== event.pointerId) return;
     drag.current = null;
+    setDragging(false);
     if (face.current?.hasPointerCapture(event.pointerId))
       face.current.releasePointerCapture(event.pointerId);
     if (!cancelled && current.advance) setSelected(current.endpoint === 'start' ? 'end' : 'start');
@@ -116,36 +126,66 @@ export function TimeDial({
     }
   }
   return (
-    <div className="time-dial-control">
+    <div
+      className="time-dial-control"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setAdjusting(false);
+      }}
+    >
       <div className="time-endpoints" aria-label={tr('TimeDial.timeToAdjust')}>
-        <Button
-          variant="plain"
-          type="button"
-          disabled={disabled}
-          aria-pressed={selected === 'start'}
-          onClick={() => setSelected('start')}
-        >
-          <span className="endpoint-dot start-dot" />
-          {tr('TaskExecution.start')}
-          <strong>{start}</strong>
-        </Button>
-        <span aria-hidden="true">—</span>
-        <Button
-          variant="plain"
-          type="button"
-          disabled={disabled}
-          aria-pressed={selected === 'end'}
-          onClick={() => setSelected('end')}
-        >
-          <span className="endpoint-dot end-dot" />
-          {tr('TimeDial.end')}
-          <strong>{end}</strong>
-        </Button>
+        {(['start', 'end'] as const).map((endpoint) => (
+          <div
+            key={endpoint}
+            className="time-endpoint-box"
+            data-active={adjusting && selected === endpoint}
+          >
+            <Button
+              variant="plain"
+              className="time-endpoint-value"
+              disabled={disabled}
+              aria-pressed={adjusting && selected === endpoint}
+              onClick={() => {
+                setSelected(endpoint);
+                setAdjusting(!(adjusting && selected === endpoint));
+              }}
+              onKeyDown={(event) => key(event, endpoint)}
+            >
+              <span className={`endpoint-dot ${endpoint}-dot`} />
+              {endpoint === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end')}
+              <strong>{(endpoint === 'start' ? start : end) || '—'}</strong>
+            </Button>
+            <div
+              className="time-step-reveal"
+              inert={!(adjusting && selected === endpoint)}
+              aria-hidden={!(adjusting && selected === endpoint)}
+            >
+              <div className="time-step-actions">
+                <Button
+                  variant="ghost"
+                  disabled={disabled}
+                  aria-label={tr('TimeDial.decreaseTime')}
+                  onClick={() => update(endpoint, (endpoint === 'start' ? s : e) - step)}
+                >
+                  <ActionIcon name="down" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={disabled}
+                  aria-label={tr('TimeDial.increaseTime')}
+                  onClick={() => update(endpoint, (endpoint === 'start' ? s : e) + step)}
+                >
+                  <ActionIcon name="up" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
       <div
         ref={face}
         className="time-dial"
         data-testid="time-dial"
+        data-dragging={dragging}
         onPointerDown={(event) => begin(event, selected)}
         onPointerMove={(event) => {
           if (drag.current?.id === event.pointerId) {
@@ -165,32 +205,47 @@ export function TimeDial({
         onPointerCancel={(event) => finish(event, true)}
         onLostPointerCapture={() => {
           drag.current = null;
+          setDragging(false);
         }}
       >
         <div className="dial-daylight" aria-hidden="true" />
         <svg viewBox="0 0 360 360" aria-hidden="true">
           <DialFace />
-          <g className="dial-selection-raised">
-            {duration >= 1440 ? (
-              <circle cx={180} cy={180} r={138} className="dial-selection" />
-            ) : (
-              <path
-                d={`M ${a.x} ${a.y} A 138 138 0 ${duration > 720 ? 1 : 0} 1 ${b.x} ${b.y}`}
-                className="dial-selection"
-              />
-            )}
+          <g className="dial-selection-raised" visibility={start || end ? undefined : 'hidden'}>
+            <circle
+              cx={180}
+              cy={180}
+              r={138}
+              visibility={start && end ? undefined : 'hidden'}
+              className="dial-selection"
+              style={{
+                transform: `rotate(${s / 4 - 90}deg)`,
+                strokeDasharray: `${(Math.min(duration, 1440) / 1440) * 2 * Math.PI * 138} ${2 * Math.PI * 138}`,
+              }}
+            />
             {(['start', 'end'] as const).map((endpoint) => {
-              const p = endpoint === 'start' ? a : b;
+              const angle = (endpoint === 'start' ? s : e) / 4;
               return (
-                <g key={endpoint}>
-                  <circle cx={p.x} cy={p.y} r={16} fill="var(--status-upcoming)" />
+                <g
+                  key={endpoint}
+                  className="dial-endpoint-orbit"
+                  style={{ transform: `rotate(${angle}deg)` }}
+                  visibility={(endpoint === 'start' ? start : end) ? undefined : 'hidden'}
+                >
+                  <circle cx={180} cy={42} r={16} fill="var(--status-upcoming)" />
                   <circle
-                    cx={p.x}
-                    cy={p.y}
+                    cx={180}
+                    cy={42}
                     r={13}
                     fill={endpoint === 'start' ? 'var(--accent)' : 'var(--dial-end)'}
                   />
-                  <text x={p.x} y={p.y + 4} textAnchor="middle" className="dial-endpoint-label">
+                  <text
+                    x={180}
+                    y={46}
+                    textAnchor="middle"
+                    className="dial-endpoint-label"
+                    style={{ transform: `rotate(${-angle}deg)` }}
+                  >
                     {endpoint === 'start' ? tr('TimeDial.s') : tr('TimeDial.e')}
                   </text>
                 </g>
@@ -201,62 +256,65 @@ export function TimeDial({
         <div className="dial-center" aria-hidden="true">
           <span>{tr('TimeDial.selectedDuration')}</span>
           <strong>
-            {Math.floor(duration / 60) > 0
-              ? tr('TimeDial.valueH', { v1: Math.floor(duration / 60) })
-              : ''}
-            {duration % 60
-              ? tr('TimeDial.valueMin', { v1: duration % 60 })
-              : duration === 0
-                ? tr('TimeDial.0Min')
+            {!start || !end
+              ? '—'
+              : Math.floor(duration / 60) > 0
+                ? tr('TimeDial.valueH', { v1: Math.floor(duration / 60) })
                 : ''}
+            {!start || !end
+              ? ''
+              : duration % 60
+                ? tr('TimeDial.valueMin', { v1: duration % 60 })
+                : duration === 0
+                  ? tr('TimeDial.0Min')
+                  : ''}
           </strong>
         </div>
         {(['start', 'end'] as const).map((endpoint) => {
-          const p = endpoint === 'start' ? a : b;
+          const angle = (endpoint === 'start' ? s : e) / 4;
           const value = endpoint === 'start' ? s : e;
           return (
-            <Button
-              variant="plain"
+            <div
               key={endpoint}
-              type="button"
-              role="slider"
-              className={`dial-handle ${endpoint}`}
-              style={{
-                left: `${p.x / 3.6}%`,
-                top: `${p.y / 3.6}%`,
-                zIndex: selected === endpoint ? 3 : 2,
-              }}
-              disabled={disabled}
-              aria-label={
-                endpoint === 'start' ? tr('ScheduleEditor.startTime') : tr('ScheduleEditor.endTime')
-              }
-              aria-valuemin={independentEndpoints && endpoint === 'end' ? step : 0}
-              aria-valuemax={1439}
-              aria-valuenow={value}
-              aria-valuetext={endpoint === 'start' ? start : end}
-              aria-describedby={hint}
-              onFocus={() => setSelected(endpoint)}
-              onKeyDown={(event) => key(event, endpoint)}
-              onPointerDown={(event) => begin(event, endpoint, true)}
+              className="dial-handle-orbit"
+              style={{ transform: `rotate(${angle}deg)`, zIndex: selected === endpoint ? 3 : 2 }}
             >
-              <span className="sr-only">
-                {endpoint === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end')}
-              </span>
-            </Button>
+              <Button
+                variant="plain"
+                key={endpoint}
+                type="button"
+                role="slider"
+                className={`dial-handle ${endpoint}`}
+                disabled={disabled}
+                aria-label={
+                  endpoint === 'start'
+                    ? tr('ScheduleEditor.startTime')
+                    : tr('ScheduleEditor.endTime')
+                }
+                aria-valuemin={independentEndpoints && endpoint === 'end' ? step : 0}
+                aria-valuemax={1439}
+                aria-valuenow={value}
+                aria-valuetext={endpoint === 'start' ? start : end}
+                aria-describedby={hint}
+                onFocus={() => setSelected(endpoint)}
+                onKeyDown={(event) => key(event, endpoint)}
+                onPointerDown={(event) => begin(event, endpoint, true)}
+              >
+                <span className="sr-only">
+                  {endpoint === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end')}
+                </span>
+              </Button>
+            </div>
           );
         })}
       </div>
-      <details className="inline-help dial-help">
-        <summary>{tr('UI.timeHelp')}</summary>
-        <p id={hint} className="dial-hint">
-          {tr('TimeDial.tapTheDialToSetTheValueTime', {
-            v1: selected === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end'),
-          })}
-          <br />
-          {tr('Settings.clockKeyboard', { count: step })}
-          <span className="sr-only">{tr('TimeDial.midnight0000AtTheTop0600On')}</span>
-        </p>
-      </details>
+      <p id={hint} className="dial-hint">
+        {tr('TimeDial.tapTheDialToSetTheValueTime', {
+          v1: selected === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end'),
+        })}
+        <span className="sr-only">{tr('Settings.clockKeyboard', { count: step })}</span>
+        <span className="sr-only">{tr('TimeDial.midnight0000AtTheTop0600On')}</span>
+      </p>
     </div>
   );
 }

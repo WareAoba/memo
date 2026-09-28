@@ -25,13 +25,35 @@ export function nextDate(date: string) {
   const result = d.toISOString().slice(0, 10);
   return result.startsWith('+') ? date : result;
 }
+// Cache formatters, never dates or offsets: DST and date boundaries remain live.
+const zoneFormatters = new Map<string, { date: Intl.DateTimeFormat; time: Intl.DateTimeFormat }>();
+function formattersInZone(zone: string) {
+  let formatters = zoneFormatters.get(zone);
+  if (!formatters) {
+    formatters = {
+      date: new Intl.DateTimeFormat('en-US', {
+        timeZone: zone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }),
+      time: new Intl.DateTimeFormat('en-GB', {
+        timeZone: zone,
+        hourCycle: 'h23',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    };
+    if (zoneFormatters.size >= 64) zoneFormatters.delete(zoneFormatters.keys().next().value!);
+    zoneFormatters.set(zone, formatters);
+  }
+  return formatters;
+}
 export function dateInZone(zone: string, now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: zone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(now);
+  const parts = formattersInZone(zone).date.formatToParts(now);
   const part = (type: string) => parts.find((p) => p.type === type)!.value;
   return `${part('year')}-${part('month')}-${part('day')}`;
+}
+export function timeInZone(zone: string, now = new Date()) {
+  return formattersInZone(zone).time.format(now);
 }

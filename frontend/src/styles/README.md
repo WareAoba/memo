@@ -21,7 +21,11 @@ Do not sort the imports or deduplicate selectors without checking the resulting 
 
 Shared control styles belong in `../design-system.css`; colors and dimensions belong in `../tokens.css`.
 Feature-local styles already live beside schedules, search, customization and toast components.
-Some earlier shared rules intentionally remain in workspace/appearance/theme to preserve precedence.
+Header and brand rules now belong exclusively to `shell-calendar.css`, including responsive overrides.
+Other earlier shared rules remain in workspace/appearance/theme to preserve precedence.
 When editing a selector, search for all its definitions before choosing the owning file.
+
+Header regression fixture: `/tests/header.html?theme=dark&motion=reduced` on the dev server.
+Compare 390px and 1280px, light/dark, and full/reduced/none motion. This fixture has no API or saved settings.
 
 Validation: `npm run check:frontend` from the repository root.

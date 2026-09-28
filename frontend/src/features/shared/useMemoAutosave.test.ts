@@ -1,7 +1,22 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { MemoAutosave, MEMO_DEBOUNCE_MS } from './useMemoAutosave';
+import { selectTrackScope } from '../../api/trackScope';
 
 afterEach(() => vi.useRealTimers());
+it('retains an old-track draft without invoking its save in another track', async () => {
+  selectTrackScope('account', 'a');
+  const save = vi.fn(async () => undefined);
+  const writer = new MemoAutosave('', save);
+  writer.change('old track draft');
+  selectTrackScope('account', 'b');
+  expect(await writer.flush()).toBe(false);
+  expect(save).not.toHaveBeenCalled();
+  expect(writer.snapshot().text).toBe('old track draft');
+  selectTrackScope('account', 'a');
+  expect(await writer.flush()).toBe(true);
+  expect(save).toHaveBeenCalledWith('old track draft');
+  selectTrackScope('', '');
+});
 it('continues debouncing when typing resumes during an automatic save', async () => {
   vi.useFakeTimers();
   let resolve!: () => void;
@@ -36,7 +51,7 @@ it('debounces rapid typing and saves only the final input without blur', async (
   expect(save).not.toHaveBeenCalled();
   await vi.advanceTimersByTimeAsync(1);
   expect(save).toHaveBeenCalledExactlyOnceWith('첫 번째 기록');
-  expect(writer.snapshot()).toMatchObject({ text: '첫 번째 기록', dirty: false, saved: true });
+  expect(writer.snapshot()).toMatchObject({ text: '첫 번째 기록', dirty: false });
 });
 
 it('serializes edits during a slow request and does not overwrite newer text', async () => {

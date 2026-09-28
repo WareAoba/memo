@@ -1,3 +1,4 @@
+use super::tracks::current_track_id;
 use super::{Result, database, execution, identifier, schedules, settings};
 use crate::{errors::ApiError, local_user::current_user_id};
 use serde_json::Value;
@@ -9,28 +10,32 @@ pub async fn delete(pool: &SqlitePool, root: &Path, id: &str, task: bool) -> Res
     let id = identifier(id)?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     let schedule: String = if task {
-        sqlx::query_scalar("SELECT schedule_id FROM schedule_tasks WHERE id=? AND user_id=?")
-            .bind(&id)
-            .bind(current_user_id())
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(database)?
-            .ok_or(ApiError::ExecutionNotFound)?
+        sqlx::query_scalar(
+            "SELECT schedule_id FROM schedule_tasks WHERE id=? AND user_id=? AND track_id=?",
+        )
+        .bind(&id)
+        .bind(current_user_id())
+        .bind(current_track_id())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(database)?
+        .ok_or(ApiError::ExecutionNotFound)?
     } else {
         id.clone()
     };
-    let row = sqlx::query("SELECT status FROM schedules WHERE id=? AND user_id=?")
+    let row = sqlx::query("SELECT status FROM schedules WHERE id=? AND user_id=? AND track_id=?")
         .bind(&schedule)
         .bind(current_user_id())
+        .bind(current_track_id())
         .fetch_optional(&mut *tx)
         .await
         .map_err(database)?
         .ok_or(ApiError::ScheduleNotFound)?;
     let cancelled = row.get::<&str, _>("status") == "cancelled";
     let photo_filter = if task {
-        "schedule_task_id=? AND user_id=?"
+        "schedule_task_id=? AND user_id=? AND track_id=?"
     } else {
-        "(schedule_id=? OR schedule_task_id IN (SELECT id FROM schedule_tasks WHERE schedule_id=?)) AND user_id=?"
+        "(schedule_id=? OR schedule_task_id IN (SELECT id FROM schedule_tasks WHERE schedule_id=?)) AND user_id=? AND track_id=?"
     };
     for prefix in [
         "INSERT INTO photo_deletions(user_id,id,mime_type) SELECT user_id,id,mime_type FROM photos WHERE ",
@@ -43,6 +48,7 @@ pub async fn delete(pool: &SqlitePool, root: &Path, id: &str, task: bool) -> Res
         }
         query
             .bind(current_user_id())
+            .bind(current_track_id())
             .execute(&mut *tx)
             .await
             .map_err(database)?;
@@ -53,9 +59,10 @@ pub async fn delete(pool: &SqlitePool, root: &Path, id: &str, task: bool) -> Res
             .execute(&mut *tx)
             .await
             .map_err(database)?;
-        sqlx::query("DELETE FROM schedule_tasks WHERE id=? AND user_id=?")
+        sqlx::query("DELETE FROM schedule_tasks WHERE id=? AND user_id=? AND track_id=?")
             .bind(&id)
             .bind(current_user_id())
+            .bind(current_track_id())
             .execute(&mut *tx)
             .await
             .map_err(database)?;

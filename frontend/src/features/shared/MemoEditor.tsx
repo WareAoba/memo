@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
 import { useEffect, useId, useImperativeHandle, type Ref } from 'react';
-import { Textarea } from './ui';
+import { AutoTextarea } from './ui';
 import { ErrorBox } from './ErrorBox';
 import { useMemoAutosave } from './useMemoAutosave';
 import './customization.css';
@@ -52,7 +52,7 @@ export function MemoEditor({
           {scope}
         </p>
       )}
-      <Textarea
+      <AutoTextarea
         id={id}
         rows={4}
         maxLength={5000}
@@ -66,15 +66,6 @@ export function MemoEditor({
           void memo.flush();
         }}
       />
-      {!memo.error && (
-        <p className="hint memo-save-status" role="status" aria-live="polite">
-          {memo.saving
-            ? tr('Photos.saving')
-            : memo.saved
-              ? tr('MemoEditor.memoSaved')
-              : tr('UI.memoAutoSave')}
-        </p>
-      )}
       {memo.error && (
         <ErrorBox
           error={memo.error}

@@ -4,6 +4,28 @@ on:
   pull_request:
 
 jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Select documentation comparison base
+        env:
+          EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          base="$EVENT_BASE"
+          if [ -z "$base" ] || [[ "$base" =~ ^0+$ ]]; then
+            first=$(git log --reverse --format=%H -- scripts/change-policy.mjs | head -n 1)
+            base=$(git rev-parse "${first}^" 2>/dev/null) || base=$(git hash-object -t tree --stdin </dev/null)
+          fi
+          echo "DOCS_BASE=$base" >> "$GITHUB_ENV"
+      - run: npm run test:harness
+      - run: npm run check:docs
+
   backend:
     runs-on: ubuntu-latest
     steps:

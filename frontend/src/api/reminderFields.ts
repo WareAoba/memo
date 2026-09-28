@@ -17,11 +17,8 @@ export const reminderUnits = {
   get days() {
     return tr('reminderFields.days');
   },
-  get weeks() {
-    return tr('reminderFields.weeks');
-  },
 };
-export type ReminderUnit = keyof typeof reminderUnits;
+export type ReminderUnit = keyof typeof unitKeys;
 export type ReminderFields = {
   reminder_enabled?: boolean;
   reminder_value?: number;

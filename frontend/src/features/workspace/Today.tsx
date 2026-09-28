@@ -1,21 +1,19 @@
+import { toggleScheduleCompletion } from '../schedules/scheduleCompletion';
 import { WorkspaceHeader } from '../shared/WorkspaceHeader';
 import { ScheduleSearchControl } from '../schedules/ScheduleSearchControl';
-import { ScheduleCardActions } from '../shared/ScheduleCardActions';
 import { LocalizedError } from '../../i18n/errors';
 import { useTranslation } from 'react-i18next';
 import { tr, locale } from '../../i18n';
 
-import { saveSchedule, deleteSchedule, reopenSchedule } from '../../api/schedules';
-import { Button, Surface } from '../shared/ui';
+import { deleteSchedule } from '../../api/schedules';
+import { Surface } from '../shared/ui';
 import { useEffect, useRef, useState } from 'react';
-import { completeSchedule, getDaySchedules, type ScheduleDetail } from '../../api/schedules';
+import { getDaySchedules, type ScheduleDetail } from '../../api/schedules';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
-import { TodayDial } from './TodayDial';
+import { TodayOverview } from './TodayOverview';
 import { TodayScheduleCard } from './TodayScheduleCard';
-import { progressOf } from './progress';
 import { fromDateKey } from './preview';
-import { scheduleAppearance } from './scheduleAppearance';
 
 export function Today({
   today,
@@ -28,7 +26,6 @@ export function Today({
 }) {
   useTranslation();
   const [result, setResult] = useState<{ date: string; items: ScheduleDetail[] }>();
-  const [now, setNow] = useState(() => new Date());
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -41,10 +38,6 @@ export function Today({
   const lock = useRef(false);
   const generation = useRef(0);
   const loadedRevision = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
   useEffect(() => {
     if (!timeZone) return;
     let controller: AbortController | undefined;
@@ -97,9 +90,8 @@ export function Today({
     };
   }, [today, timeZone, attempt, editing, adding, revision, rolloverPending]);
   const items = result?.date === displayDate ? result.items : undefined;
-  const count = progressOf(items || []);
   async function mutate(operation: () => Promise<ScheduleDetail>) {
-    if (lock.current) throw new LocalizedError('Schedules.savingIsInProgressTryAgainShortly');
+    if (lock.current) throw new LocalizedError('Schedules.operationUnavailable');
     lock.current = true;
     generation.current++;
     setBusy(true);
@@ -120,7 +112,7 @@ export function Today({
     }
   }
   async function remove(id: string) {
-    if (lock.current) throw new LocalizedError('Schedules.savingIsInProgressTryAgainShortly');
+    if (lock.current) throw new LocalizedError('Schedules.operationUnavailable');
     lock.current = true;
     generation.current++;
     setBusy(true);
@@ -136,9 +128,7 @@ export function Today({
   }
   async function finishSchedule(item: ScheduleDetail) {
     try {
-      await mutate(() =>
-        item.status === 'completed' ? reopenSchedule(item.id) : completeSchedule(item.id),
-      );
+      await mutate(() => toggleScheduleCompletion(item));
     } catch (e) {
       setError(message(e));
     }
@@ -170,83 +160,16 @@ export function Today({
           }}
         />
       )}
-      <div className="today-overview">
-        <TodayDial today={displayDate} timeZone={timeZone} now={now} items={items} />
-        <section className="today-schedule-list" aria-label={tr('Today.todaySScheduleList')}>
-          <div className="section-heading">
-            <h2>{tr('Today.summary')}</h2>
-            <span>{tr('Calendar.value', { v1: items?.length ?? 0 })}</span>
-          </div>
-          {!items && !error && (
-            <p role="status">
-              {timeZone ? tr('Today.loadingTodaySSchedules') : tr('App.loadingAppSettings')}
-            </p>
-          )}
-          <div className="schedule-completion-list">
-            {items?.map((item) => {
-              const appearance = scheduleAppearance(item, now);
-              const completed = item.status === 'completed';
-              const progress = progressOf([item]);
-              return (
-                <div key={item.id} className="completion-preview memo-preview schedule-card">
-                  <Button
-                    variant="plain"
-                    key={item.id}
-                    className="schedule-completion-row"
-                    disabled={busy || !!editing || !!adding || item.status === 'cancelled'}
-                    aria-label={
-                      completed
-                        ? tr('Delete.reopen', { name: item.entity_snapshot.name })
-                        : tr('Today.completeAllTasksInValue', { v1: item.entity_snapshot.name })
-                    }
-                    onClick={() => void finishSchedule(item)}
-                  >
-                    <span className="schedule-completion-check" aria-hidden="true">
-                      {completed ? '✓' : ''}
-                    </span>
-                    <span className="schedule-completion-description">
-                      <strong>{item.entity_snapshot.name}</strong>
-                      <span>
-                        {item.start_time}–{item.end_time} · {appearance.label}
-                      </span>
-                    </span>
-                    <span className="schedule-completion-count">
-                      {progress.completed}/{progress.total}
-                    </span>
-                    <i
-                      className="work-state-dot"
-                      style={{ background: appearance.color }}
-                      aria-hidden="true"
-                    />
-                  </Button>
-                  <ScheduleCardActions
-                    id={item.id}
-                    label={item.entity_snapshot.name}
-                    value={item.notes}
-                    disabled={busy || !!editing || !!adding}
-                    onOpenChange={(open) => setEditing(open ? 'memo-' + item.id : undefined)}
-                    onSave={async (notes) => {
-                      await mutate(() => saveSchedule({ notes }, item.id));
-                    }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-          {items && (
-            <div className="today-progress">
-              <span aria-label={tr('Today.todaySTaskProgress')}>
-                {tr('Today.tasksValueValueCompletedValueSkipped', {
-                  v1: count.completed,
-                  v2: count.total,
-                  v3: count.skipped,
-                })}
-              </span>
-            </div>
-          )}
-          {busy && <p role="status">{tr('Photos.saving')}</p>}
-        </section>
-      </div>
+      <TodayOverview
+        today={displayDate}
+        timeZone={timeZone}
+        items={items}
+        error={error}
+        locked={busy || !!editing || !!adding}
+        onFinish={finishSchedule}
+        onEditing={setEditing}
+        mutate={mutate}
+      />
       <div
         className="today-detail-scroll"
         tabIndex={0}

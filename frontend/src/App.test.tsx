@@ -1,3 +1,10 @@
+vi.mock('./api/tracks', () => ({
+  listTracks: async () => ({
+    items: [{ id: 'local', name: 'My Track' }],
+    limit: 3,
+    default_id: 'local',
+  }),
+}));
 import { bootstrapSettings, defaultSettings } from './api/settings';
 vi.mock('./api/auth', () => ({
   getAccount: vi.fn(async () => ({ id: 'local', display_name: '가상 계정', email: null })),
@@ -6,12 +13,11 @@ vi.mock('./api/settings', async (original) => ({
   ...(await original<typeof import('./api/settings')>()),
   bootstrapSettings: vi.fn(),
 }));
-import { getWorkTasks } from './api/workTasks';
-vi.mock('./api/workTasks', () => ({ getWorkTasks: vi.fn(async () => []) }));
 import {
   getDaySchedules,
   getSchedule,
   getRangeSchedules,
+  getRangeScheduleSummaries,
   saveSchedule,
   listSchedules,
   type ScheduleDetail,
@@ -20,7 +26,8 @@ vi.mock('./api/schedules', async (original) => ({
   ...(await original<typeof import('./api/schedules')>()),
   getDaySchedules: vi.fn(),
   getSchedule: vi.fn(),
-  getRangeSchedules: vi.fn(),
+  getRangeSchedules: vi.fn().mockResolvedValue([]),
+  getRangeScheduleSummaries: vi.fn(),
   saveSchedule: vi.fn(),
   listSchedules: vi.fn(),
 }));
@@ -29,14 +36,13 @@ vi.mock('./api/taskPresets', async (original) => ({
   ...(await original<typeof import('./api/taskPresets')>()),
   listTaskPresets: vi.fn(),
 }));
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import { archiveWork, emptyFields, getWork, listWorks, saveWork } from './api/works';
+import { emptyFields, getWork, listWorks, saveWork } from './api/works';
 import type { Work } from './api/works';
 vi.mock('./api/works', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./api/works')>()),
-  archiveWork: vi.fn(),
   getWork: vi.fn(),
   initializeLocalUser: vi.fn(),
   listWorks: vi.fn(),
@@ -55,9 +61,9 @@ const work: Work = {
   updated_at: '2026-09-24T00:00:00Z',
 };
 beforeEach(() => {
-  vi.mocked(getWorkTasks).mockResolvedValue([]);
   vi.mocked(getDaySchedules).mockResolvedValue([]);
   vi.mocked(getRangeSchedules).mockResolvedValue([]);
+  vi.mocked(getRangeScheduleSummaries).mockResolvedValue([]);
   vi.mocked(listTaskPresets).mockResolvedValue({ items: [], total: 0, offset: 0, limit: 20 });
   window.history.replaceState(null, '', '#/entities');
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
@@ -65,6 +71,7 @@ beforeEach(() => {
   vi.mocked(listWorks).mockResolvedValue({ items: [], total: 0, offset: 0, limit: 20 });
 });
 afterEach(() => {
+  cleanup();
   vi.restoreAllMocks();
   vi.resetAllMocks();
 });
@@ -79,7 +86,7 @@ describe('work workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
     expect(await screen.findByText('첫 워크를 등록해 보세요.')).toBeInTheDocument();
   });
-  it('searches and switches archive scope with pagination reset', async () => {
+  it('searches with pagination reset and no archive scope', async () => {
     vi.mocked(listWorks).mockResolvedValue({ items: [work], total: 49, offset: 0, limit: 20 });
     render(<App />);
     await screen.findByText('가상 계정');
@@ -96,10 +103,7 @@ describe('work workspace', () => {
     await waitFor(() =>
       expect(listWorks).toHaveBeenLastCalledWith('서울', false, 0, expect.any(AbortSignal), 48),
     );
-    fireEvent.click(screen.getByRole('button', { name: '보관함' }));
-    await waitFor(() =>
-      expect(listWorks).toHaveBeenLastCalledWith('서울', true, 0, expect.any(AbortSignal), 48),
-    );
+    expect(screen.queryByRole('button', { name: '보관함' })).not.toBeInTheDocument();
   });
   it('retains form values after failure and creates on retry', async () => {
     window.location.hash = '/entities/new';
@@ -135,19 +139,13 @@ describe('work workspace', () => {
     expect(await screen.findByText('같은 종류를 중복해서 사용할 수 없습니다.')).toBeInTheDocument();
     expect(saveWork).not.toHaveBeenCalled();
   });
-  it('archives and restores an existing work', async () => {
+  it('has no work archiving or default-task controls', async () => {
     window.location.hash = '/entities/' + work.id;
     vi.mocked(getWork).mockResolvedValue(work);
-    vi.mocked(archiveWork).mockResolvedValue();
-    vi.mocked(saveWork).mockResolvedValue(work);
     render(<App />);
-    await screen.findByText('가상 계정');
-    fireEvent.click(await screen.findByRole('button', { name: '워크 보관' }));
-    expect(await screen.findByText('보관된 워크')).toBeInTheDocument();
-    expect(archiveWork).toHaveBeenCalledWith(work.id);
-    fireEvent.click(screen.getByRole('button', { name: '워크 복원' }));
-    expect(await screen.findByRole('button', { name: '워크 보관' })).toBeEnabled();
-    expect(saveWork).toHaveBeenCalledWith({ archived: false }, work.id);
+    await screen.findByLabelText('워크 이름 *');
+    expect(screen.queryByRole('button', { name: '워크 보관' })).not.toBeInTheDocument();
+    expect(screen.queryByText('기본 태스크 관리')).not.toBeInTheDocument();
   });
   it('loads edit fields and submits only writable fields', async () => {
     window.location.hash = '/entities/' + work.id + '/edit';
@@ -183,7 +181,7 @@ describe('three-destination workspace structure', () => {
       'page',
     );
     expect(screen.queryByText('화면 구조 미리보기')).not.toBeInTheDocument();
-    expect(await screen.findByText('오늘 저장된 일정이 없습니다.')).toBeInTheDocument();
+    expect(await screen.findByText('오늘 저장된 스케줄이 없습니다.')).toBeInTheDocument();
     expect(listWorks).not.toHaveBeenCalled();
   });
   it('loads saved calendar schedules without preview controls', async () => {
@@ -191,8 +189,8 @@ describe('three-destination workspace structure', () => {
     render(<App />);
     await screen.findByText('가상 계정');
     expect(await screen.findByRole('region', { name: '월 캘린더' })).toBeInTheDocument();
-    await waitFor(() => expect(getRangeSchedules).toHaveBeenCalled());
-    expect(getRangeSchedules).toHaveBeenCalled();
+    await waitFor(() => expect(getRangeScheduleSummaries).toHaveBeenCalled());
+    expect(getRangeScheduleSummaries).toHaveBeenCalled();
     expect(screen.queryByText('예시 끄기')).not.toBeInTheDocument();
   });
   it('separates stored work and task presets', async () => {
@@ -223,7 +221,7 @@ describe('three-destination workspace structure', () => {
     expect(screen.queryByRole('heading', { name: label })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '이전 달' }));
     expect(await screen.findByRole('heading', { name: label })).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: '일간 일정 상세' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: '일간 스케줄 상세' })).not.toBeInTheDocument();
   });
 });
 
@@ -240,8 +238,8 @@ it('switches calendar views through the tab drawer', async () => {
   expect(screen.getByRole('region', { name: '월 캘린더' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '메뉴 펼치기' }));
   fireEvent.click(screen.getByRole('link', { name: '일간 상세 보기' }));
-  expect(screen.getByRole('region', { name: '일간 일정 상세' })).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: '일정 추가' })).toHaveAttribute(
+  expect(screen.getByRole('region', { name: '일간 스케줄 상세' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '스케줄 추가' })).toHaveAttribute(
     'href',
     expect.stringContaining('-12-01'),
   );
@@ -291,54 +289,57 @@ it('creates a schedule in a dialog while preserving the calendar date and route'
   });
   window.history.replaceState(null, '', '#/calendar');
   vi.mocked(listWorks).mockResolvedValue({ items: [work], total: 1, limit: 20, offset: 0 });
-  vi.mocked(getWorkTasks).mockResolvedValue([]);
   vi.mocked(saveSchedule).mockResolvedValue({ id: 'new-schedule' } as ScheduleDetail);
   render(<App />);
   await screen.findByText('가상 계정');
   await screen.findByRole('region', { name: '월 캘린더' });
   fireEvent.click(screen.getByRole('button', { name: '다음 달' }));
-  fireEvent.click(screen.getByRole('button', { name: /월 15일.*일정 0개/ }));
-  const launch = screen.getByRole('link', { name: '일정 추가' });
+  fireEvent.click(screen.getByRole('button', { name: /월 15일.*스케줄 0개/ }));
+  const launch = screen.getByRole('link', { name: '스케줄 추가' });
   const date = launch.getAttribute('href')!.split('date=')[1];
-  const calendar = screen.getByRole('region', { name: '일간 일정 상세' });
+  const calendar = screen.getByRole('region', { name: '일간 스케줄 상세' });
   launch.focus();
   fireEvent.click(launch);
-  let dialog = await screen.findByRole('dialog', { name: '일정 추가' });
+  let dialog = await screen.findByRole('dialog', { name: '스케줄 추가' });
   expect(window.location.hash).toBe('#/calendar');
   expect(calendar).toBeInTheDocument();
-  expect(within(dialog).queryByLabelText('일정 날짜')).not.toBeInTheDocument();
+  expect(within(dialog).queryByLabelText('스케줄 날짜')).not.toBeInTheDocument();
   expect(within(dialog).queryByLabelText('시작 날짜')).not.toBeInTheDocument();
-  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 일정'));
-  expect(within(dialog).getByLabelText('시작 날짜')).toHaveValue(date);
-  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 일정'));
+  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 스케줄'));
+  expect(within(dialog).getByLabelText('시작 날짜')).toHaveTextContent(date!);
+  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 스케줄'));
   expect(
     within(dialog)
-      .getByRole('button', { name: /일정 저장/ })
+      .getByRole('button', { name: /스케줄 저장/ })
       .closest('.modal-footer'),
   ).not.toBeNull();
   expect(within(dialog).queryByRole('button', { name: '취소' })).not.toBeInTheDocument();
-  fireEvent.click(within(dialog).getByRole('button', { name: '일정 추가 닫기' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 추가 닫기' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(launch).toHaveFocus();
   fireEvent.click(launch);
-  dialog = await screen.findByRole('dialog', { name: '일정 추가' });
+  dialog = await screen.findByRole('dialog', { name: '스케줄 추가' });
   fireEvent.change(within(dialog).getByRole('textbox', { name: '워크 이름' }), {
     target: { value: '중앙' },
   });
   fireEvent.click(await within(dialog).findByRole('button', { name: '중앙 워크 선택' }));
   await waitFor(() =>
-    expect(within(dialog).getByRole('button', { name: /일정 저장/ })).toBeEnabled(),
+    expect(within(dialog).getByRole('button', { name: /스케줄 저장/ })).toBeEnabled(),
   );
   const before = vi.mocked(getRangeSchedules).mock.calls.length;
-  fireEvent.click(within(dialog).getByRole('button', { name: /일정 저장/ }));
+  for (let i = 0; i < 10; i++)
+    fireEvent.keyDown(within(dialog).getByRole('slider', { name: '종료 시간' }), { key: 'PageUp' });
+  for (let i = 0; i < 9; i++)
+    fireEvent.keyDown(within(dialog).getByRole('slider', { name: '시작 시간' }), { key: 'PageUp' });
+  fireEvent.click(within(dialog).getByRole('button', { name: /스케줄 저장/ }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(saveSchedule).toHaveBeenCalledWith(
     expect.objectContaining({ scheduled_date: date, entity_id: work.id }),
     undefined,
   );
   expect(window.location.hash).toBe('#/calendar');
-  expect(screen.getByRole('region', { name: '일간 일정 상세' })).toBe(calendar);
-  expect(screen.getByRole('link', { name: '일정 추가' })).toHaveAttribute(
+  expect(screen.getByRole('region', { name: '일간 스케줄 상세' })).toBe(calendar);
+  expect(screen.getByRole('link', { name: '스케줄 추가' })).toHaveAttribute(
     'href',
     '#/schedules/new?date=' + date,
   );
@@ -363,11 +364,11 @@ it('opens a direct schedule creation URL as a dialog over the calendar', async (
   window.history.replaceState(null, '', '#/schedules/new?date=2026-11-02');
   render(<App />);
   await screen.findByText('가상 계정');
-  const dialog = await screen.findByRole('dialog', { name: '일정 추가' });
+  const dialog = await screen.findByRole('dialog', { name: '스케줄 추가' });
   expect(within(dialog).queryByLabelText('시작 날짜')).not.toBeInTheDocument();
-  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 일정'));
-  expect(within(dialog).getByLabelText('시작 날짜')).toHaveValue('2026-11-02');
-  fireEvent.click(within(dialog).getByRole('button', { name: '일정 추가 닫기' }));
+  fireEvent.click(within(dialog).getByLabelText('여러 날에 걸친 스케줄'));
+  expect(within(dialog).getByLabelText('시작 날짜')).toHaveTextContent('2026-11-02');
+  fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 추가 닫기' }));
   expect(window.location.hash).toBe('#/calendar');
   expect(screen.getByRole('heading', { name: '캘린더' })).toBeInTheDocument();
 });
@@ -407,8 +408,8 @@ it('replaces the removed schedule management page with the calendar', async () =
   render(<App />);
   await screen.findByText('가상 계정');
   expect(await screen.findByRole('region', { name: '월 캘린더' })).toBeVisible();
-  expect(screen.queryByRole('link', { name: '저장된 일정 관리' })).not.toBeInTheDocument();
-  expect(screen.queryByRole('heading', { name: '저장된 일정' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '저장된 스케줄 관리' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: '저장된 스케줄' })).not.toBeInTheDocument();
   expect(listSchedules).not.toHaveBeenCalled();
 });
 
@@ -492,18 +493,16 @@ describe('unified edit dialogs', () => {
     updated_at: '',
   };
   it.each(['', '/edit'])(
-    'opens direct schedule%s URLs as the same editor with a dial',
+    'opens direct schedule%s URLs as the same multi-day editor without a dial',
     async (suffix) => {
       window.history.replaceState(null, '', '#/schedules/schedule-edit' + suffix);
       vi.mocked(getSchedule).mockResolvedValue(scheduled);
       render(<App />);
       await screen.findByText('가상 계정');
-      const dialog = await screen.findByRole('dialog', { name: '일정 수정' });
-      expect(await within(dialog).findByRole('slider', { name: '시작 시간' })).toHaveAttribute(
-        'aria-valuetext',
-        '23:00',
-      );
-      expect(within(dialog).getByLabelText('종료 날짜')).toHaveValue('2026-09-26');
+      const dialog = await screen.findByRole('dialog', { name: '스케줄 수정' });
+      expect(await within(dialog).findByLabelText('시작 시간')).toHaveTextContent('23:00');
+      expect(within(dialog).queryByTestId('time-dial')).not.toBeInTheDocument();
+      expect(within(dialog).getByLabelText('종료 날짜')).toHaveTextContent('2026-09-26');
       fireEvent.click(within(dialog).getByRole('button', { name: '상세 닫기' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(window.location.hash).toBe('#/today');
@@ -521,23 +520,27 @@ describe('unified edit dialogs', () => {
     await screen.findByText('가상 계정');
     const card = await screen.findByRole('article', { name: work.name });
     fireEvent.click(within(card).getByRole('button', { name: work.name }));
-    const trigger = within(card).getByRole('link', { name: '수정' });
+    const trigger = within(card).getByRole('link', { name: '스케줄 수정' });
     trigger.focus();
     fireEvent.click(trigger);
-    const dialog = screen.getByRole('dialog', { name: '일정 수정' });
-    const start = await within(dialog).findByRole('slider', { name: '시작 시간' });
-    fireEvent.keyDown(start, { key: 'ArrowRight' });
+    const dialog = screen.getByRole('dialog', { name: '스케줄 수정' });
+    const start = await within(dialog).findByLabelText('시작 시간');
+    fireEvent.click(start);
+    fireEvent.click(
+      within(screen.getByRole('listbox', { name: '분' })).getByRole('option', { name: '05' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: '적용' }));
     expect(window.location.hash).toBe('#/today');
-    fireEvent.click(within(dialog).getByRole('button', { name: '일정 저장' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 저장' }));
     expect(await within(dialog).findByText('편집 실패')).toBeVisible();
-    expect(start).toHaveAttribute('aria-valuetext', '23:05');
-    fireEvent.click(within(dialog).getByRole('button', { name: '일정 저장' }));
+    expect(start).toHaveTextContent('23:05');
+    fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(saveSchedule).toHaveBeenLastCalledWith(
       expect.objectContaining({ start_time: '23:05', end_date: '2026-09-26' }),
       'schedule-edit',
     );
-    expect(vi.mocked(saveSchedule).mock.calls[1]![0]).not.toHaveProperty('notes');
+    expect(vi.mocked(saveSchedule).mock.calls[1]![0]).toHaveProperty('notes', '');
     expect(trigger).toHaveFocus();
     await waitFor(() => expect(getDaySchedules).toHaveBeenCalledTimes(2));
   });
@@ -549,7 +552,7 @@ it.each(['/today', '/presets/works', '/presets/tasks'])(
     window.history.replaceState(null, '', '#' + path);
     render(<App />);
     await screen.findByText('가상 계정');
-    const action = screen.getByRole('link', { name: '일정 추가' });
+    const action = screen.getByRole('link', { name: '스케줄 추가' });
     expect(action.closest('header')).toHaveClass('site-header');
     expect(action).toHaveAttribute(
       'href',
@@ -562,16 +565,64 @@ it('uses the selected day only in the daily calendar, including after day naviga
   window.history.replaceState(null, '', '#/calendar');
   render(<App />);
   await screen.findByRole('region', { name: '월 캘린더' });
-  const action = screen.getByRole('link', { name: '일정 추가' });
+  const action = screen.getByRole('link', { name: '스케줄 추가' });
   const todayHref = action.getAttribute('href');
   fireEvent.click(screen.getByRole('button', { name: '다음 달' }));
   expect(action).toHaveAttribute('href', todayHref);
-  fireEvent.click(screen.getByRole('button', { name: /월 15일.*일정 0개/ }));
+  fireEvent.click(screen.getByRole('button', { name: /월 15일.*스케줄 0개/ }));
   expect(action.getAttribute('href')).toMatch(/-15$/);
   fireEvent.click(screen.getByRole('button', { name: '다음 날' }));
   expect(action.getAttribute('href')).toMatch(/-16$/);
-  expect(screen.queryByRole('link', { name: '이 날짜에 일정 만들기' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '이 날짜에 스케줄 만들기' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: '가상 계정' }));
   fireEvent.click(screen.getByRole('button', { name: '설정' }));
-  expect(screen.queryByRole('link', { name: '일정 추가' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: '스케줄 추가' })).not.toBeInTheDocument();
+});
+
+it('shares zoom preparation between sidebar and calendar tabs and keeps preset navigation mounted', async () => {
+  window.history.replaceState(null, '', '#/calendar');
+  const original = HTMLElement.prototype.animate;
+  const targets: HTMLElement[] = [];
+  HTMLElement.prototype.animate = function () {
+    targets.push(this);
+    return { cancel: vi.fn(), onfinish: null } as unknown as Animation;
+  };
+  const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+    x: 0,
+    y: 0,
+    left: 0,
+    top: 0,
+    right: 800,
+    bottom: 600,
+    width: 800,
+    height: 600,
+  } as DOMRect);
+  try {
+    const { container, unmount } = render(<App />);
+    await screen.findByRole('heading', { name: '캘린더' });
+    fireEvent.click(screen.getByRole('button', { name: '메뉴 펼치기' }));
+    fireEvent.click(screen.getByRole('button', { name: '캘린더 보기 메뉴' }));
+    const sidebar = document.getElementById('calendar-children')!;
+    fireEvent.click(within(sidebar).getByRole('link', { name: '연도별로 월 선택' }));
+    expect(screen.getByRole('button', { name: '연간' })).toHaveAttribute('aria-pressed', 'true');
+    expect(targets.some((target) => target.matches('.year-panel'))).toBe(true);
+    expect(document.querySelectorAll('[data-calendar-transition]')).toHaveLength(1);
+    fireEvent.click(within(sidebar).getByRole('link', { name: '월별로 보기' }));
+    expect(targets.some((target) => target.matches('.calendar-panel'))).toBe(true);
+    fireEvent.click(screen.getByRole('link', { name: '프리셋 설정' }));
+    await screen.findByRole('heading', { name: '워크 프리셋' });
+    const indicator = container.querySelector('.ui-horizontal-indicator');
+    const navigation = screen.getByRole('navigation', { name: '프리셋 전환' });
+    fireEvent.click(within(navigation).getByRole('link', { name: '태스크' }));
+    await screen.findByRole('heading', { name: '태스크 프리셋' });
+    expect(container.querySelector('.ui-horizontal-indicator')).toBe(indicator);
+    expect(
+      targets.some((target) => target.parentElement?.matches('.ui-horizontal-page-viewport')),
+    ).toBe(true);
+    expect(document.querySelectorAll('[data-calendar-transition]')).toHaveLength(0);
+    unmount();
+  } finally {
+    HTMLElement.prototype.animate = original;
+    bounds.mockRestore();
+  }
 });

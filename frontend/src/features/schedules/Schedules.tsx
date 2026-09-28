@@ -1,24 +1,17 @@
+import { toggleScheduleCompletion } from './scheduleCompletion';
 import { LocalizedError } from '../../i18n/errors';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { reminderUnitLabel } from '../../api/reminderFields';
-import { MemoEditor } from '../shared/MemoEditor';
-import {
-  saveSchedule,
-  deleteSchedule,
-  deleteScheduleTask,
-  reopenSchedule,
-} from '../../api/schedules';
-import { PageHeader, Button, Surface } from '../shared/ui';
-import { ActionIcon } from '../shared/ActionIcon';
+import { NewTaskRows, SavedTaskRow } from './ScheduleTaskRows';
+import { deleteSchedule, deleteScheduleTask } from '../../api/schedules';
+import { DisclosureSummary, PageHeader, Input, Surface } from '../shared/ui';
 import { PresetModal } from '../shared/PresetModal';
 import { Photos } from './Photos';
 import { TaskExecution } from './TaskExecution';
 import { Requirements } from '../works/Requirements';
 import { textFields } from '../works/fields';
-import { progressOf, statusLabel } from '../workspace/progress';
 import { useEffect, useRef, useState } from 'react';
-import { updateScheduleStatus, getSchedule, type ScheduleDetail } from '../../api/schedules';
+import { getSchedule, type ScheduleDetail } from '../../api/schedules';
 
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
@@ -56,8 +49,7 @@ export function ScheduleView({
   }, [id, attempt]);
   const mutationLock = useRef(false);
   async function mutate(operation: () => Promise<ScheduleDetail>) {
-    if (mutationLock.current)
-      throw new LocalizedError('Schedules.savingIsInProgressTryAgainShortly');
+    if (mutationLock.current) throw new LocalizedError('Schedules.operationUnavailable');
     mutationLock.current = true;
     setBusy(true);
     try {
@@ -68,10 +60,11 @@ export function ScheduleView({
       if (active.current) setBusy(false);
     }
   }
-  async function changeStatus(status: string) {
+  async function changeCompletion() {
+    if (!value) return;
     setError('');
     try {
-      await mutate(() => updateScheduleStatus(id, status));
+      await mutate(() => toggleScheduleCompletion(value));
     } catch (e) {
       if (active.current) setError(message(e));
     }
@@ -106,40 +99,47 @@ export function ScheduleView({
               <h1>{value.title || tr('Schedules.untitledSchedule')}</h1>
             </PageHeader>
           )}
-          <section className="work-stack execution-task-list" aria-label={tr('UI.executionTasks')}>
-            <h2>{tr('UI.executionTasks')}</h2>
-            {value.tasks.map((task) => (
-              <div key={task.id}>
-                <Button variant="option" onClick={() => setTaskEditor(task.id)}>
-                  {task.name_snapshot}
-                </Button>
-                {taskEditor === task.id && (
-                  <PresetModal
-                    label={tr('MemoEditor.editValue', { v1: task.name_snapshot })}
-                    onClose={() => {
-                      if (!busy) setTaskEditor(undefined);
-                    }}
-                  >
-                    <TaskExecution
-                      allowRename
-                      onDelete={async () => {
-                        await mutate(() => deleteScheduleTask(task.id));
-                        setTaskEditor(undefined);
-                      }}
-                      task={task}
-                      locked={value.status === 'cancelled'}
-                      busy={busy}
-                      mutate={mutate}
-                    />
-                  </PresetModal>
-                )}
-              </div>
-            ))}
-          </section>
           <ScheduleEditor
             initial={value}
             embedded={modal}
-            hideMemo
+            completionControl={
+              <Input
+                type="checkbox"
+                aria-label={tr('Schedules.completeSchedule')}
+                checked={value.status === 'completed'}
+                disabled={busy || value.status === 'cancelled'}
+                onChange={() => void changeCompletion()}
+              />
+            }
+            mutationBusy={busy}
+            taskContent={
+              <section
+                className="work-stack execution-task-list"
+                aria-label={tr('UI.executionTasks')}
+              >
+                <NewTaskRows
+                  scheduleId={id}
+                  existing={value.tasks.map((task) => ({
+                    id: task.id,
+                    name: task.name_template_snapshot ?? task.name_snapshot,
+                  }))}
+                  disabled={busy || value.status === 'cancelled'}
+                  mutate={mutate}
+                >
+                  {value.tasks.map((task) => (
+                    <div key={task.id}>
+                      <SavedTaskRow
+                        key={task.name_snapshot}
+                        task={task}
+                        disabled={busy || value.status === 'cancelled'}
+                        mutate={mutate}
+                        onEdit={() => setTaskEditor(task.id)}
+                      />
+                    </div>
+                  ))}
+                </NewTaskRows>
+              </section>
+            }
             onDelete={async () => {
               await deleteSchedule(id);
               if (onClose) onClose();
@@ -148,39 +148,10 @@ export function ScheduleView({
             onCancel={onClose || (() => {})}
             onSaved={onClose || (() => setAttempt((n) => n + 1))}
           />
-          <p>
-            {value.time_zone} · {statusLabel(value.status)}
-          </p>
-          <p>
-            {tr('Schedules.tasksValueValueCompletedValueSkipped', {
-              v1: progressOf([value]).completed,
-              v2: progressOf([value]).total,
-              v3: progressOf([value]).skipped,
-            })}
-          </p>
-          {value.reminder_enabled && (
-            <p>
-              {tr('Schedules.reminderValueValueBefore', {
-                v1: value.reminder_value,
-                v2: reminderUnitLabel(value.reminder_unit ?? 'minutes', value.reminder_value),
-              })}
-            </p>
-          )}
+
           <Surface as="section" className="detail-section memo-preview">
-            <div className="section-heading">
-              <h2>{value.entity_snapshot.name}</h2>
-            </div>
-            <MemoEditor
-              draftKey={'schedule:' + id}
-              label={tr('Schedules.workMemo')}
-              value={value.notes}
-              disabled={busy}
-              onSave={async (notes) => {
-                await mutate(() => saveSchedule({ notes }, id));
-              }}
-            />
             <details className="optional-fields">
-              <summary>{tr('UI.workDetails')}</summary>
+              <DisclosureSummary>{tr('UI.workDetails')}</DisclosureSummary>
               <Requirements value={value.entity_snapshot} />
               <dl>
                 {(value.entity_snapshot.custom_fields ?? []).map((field, index) => (
@@ -202,40 +173,71 @@ export function ScheduleView({
                   ))}
               </dl>
               <p className="preserve-lines">{value.entity_snapshot.general_notes}</p>
-              <p>{tr('Schedules.workAndTasksAsSavedWhenTheScheduleWas')}</p>
             </details>
           </Surface>
-          <div className="work-task-actions">
-            <Button
-              variant="ghost"
-              disabled={busy || value.status === 'cancelled'}
-              onClick={() => {
-                if (value.status === 'completed')
-                  void mutate(() => reopenSchedule(id)).catch((e) => setError(message(e)));
-                else void changeStatus('completed');
-              }}
-            >
-              <ActionIcon name="check" />
-              {value.status === 'completed'
-                ? tr('Delete.reopen', { name: value.entity_snapshot.name })
-                : tr('Schedules.completeSchedule')}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={busy}
-              onClick={() =>
-                void changeStatus(value.status === 'cancelled' ? 'planned' : 'cancelled')
-              }
-            >
-              <ActionIcon name={value.status === 'cancelled' ? 'play' : 'close'} />
-              {value.status === 'cancelled'
-                ? tr('Schedules.resumeSchedule')
-                : tr('Schedules.cancelSchedule')}
-            </Button>
-          </div>
+          {value.tasks
+            .filter((task) => taskEditor === task.id)
+            .map((task) => (
+              <PresetModal
+                key={task.id}
+                label={tr('MemoEditor.editValue', { v1: task.name_snapshot })}
+                onClose={() => {
+                  if (!busy) setTaskEditor(undefined);
+                }}
+              >
+                <TaskExecution
+                  allowRename
+                  onDelete={async () => {
+                    await mutate(() => deleteScheduleTask(task.id));
+                    setTaskEditor(undefined);
+                  }}
+                  task={task}
+                  locked={value.status === 'cancelled'}
+                  busy={busy}
+                  mutate={mutate}
+                />
+              </PresetModal>
+            ))}
           <Photos target={{ type: 'schedule', id }} locked={value.status === 'cancelled'} />
         </>
       )}
     </section>
+  );
+}
+
+export function ScheduleModal({
+  id,
+  initialDate,
+  timeZone,
+  onClose,
+  onSaved,
+}: {
+  id?: string;
+  initialDate?: string;
+  timeZone?: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  return (
+    <PresetModal
+      label={id ? tr('ScheduleEditor.editSchedule') : tr('App.addSchedule')}
+      variant="schedule"
+      closeLabel={id ? tr('PresetModal.closeDetails') : tr('App.closeNewSchedule')}
+      onClose={onClose}
+    >
+      {id ? (
+        <ScheduleView id={id} modal onClose={onClose} />
+      ) : timeZone ? (
+        <ScheduleEditor
+          embedded
+          timeZone={timeZone}
+          initialDate={initialDate}
+          onCancel={onClose}
+          onSaved={onSaved}
+        />
+      ) : (
+        <p role="status">{tr('App.loadingAppSettings')}</p>
+      )}
+    </PresetModal>
   );
 }

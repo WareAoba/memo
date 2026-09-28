@@ -1,4 +1,42 @@
 @layer features {
+  .site-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    border: 0;
+    position: relative;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-height: 72px;
+    margin: 0;
+    padding: 0 var(--space-2) 0 0;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 750;
+    text-decoration: none;
+    min-height: 44px;
+    font-size: 21px;
+    letter-spacing: -0.04em;
+  }
+  .header-notifications {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+  .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    color: var(--surface);
+    background: var(--accent);
+    border-radius: var(--radius-control);
+  }
   /* Header, expanding navigation rail, and independently scrolling content. */
   .app-shell {
     max-width: none;
@@ -13,18 +51,9 @@
   .app-shell.menu-expanded {
     grid-template-columns: 252px minmax(0, 1fr);
   }
-  .site-header {
-    position: relative;
-    grid-column: 1 / -1;
-    grid-row: 1;
-    min-height: 72px;
-    margin: 0;
-    padding: 0 var(--space-2) 0 0;
-  }
   .header-add-schedule {
-    position: absolute;
-    left: 50%;
-    translate: -50% 0;
+    grid-column: 2;
+    grid-row: 1;
     height: 48px;
     min-width: 152px;
     font-size: 16px;
@@ -43,10 +72,69 @@
       font-size: 19px;
     }
   }
+  @media (max-width: 360px) {
+    .header-add-schedule {
+      min-width: 116px;
+      font-size: 14px;
+    }
+    .header-add-schedule svg {
+      display: none;
+    }
+  }
   .header-brand-group {
     display: flex;
     align-items: center;
     gap: var(--space-4);
+    min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .header-brand-group .brand {
+    flex-shrink: 0;
+  }
+  .site-header > .sticky-launcher {
+    position: static;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+    white-space: nowrap;
+  }
+  .site-header > .sticky-launcher > svg {
+    display: none;
+  }
+  .track-selector {
+    min-width: 0;
+    width: 180px;
+  }
+  .track-selector .ui-dropdown {
+    min-width: 0;
+  }
+  .track-selector .ui-dropdown-trigger {
+    min-width: 0;
+    width: 100%;
+  }
+  .track-selector .ui-dropdown-trigger > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .track-selector .ui-dropdown-trigger > svg {
+    flex-shrink: 0;
+  }
+  .track-error {
+    position: fixed;
+    inset: auto var(--space-4) var(--space-4);
+    z-index: 100;
+  }
+  @media (max-width: 1100px) {
+    .site-header {
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: var(--space-2);
+    }
+    .header-brand-group {
+      gap: var(--space-2);
+    }
   }
   .menu-button-slot {
     width: 80px;
@@ -164,15 +252,11 @@
   .sidebar-disclosure {
     position: absolute;
     right: 4px;
-    transition: transform var(--motion-medium) var(--ease-settle);
     min-height: 44px;
     width: 36px;
     padding: var(--space-1);
     background: transparent;
     flex-shrink: 0;
-  }
-  .sidebar-disclosure[aria-expanded='true'] {
-    transform: rotate(180deg);
   }
   .sidebar-children {
     display: flex;
@@ -391,6 +475,12 @@
     color: var(--success);
   }
   @media (max-width: 700px) {
+    .site-header > .sticky-launcher > svg {
+      display: block;
+    }
+    .site-header > .sticky-launcher > span {
+      display: none;
+    }
     .app-shell,
     .app-shell.menu-expanded {
       display: grid;
@@ -405,7 +495,7 @@
       padding: 0 var(--space-1);
     }
     .header-brand-group {
-      gap: 0;
+      gap: var(--space-2);
     }
     .menu-button-slot {
       display: none;
@@ -574,5 +664,11 @@
     .today-detail-scroll {
       overflow: visible;
     }
+  }
+}
+@layer components {
+  .track-selector .ui-dropdown-trigger {
+    padding-inline: var(--space-2);
+    gap: var(--space-1);
   }
 }

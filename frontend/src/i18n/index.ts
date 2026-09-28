@@ -58,7 +58,8 @@ export const weekdays = () =>
 function syncDocument() {
   const language = currentLanguage();
   document.documentElement.lang = language;
-  document.title = tr('app.title');
+  const titleKey = document.querySelector('title')?.getAttribute('data-i18n');
+  document.title = tr(titleKey && isMessageKey(titleKey) ? titleKey : 'app.title');
   const manifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
   if (manifest) manifest.href = `/manifest.${language}.webmanifest`;
   navigator.serviceWorker?.controller?.postMessage({ type: 'set-language', language });

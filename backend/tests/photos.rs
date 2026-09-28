@@ -501,7 +501,9 @@ async fn ownership_is_enforced_for_target_photo_and_database_foreign_keys() {
             .await
             .is_err()
     );
-    sqlx::query("UPDATE photos SET user_id=?,schedule_id=? WHERE id=?")
+    let foreign_photo = uuid::Uuid::new_v4().to_string();
+    sqlx::query("INSERT INTO photos(id,user_id,schedule_id,filename,mime_type,size_bytes,state) SELECT ?,?,?,filename,mime_type,size_bytes,state FROM photos WHERE id=?")
+        .bind(&foreign_photo)
         .bind(OTHER)
         .bind(&foreign_s)
         .bind(p["id"].as_str().unwrap())
@@ -514,7 +516,7 @@ async fn ownership_is_enforced_for_target_photo_and_database_foreign_keys() {
                 &pool,
                 &root,
                 method,
-                &format!("/api/photos/{}", p["id"].as_str().unwrap()),
+                &format!("/api/photos/{}", foreign_photo),
                 "",
                 vec![]
             )

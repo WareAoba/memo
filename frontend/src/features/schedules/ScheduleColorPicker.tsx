@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useId } from 'react';
 import { tr } from '../../i18n';
 import { scheduleColors, type ScheduleColor } from '../../api/scheduleColors';
@@ -6,13 +7,16 @@ import { Input } from '../shared/ui';
 export function ScheduleColorPicker({
   value,
   onChange,
+  disabled = false,
 }: {
   value: ScheduleColor;
   onChange: (value: ScheduleColor) => void;
+  disabled?: boolean;
 }) {
+  useTranslation();
   const id = useId();
   return (
-    <fieldset className="schedule-color-picker">
+    <fieldset className="schedule-color-picker" disabled={disabled}>
       <legend className="sr-only">{tr('ScheduleColor.label')}</legend>
       <div className="schedule-color-options">
         {scheduleColors.map((color) => (

@@ -10,6 +10,17 @@ for (const name of readdirSync(root, { recursive: true }).filter(
   const css = readFileSync(join(root, name), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   if (/#(?:[\da-f]{3,8})\b|\b(?:rgb|hsl)a?\(/i.test(css))
     errors.push(`${name}: literal color; use tokens.css`);
+  if (name !== 'design-system.css') {
+    for (const block of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (
+        /summary|disclosure|dropdown-trigger|detail-kind-toggle/.test(block[1]) &&
+        /(?:rotate\s*:|rotate\(|content\s*:\s*['"][+−▼▶▸▾])/.test(block[2])
+      )
+        errors.push(
+          `${name}: disclosure glyph/motion belongs to DisclosureIcon and design-system.css`,
+        );
+    }
+  }
   if (!css.trimStart().startsWith('@layer '))
     errors.push(`${name}: CSS must declare its cascade layer`);
   if (/:has\(\s*>\s*(?:svg|\.action-icon)/.test(css))

@@ -1,3 +1,4 @@
+import { usePopupExit } from './usePopupExit';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -42,6 +43,8 @@ function DesktopMemoButton({
   useTranslation();
   const id = useId();
   const editor = useRef<MemoEditorHandle>(null);
+  const popup = useRef<HTMLDivElement>(null);
+  const popupExit = usePopupExit(popup);
   const [anchor, setAnchor] = useState<HTMLButtonElement>();
   const [initial, setInitial] = useState(value);
   const [memoSnapshot, setMemoSnapshot] = useState<{ source: string; text: string }>();
@@ -65,7 +68,7 @@ function DesktopMemoButton({
   function close(restoreFocus = true) {
     generation.current++;
     open.current = false;
-    setAnchor(undefined);
+    popupExit.close(() => setAnchor(undefined));
     onOpenChange?.(false);
     if (restoreFocus)
       requestAnimationFrame(() => {
@@ -92,6 +95,7 @@ function DesktopMemoButton({
     return false;
   }
   async function show(button: HTMLButtonElement) {
+    popupExit.cancel();
     const current = ++generation.current;
     setInitial(currentValue);
     setError('');
@@ -115,6 +119,7 @@ function DesktopMemoButton({
   return (
     <>
       <Button
+        data-context-action="memo"
         iconOnly
         variant="ghost"
         type="button"
@@ -137,6 +142,7 @@ function DesktopMemoButton({
       {anchor &&
         createPortal(
           <MemoPopover
+            popupRef={popup}
             anchor={anchor}
             id={id}
             label={tr('MemoButton.valueMemo', { v1: label })}

@@ -1,3 +1,6 @@
+import { observeAnchoredPopover } from '../shared/anchoredPopover';
+import { useTranslation } from 'react-i18next';
+import { usePopupExit } from '../shared/usePopupExit';
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { tr, locale, weekdays } from '../../i18n';
@@ -20,8 +23,10 @@ export function CalendarDatePicker({
   onClose: () => void;
   anchor: RefObject<HTMLButtonElement | null>;
 }) {
+  useTranslation();
   const [month, setMonth] = useState(selected.slice(0, 7));
   const popup = useRef<HTMLDivElement>(null);
+  const { close } = usePopupExit(popup);
   const callbacks = useRef({ onClose });
   useLayoutEffect(() => {
     callbacks.current = { onClose };
@@ -30,32 +35,21 @@ export function CalendarDatePicker({
   useLayoutEffect(() => {
     const menu = popup.current!;
     const trigger = anchor.current;
-    menu.showPopover?.();
-    function position() {
-      if (!trigger) return;
-      const rect = trigger.getBoundingClientRect();
-      menu.style.width = `${Math.min(420, window.innerWidth - 24)}px`;
-      menu.style.maxHeight = `${window.innerHeight - 24}px`;
-      menu.style.left = `${Math.max(12, Math.min(rect.left + rect.width / 2 - menu.offsetWidth / 2, window.innerWidth - menu.offsetWidth - 12))}px`;
-      const above = rect.top - menu.offsetHeight - 8;
-      const top =
-        rect.bottom + 8 + menu.offsetHeight > window.innerHeight - 12 && above >= 12
-          ? above
-          : rect.bottom + 8;
-      menu.style.top = `${Math.max(12, Math.min(top, window.innerHeight - menu.offsetHeight - 12))}px`;
-    }
+    const stopPositioning = trigger
+      ? observeAnchoredPopover(menu, trigger, { width: 420, gap: 8, align: 'center' })
+      : undefined;
     function outside(event: PointerEvent) {
       if (
         event.target instanceof Node &&
         !menu.contains(event.target) &&
         !trigger?.contains(event.target)
       )
-        callbacks.current.onClose();
+        close(() => callbacks.current.onClose());
     }
     function escape(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
-        callbacks.current.onClose();
+        close(() => callbacks.current.onClose());
         trigger?.focus();
       }
     }
@@ -65,27 +59,24 @@ export function CalendarDatePicker({
         !menu.contains(event.target) &&
         !trigger?.contains(event.target)
       )
-        callbacks.current.onClose();
+        close(() => callbacks.current.onClose());
     }
-    position();
     menu.querySelector<HTMLElement>('[aria-pressed="true"]')?.focus({ preventScroll: true });
-    window.addEventListener('resize', position);
-    document.addEventListener('scroll', position, true);
     document.addEventListener('pointerdown', outside);
     document.addEventListener('keydown', escape);
     document.addEventListener('focusin', focusAway);
     return () => {
-      window.removeEventListener('resize', position);
-      document.removeEventListener('scroll', position, true);
       document.removeEventListener('pointerdown', outside);
       document.removeEventListener('keydown', escape);
       document.removeEventListener('focusin', focusAway);
-      menu.hidePopover?.();
+      stopPositioning?.();
     };
-  }, [anchor]);
+  }, [anchor, close]);
   function select(date: string) {
-    onSelect(date);
-    anchor.current?.focus();
+    close(() => {
+      onSelect(date);
+      anchor.current?.focus();
+    });
   }
   function move(delta: number) {
     prepare({ direction: delta });
@@ -136,6 +127,6 @@ export function CalendarDatePicker({
         {tr('Calendar.today')}
       </Button>
     </MenuSurface>,
-    document.body,
+    anchor.current?.closest('dialog') ?? document.body,
   );
 }

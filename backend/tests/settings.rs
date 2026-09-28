@@ -287,30 +287,21 @@ async fn migration_preserves_populated_snapshot_graph_and_revision_triggers() {
                 .unwrap();
         }
     }
-    // Current fixture APIs require color; remove it before replaying the older migration.
-    sqlx::raw_sql(include_str!(
-        "../migrations/202609250006_schedule_color.sql"
-    ))
-    .execute(&pool)
-    .await
-    .unwrap();
-    // The fixture uses current preset APIs. These columns live on source tables,
-    // which the historical settings migration does not rebuild.
-    sqlx::raw_sql("ALTER TABLE entities ADD COLUMN unmanaged INTEGER NOT NULL DEFAULT 0; ALTER TABLE task_presets ADD COLUMN unmanaged INTEGER NOT NULL DEFAULT 0;")
+    // Seed the historical schema directly: today's APIs must never run against an old schema.
+    let sid = "10000000-0000-4000-8000-000000000001";
+    sqlx::raw_sql(r#"INSERT INTO entities(id,user_id,name) VALUES('legacy-work','00000000-0000-4000-8000-000000000001','Original work');
+        INSERT INTO task_presets(id,user_id,name) VALUES('legacy-task','00000000-0000-4000-8000-000000000001','Original task');
+        INSERT INTO tags(id,user_id,name) VALUES('legacy-tag','00000000-0000-4000-8000-000000000001','shared');
+        INSERT INTO entity_tags(entity_id,tag_id,user_id) VALUES('legacy-work','legacy-tag','00000000-0000-4000-8000-000000000001');
+        INSERT INTO task_preset_tags(task_preset_id,tag_id,user_id) VALUES('legacy-task','legacy-tag','00000000-0000-4000-8000-000000000001');
+        INSERT INTO work_task_presets(entity_id,task_preset_id,user_id,position) VALUES('legacy-work','legacy-task','00000000-0000-4000-8000-000000000001',0);
+        INSERT INTO schedules(id,user_id,entity_id,title,scheduled_date,end_date,start_time,end_time,time_zone) VALUES('10000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','legacy-work','Original','2077-01-01','2077-01-01','09:00','10:00','Asia/Tokyo');
+        INSERT INTO schedule_entity_snapshot(id,schedule_id,definition) VALUES('snapshot','10000000-0000-4000-8000-000000000001','{"name":"Original work"}');
+        INSERT INTO schedule_tasks(id,schedule_id,user_id,source_task_preset_id,source_task_preset_version,name_snapshot,default_notes_snapshot,position,execution_notes) VALUES('legacy-execution','10000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','legacy-task',1,'Original task','',0,'Saved memo');
+        INSERT INTO schedule_task_items(id,schedule_task_id,source_preset_item_id,position,definition,value_text,completed) VALUES('legacy-item','legacy-execution','source-item',0,'{}','Saved value',1);
+        INSERT INTO photos(id,user_id,schedule_id,filename,mime_type,size_bytes,state) VALUES('20000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','old.png','image/png',100,'ready');"#)
         .execute(&pool).await.unwrap();
-    // Current API fixtures also require the identity table, untouched by settings migration.
-    sqlx::raw_sql(include_str!(
-        "../migrations/202609260002_virtual_account.sql"
-    ))
-    .execute(&pool)
-    .await
-    .unwrap();
     let root = tempfile::tempdir().unwrap();
-    let before = fixtures(&pool, root.path()).await;
-    sqlx::query("ALTER TABLE schedules DROP COLUMN color")
-        .execute(&pool)
-        .await
-        .unwrap();
     let mut tx = pool.begin().await.unwrap();
     sqlx::raw_sql(include_str!("../migrations/202609250005_user_settings.sql"))
         .execute(&mut *tx)
@@ -323,21 +314,41 @@ async fn migration_preserves_populated_snapshot_graph_and_revision_triggers() {
     .execute(&pool)
     .await
     .unwrap();
-    let uri = format!("/api/schedules/{}", before["id"].as_str().unwrap());
+    for sql in [
+        include_str!("../migrations/202609260001_unmanaged_presets.sql"),
+        include_str!("../migrations/202609260002_virtual_account.sql"),
+        include_str!("../migrations/202609270001_tracks.sql"),
+    ] {
+        let mut tx = pool.begin().await.unwrap();
+        sqlx::raw_sql(sql).execute(&mut *tx).await.unwrap();
+        tx.commit().await.unwrap();
+    }
+    let uri = format!("/api/schedules/{sid}");
+    let (status, value) = request(&pool, root.path(), "GET", &uri, Value::Null).await;
+    assert_eq!(status, 200, "{value}");
+    assert_eq!(value["entity_snapshot"]["name"], "Original work");
+    assert_eq!(value["tasks"][0]["execution_notes"], "Saved memo");
+    assert_eq!(value["tasks"][0]["items"][0]["value_text"], "Saved value");
+    assert_eq!(value["tasks"][0]["items"][0]["completed"], true);
+    let photo: (String, String, String) = sqlx::query_as("SELECT id,user_id,track_id FROM photos")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(
-        request(&pool, root.path(), "GET", &uri, Value::Null)
-            .await
-            .1,
-        before
+        photo,
+        (
+            "20000000-0000-4000-8000-000000000001".into(),
+            OWNER.into(),
+            OWNER.into()
+        )
     );
-    let revision: i64 =
-        sqlx::query_scalar("SELECT revision FROM schedule_revisions WHERE user_id=?")
-            .bind(OWNER)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let revision: i64 = sqlx::query_scalar("SELECT revision FROM tracks WHERE id=?")
+        .bind(OWNER)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     request(&pool, root.path(), "PATCH", &uri, json!({"notes":"edited"})).await;
-    let next: i64 = sqlx::query_scalar("SELECT revision FROM schedule_revisions WHERE user_id=?")
+    let next: i64 = sqlx::query_scalar("SELECT revision FROM tracks WHERE id=?")
         .bind(OWNER)
         .fetch_one(&pool)
         .await

@@ -38,8 +38,6 @@ export function PushSettings() {
   return (
     <section>
       <h2>{tr('PushSettings.notificationsOnThisDevice')}</h2>
-      <p>{tr('PushSettings.theServerSendsRemindersAtTheScheduledTimeFor')}</p>
-      <p>{tr('PushSettings.whileTheAppIsOpenYouGetToastsWith')}</p>
       {!state && !error && <p role="status">{tr('PushSettings.checkingNotificationSettings')}</p>}
       {state && (
         <>
@@ -80,9 +78,6 @@ export function PushSettings() {
           }}
         />
       )}
-      <p className="hint">
-        {tr('PushSettings.notificationsAreConfiguredPerDeviceNetworkPowerSavingAnd')}
-      </p>
     </section>
   );
 }

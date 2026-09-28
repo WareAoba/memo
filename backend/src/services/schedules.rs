@@ -1,3 +1,4 @@
+use super::tracks::current_track_id;
 use super::{Result, database, identifier, invalid};
 use crate::{errors::ApiError, local_user::current_user_id};
 use chrono::{NaiveDateTime, TimeZone};
@@ -43,14 +44,13 @@ fn reminder_times(f: &Fields) -> Result<(Option<i64>, Option<i64>)> {
         "minutes" => 60,
         "hours" => 3600,
         "days" => 86400,
-        "weeks" => 604800,
         _ => return Err(invalid()),
     };
     let seconds = f
         .reminder_value
         .checked_mul(multiplier)
         .ok_or_else(invalid)?;
-    if !(1..=365 * 86400).contains(&seconds) || f.reminder_value < 1 {
+    if !(1..=7 * 86400).contains(&seconds) || f.reminder_value < 1 {
         return Err(invalid());
     }
     if !f.reminder_enabled {
@@ -157,9 +157,10 @@ fn validate(f: &mut Fields) -> Result<()> {
     Ok(())
 }
 async fn read(conn: &mut SqliteConnection, id: &str) -> Result<Schedule> {
-    sqlx::query_as("SELECT * FROM schedules WHERE id=? AND user_id=?")
+    sqlx::query_as("SELECT * FROM schedules WHERE id=? AND user_id=? AND track_id=?")
         .bind(id)
         .bind(current_user_id())
+        .bind(current_track_id())
         .fetch_optional(conn)
         .await
         .map_err(database)?
@@ -170,6 +171,48 @@ async fn detail(conn: &mut SqliteConnection, s: Schedule) -> Result<Value> {
         .await?
         .pop()
         .ok_or(ApiError::DatabaseUnavailable)
+}
+
+#[derive(Serialize, FromRow)]
+struct ExecutionItem {
+    id: String,
+    #[serde(skip)]
+    schedule_task_id: String,
+    source_preset_item_id: String,
+    position: i64,
+    #[sqlx(json)]
+    definition: Value,
+    value_boolean: Option<bool>,
+    value_text: Option<String>,
+    value_number: Option<f64>,
+    completed: bool,
+}
+
+#[derive(Serialize, FromRow)]
+struct ExecutionTask {
+    id: String,
+    #[serde(skip)]
+    schedule_id: String,
+    source_task_preset_id: Option<String>,
+    source_task_preset_version: i64,
+    name_snapshot: String,
+    name_template_snapshot: String,
+    #[sqlx(json)]
+    parameter_values: Value,
+    default_notes_snapshot: String,
+    position: i64,
+    status: String,
+    execution_notes: String,
+    #[sqlx(skip)]
+    items: Vec<ExecutionItem>,
+}
+
+#[derive(Serialize)]
+struct ScheduleDetail {
+    #[serde(flatten)]
+    schedule: Schedule,
+    entity_snapshot: Value,
+    tasks: Vec<ExecutionTask>,
 }
 
 // Each page has at most 100 schedules. Bind schedule IDs rather than task IDs,
@@ -193,31 +236,38 @@ async fn details(conn: &mut SqliteConnection, schedules: Vec<Schedule>) -> Resul
         snapshots.insert(row.get("schedule_id"), definition);
     }
     let item_sql = format!(
-        "SELECT i.* FROM schedule_task_items i JOIN schedule_tasks t ON t.id=i.schedule_task_id WHERE t.user_id=? AND t.schedule_id IN ({placeholders}) ORDER BY i.schedule_task_id,i.position"
+        "SELECT i.* FROM schedule_task_items i JOIN schedule_tasks t ON t.id=i.schedule_task_id WHERE t.user_id=? AND t.track_id=? AND t.schedule_id IN ({placeholders}) ORDER BY i.schedule_task_id,i.position"
     );
-    let mut query = sqlx::query(&item_sql).bind(current_user_id());
+    let mut query = sqlx::query_as::<_, ExecutionItem>(&item_sql)
+        .bind(current_user_id())
+        .bind(current_track_id());
     for schedule in &schedules {
         query = query.bind(&schedule.id);
     }
-    let mut items_by_task = HashMap::<String, Vec<Value>>::new();
-    for i in query.fetch_all(&mut *conn).await.map_err(database)? {
-        let definition: Value =
-            serde_json::from_str(i.get("definition")).map_err(|_| ApiError::DatabaseUnavailable)?;
-        items_by_task.entry(i.get("schedule_task_id")).or_default().push(json!({"id":i.get::<String,_>("id"),"source_preset_item_id":i.get::<String,_>("source_preset_item_id"),"position":i.get::<i64,_>("position"),"definition":definition,"value_boolean":i.get::<Option<bool>,_>("value_boolean"),"value_text":i.get::<Option<String>,_>("value_text"),"value_number":i.get::<Option<f64>,_>("value_number"),"completed":i.get::<bool,_>("completed")}));
+    let mut items_by_task = HashMap::<String, Vec<ExecutionItem>>::new();
+    for item in query.fetch_all(&mut *conn).await.map_err(database)? {
+        items_by_task
+            .entry(item.schedule_task_id.clone())
+            .or_default()
+            .push(item);
     }
     let task_sql = format!(
-        "SELECT * FROM schedule_tasks WHERE user_id=? AND schedule_id IN ({placeholders}) ORDER BY schedule_id,position"
+        "SELECT * FROM schedule_tasks WHERE user_id=? AND track_id=? AND schedule_id IN ({placeholders}) ORDER BY schedule_id,position"
     );
-    let mut query = sqlx::query(&task_sql).bind(current_user_id());
+    let mut query = sqlx::query_as::<_, ExecutionTask>(&task_sql)
+        .bind(current_user_id())
+        .bind(current_track_id());
     for schedule in &schedules {
         query = query.bind(&schedule.id);
     }
     let rows = query.fetch_all(&mut *conn).await.map_err(database)?;
-    let mut tasks_by_schedule = HashMap::<String, Vec<Value>>::new();
-    for r in rows {
-        let id: String = r.get("id");
-        let values = items_by_task.remove(&id).unwrap_or_default();
-        tasks_by_schedule.entry(r.get("schedule_id")).or_default().push(json!({"id":id,"source_task_preset_id":r.get::<Option<String>,_>("source_task_preset_id"),"source_task_preset_version":r.get::<i64,_>("source_task_preset_version"),"name_snapshot":r.get::<String,_>("name_snapshot"),"name_template_snapshot":r.get::<String,_>("name_template_snapshot"),"parameter_values":serde_json::from_str::<Value>(r.get("parameter_values")).map_err(|_| ApiError::DatabaseUnavailable)?,"default_notes_snapshot":r.get::<String,_>("default_notes_snapshot"),"position":r.get::<i64,_>("position"),"status":r.get::<String,_>("status"),"execution_notes":r.get::<String,_>("execution_notes"),"items":values}));
+    let mut tasks_by_schedule = HashMap::<String, Vec<ExecutionTask>>::new();
+    for mut task in rows {
+        task.items = items_by_task.remove(&task.id).unwrap_or_default();
+        tasks_by_schedule
+            .entry(task.schedule_id.clone())
+            .or_default()
+            .push(task);
     }
     schedules
         .into_iter()
@@ -226,10 +276,12 @@ async fn details(conn: &mut SqliteConnection, schedules: Vec<Schedule>) -> Resul
                 .remove(&s.id)
                 .ok_or(ApiError::DatabaseUnavailable)?;
             let tasks = tasks_by_schedule.remove(&s.id).unwrap_or_default();
-            let mut value = serde_json::to_value(s).map_err(|_| ApiError::DatabaseUnavailable)?;
-            value["entity_snapshot"] = work;
-            value["tasks"] = json!(tasks);
-            Ok(value)
+            serde_json::to_value(ScheduleDetail {
+                schedule: s,
+                entity_snapshot: work,
+                tasks,
+            })
+            .map_err(|_| ApiError::DatabaseUnavailable)
         })
         .collect()
 }
@@ -297,15 +349,12 @@ pub async fn create(pool: &SqlitePool, mut value: Value) -> Result<Value> {
         }
     }
     let work = super::works::snapshot(&mut tx, &entity_id).await?;
-    if work["archived"] == true {
-        return Err(invalid());
-    }
     if f.title.is_empty() {
         f.title = work["name"].as_str().unwrap_or_default().to_owned();
     }
     let id = Uuid::new_v4().to_string();
     let (reminder_at, reminder_start_at) = reminder_times(&f)?;
-    sqlx::query("INSERT INTO schedules(id,user_id,entity_id,title,scheduled_date,end_date,start_time,end_time,time_zone,notes,color,reminder_enabled,reminder_value,reminder_unit,reminder_at,reminder_start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(&id).bind(current_user_id()).bind(&entity_id).bind(&f.title).bind(&f.scheduled_date).bind(&f.end_date).bind(&f.start_time).bind(&f.end_time).bind(&f.time_zone).bind(&f.notes).bind(&f.color).bind(f.reminder_enabled).bind(f.reminder_value).bind(&f.reminder_unit).bind(reminder_at).bind(reminder_start_at).execute(&mut *tx).await.map_err(database)?;
+    sqlx::query("INSERT INTO schedules(id,user_id,track_id,entity_id,title,scheduled_date,end_date,start_time,end_time,time_zone,notes,color,reminder_enabled,reminder_value,reminder_unit,reminder_at,reminder_start_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(&id).bind(current_user_id()).bind(current_track_id()).bind(&entity_id).bind(&f.title).bind(&f.scheduled_date).bind(&f.end_date).bind(&f.start_time).bind(&f.end_time).bind(&f.time_zone).bind(&f.notes).bind(&f.color).bind(f.reminder_enabled).bind(f.reminder_value).bind(&f.reminder_unit).bind(reminder_at).bind(reminder_start_at).execute(&mut *tx).await.map_err(database)?;
     sqlx::query("INSERT INTO schedule_entity_snapshot(id,schedule_id,definition) VALUES(?,?,?)")
         .bind(Uuid::new_v4().to_string())
         .bind(&id)
@@ -355,7 +404,7 @@ pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     }
     validate(&mut f)?;
     let (reminder_at, reminder_start_at) = reminder_times(&f)?;
-    sqlx::query("UPDATE schedules SET title=?,scheduled_date=?,end_date=?,start_time=?,end_time=?,time_zone=?,notes=?,color=?,reminder_enabled=?,reminder_value=?,reminder_unit=?,reminder_at=?,reminder_start_at=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?").bind(f.title).bind(f.scheduled_date).bind(f.end_date).bind(f.start_time).bind(f.end_time).bind(f.time_zone).bind(f.notes).bind(f.color).bind(f.reminder_enabled).bind(f.reminder_value).bind(f.reminder_unit).bind(reminder_at).bind(reminder_start_at).bind(&id).bind(current_user_id()).execute(&mut *tx).await.map_err(database)?;
+    sqlx::query("UPDATE schedules SET title=?,scheduled_date=?,end_date=?,start_time=?,end_time=?,time_zone=?,notes=?,color=?,reminder_enabled=?,reminder_value=?,reminder_unit=?,reminder_at=?,reminder_start_at=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=? AND track_id=?").bind(f.title).bind(f.scheduled_date).bind(f.end_date).bind(f.start_time).bind(f.end_time).bind(f.time_zone).bind(f.notes).bind(f.color).bind(f.reminder_enabled).bind(f.reminder_value).bind(f.reminder_unit).bind(reminder_at).bind(reminder_start_at).bind(&id).bind(current_user_id()).bind(current_track_id()).execute(&mut *tx).await.map_err(database)?;
     let s = read(&mut tx, &id).await?;
     let result = detail(&mut tx, s).await?;
     tx.commit().await.map_err(database)?;
@@ -396,18 +445,20 @@ pub async fn list(pool: &SqlitePool, q: ListQuery) -> Result<Value> {
     let to = q.date.as_ref().or(q.to.as_ref());
     let mut tx = pool.begin().await.map_err(database)?;
     let revision: i64 = sqlx::query_scalar(
-        "SELECT COALESCE((SELECT revision FROM schedule_revisions WHERE user_id=?),0)",
+        "SELECT COALESCE((SELECT revision FROM tracks WHERE user_id=? AND id=?),0)",
     )
     .bind(current_user_id())
+    .bind(current_track_id())
     .fetch_one(&mut *tx)
     .await
     .map_err(database)?;
     if q.revision.is_some_and(|expected| expected != revision) {
         return Err(ApiError::ScheduleListChanged);
     }
-    let filter = " FROM schedules WHERE user_id=? AND (? IS NULL OR end_date>=?) AND (? IS NULL OR scheduled_date<=?) AND (? IS NULL OR entity_id=?) AND (? IS NULL OR title LIKE ? ESCAPE '!' OR notes LIKE ? ESCAPE '!' OR EXISTS(SELECT 1 FROM schedule_entity_snapshot e WHERE e.schedule_id=schedules.id AND json_extract(e.definition,'$.name') LIKE ? ESCAPE '!') OR EXISTS(SELECT 1 FROM schedule_tasks t WHERE t.schedule_id=schedules.id AND t.user_id=schedules.user_id AND t.name_snapshot LIKE ? ESCAPE '!'))";
+    let filter = " FROM schedules WHERE user_id=? AND track_id=? AND (? IS NULL OR end_date>=?) AND (? IS NULL OR scheduled_date<=?) AND (? IS NULL OR entity_id=?) AND (? IS NULL OR title LIKE ? ESCAPE '!' OR notes LIKE ? ESCAPE '!' OR EXISTS(SELECT 1 FROM schedule_entity_snapshot e WHERE e.schedule_id=schedules.id AND json_extract(e.definition,'$.name') LIKE ? ESCAPE '!') OR EXISTS(SELECT 1 FROM schedule_tasks t WHERE t.schedule_id=schedules.id AND t.user_id=schedules.user_id AND t.name_snapshot LIKE ? ESCAPE '!'))";
     let total: i64 = sqlx::query_scalar(&format!("SELECT count(*){filter}"))
         .bind(current_user_id())
+        .bind(current_track_id())
         .bind(from)
         .bind(from)
         .bind(to)
@@ -426,6 +477,7 @@ pub async fn list(pool: &SqlitePool, q: ListQuery) -> Result<Value> {
         "SELECT *{filter} ORDER BY scheduled_date,start_time,id LIMIT ? OFFSET ?"
     ))
     .bind(current_user_id())
+    .bind(current_track_id())
     .bind(from)
     .bind(from)
     .bind(to)
@@ -445,9 +497,34 @@ pub async fn list(pool: &SqlitePool, q: ListQuery) -> Result<Value> {
     let values = if q.include_details {
         details(&mut tx, items).await?
     } else {
+        // Preserve the calendar's empty-title fallback without loading task/item snapshots.
+        // IDs come from the owner-scoped page in this same read transaction.
+        let mut names = HashMap::<String, String>::new();
+        if !items.is_empty() {
+            let placeholders = vec!["?"; items.len()].join(",");
+            let sql = format!(
+                "SELECT schedule_id, json_extract(definition, '$.name') AS name \
+                 FROM schedule_entity_snapshot WHERE schedule_id IN ({placeholders})"
+            );
+            let mut query = sqlx::query(&sql);
+            for item in &items {
+                query = query.bind(&item.id);
+            }
+            for row in query.fetch_all(&mut *tx).await.map_err(database)? {
+                names.insert(row.get("schedule_id"), row.get("name"));
+            }
+        }
         items
             .into_iter()
-            .map(|item| serde_json::to_value(item).map_err(|_| ApiError::DatabaseUnavailable))
+            .map(|item| {
+                let name = names
+                    .remove(&item.id)
+                    .ok_or(ApiError::DatabaseUnavailable)?;
+                let mut value =
+                    serde_json::to_value(item).map_err(|_| ApiError::DatabaseUnavailable)?;
+                value["entity_name"] = json!(name);
+                Ok(value)
+            })
             .collect::<Result<Vec<_>>>()?
     };
     tx.commit().await.map_err(database)?;
@@ -462,9 +539,6 @@ pub(super) async fn append_preset(
     customization: Option<&super::task_parameters::Customization>,
 ) -> Result<()> {
     let p = super::task_presets::snapshot(&mut *conn, source).await?;
-    if p["archived"] == true {
-        return Err(invalid());
-    }
     let task = Uuid::new_v4().to_string();
     let defaults = super::task_parameters::Customization::default();
     let customization = customization.unwrap_or(&defaults);
@@ -475,7 +549,7 @@ pub(super) async fn append_preset(
     {
         return Err(invalid());
     }
-    sqlx::query("INSERT INTO schedule_tasks(id,schedule_id,user_id,source_task_preset_id,source_task_preset_version,name_snapshot,default_notes_snapshot,position,name_template_snapshot,parameter_values,execution_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?)").bind(&task).bind(schedule).bind(current_user_id()).bind(source).bind(p["version"].as_i64()).bind(name).bind(p["default_notes"].as_str()).bind(position).bind(template).bind(json!(parameters).to_string()).bind(&customization.execution_notes).execute(&mut *conn).await.map_err(database)?;
+    sqlx::query("INSERT INTO schedule_tasks(id,schedule_id,user_id,track_id,source_task_preset_id,source_task_preset_version,name_snapshot,default_notes_snapshot,position,name_template_snapshot,parameter_values,execution_notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)").bind(&task).bind(schedule).bind(current_user_id()).bind(current_track_id()).bind(source).bind(p["version"].as_i64()).bind(name).bind(p["default_notes"].as_str()).bind(position).bind(template).bind(json!(parameters).to_string()).bind(&customization.execution_notes).execute(&mut *conn).await.map_err(database)?;
     for i in p["items"].as_array().ok_or(ApiError::DatabaseUnavailable)? {
         let completed = match i["item_type"].as_str() {
             Some("checkbox") => i["default_value"] == true,
@@ -490,11 +564,28 @@ pub(super) async fn append_preset(
     Ok(())
 }
 
-pub async fn reminders(pool: &SqlitePool) -> Result<Value> {
-    let rows = sqlx::query("SELECT id,title,start_time,scheduled_date,time_zone,reminder_at,reminder_start_at,reminder_version FROM schedules WHERE user_id=? AND reminder_enabled=1 AND status IN ('planned','in_progress') AND reminder_at<=unixepoch('now') AND reminder_start_at>unixepoch('now') ORDER BY reminder_at,id")
-        .bind(current_user_id()).fetch_all(pool).await.map_err(database)?;
+#[derive(Default, Deserialize)]
+pub struct ReminderQuery {
+    #[serde(default)]
+    include: String,
+}
+
+pub async fn reminders(pool: &SqlitePool, query: ReminderQuery) -> Result<Value> {
+    let ids: Vec<&str> = query
+        .include
+        .split(',')
+        .filter(|id| !id.is_empty())
+        .collect();
+    if ids.len() > 200 || ids.iter().any(|id| Uuid::parse_str(id).is_err()) {
+        return Err(invalid());
+    }
+    // Retained browser reminders can be validated after the schedule has started.
+    // Owner and active-state predicates apply to both sides of the time condition.
+    let rows = sqlx::query("SELECT id,track_id,title,start_time,scheduled_date,time_zone,reminder_at,reminder_start_at,reminder_version FROM schedules WHERE user_id=? AND reminder_enabled=1 AND status IN ('planned','in_progress') AND ((reminder_at<=unixepoch('now') AND reminder_start_at>unixepoch('now')) OR id IN (SELECT value FROM json_each(?))) ORDER BY reminder_at,id")
+        .bind(current_user_id()).bind(json!(ids).to_string()).fetch_all(pool).await.map_err(database)?;
     Ok(json!(rows.into_iter().map(|r| json!({
         "id": r.get::<String,_>("id"), "title": r.get::<String,_>("title"),
+        "track_id": r.get::<String,_>("track_id"),
         "start_time": r.get::<String,_>("start_time"), "scheduled_date": r.get::<String,_>("scheduled_date"),
         "time_zone": r.get::<String,_>("time_zone"), "reminder_at": r.get::<i64,_>("reminder_at"),
         "start_at": r.get::<i64,_>("reminder_start_at"), "reminder_version": r.get::<i64,_>("reminder_version")

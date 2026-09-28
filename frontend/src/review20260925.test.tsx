@@ -1,3 +1,10 @@
+vi.mock('./api/tracks', () => ({
+  listTracks: async () => ({
+    items: [{ id: 'local', name: 'My Track' }],
+    limit: 3,
+    default_id: 'local',
+  }),
+}));
 vi.mock('./api/auth', () => ({
   getAccount: vi.fn(async () => ({ id: 'local', display_name: '가상 계정', email: null })),
 }));
@@ -8,7 +15,7 @@ vi.mock('./api/settings', async (original) => ({
 }));
 // Regression coverage for the behavior bugs found in the 2026-09-25 review.
 import { useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import App from './App';
 import { TaskExecution } from './features/schedules/TaskExecution';
@@ -82,7 +89,12 @@ it('review: successful trimmed rename should allow completion', async () => {
   render(<Harness />);
   fireEvent.change(screen.getByLabelText('태스크 이름'), { target: { value: ' Renamed ' } });
   fireEvent.click(screen.getByRole('button', { name: '이름 저장' }));
-  await screen.findByText('저장했습니다.');
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(updateTask).toHaveBeenCalledWith('t', { name: 'Renamed' });
   expect(screen.getByRole('button', { name: '태스크 완료' })).toBeEnabled();
 });

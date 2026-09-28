@@ -165,13 +165,6 @@
       border-bottom: 1px solid var(--line);
       padding-block: var(--space-2);
     }
-    .schedule-time-disclosure > summary::after {
-      content: '+';
-      margin-left: auto;
-    }
-    .schedule-time-disclosure[open] > summary::after {
-      content: '−';
-    }
     .schedule-time-disclosure > .schedule-panel-heading {
       display: none;
     }

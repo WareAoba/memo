@@ -7,6 +7,59 @@ use serde_json::{Value, json};
 use sqlx::SqlitePool;
 use tower::ServiceExt;
 #[tokio::test]
+async fn summaries_keep_snapshot_names_without_task_payloads() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("summary.sqlite3"))
+        .await
+        .unwrap();
+    let work = create(&pool, "entities", "Original work").await;
+    let task = create(&pool, "task-presets", "A task").await;
+    let (status, schedule) = request(&pool, "POST", "/api/schedules", body(&work, &[task])).await;
+    assert_eq!(status, 201);
+    let url = format!("/api/schedules/{}", schedule["id"].as_str().unwrap());
+    assert_eq!(
+        request(&pool, "PATCH", &url, json!({"title":""})).await.0,
+        200
+    );
+    assert_eq!(
+        request(
+            &pool,
+            "PATCH",
+            &format!("/api/entities/{work}"),
+            json!({"name":"Renamed work"})
+        )
+        .await
+        .0,
+        200
+    );
+    let (status, summaries) = request(
+        &pool,
+        "GET",
+        "/api/schedules?include_details=false",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200);
+    let summary = &summaries["items"][0];
+    assert_eq!(summary["title"], "");
+    assert_eq!(summary["entity_name"], "Original work");
+    assert!(summary.get("tasks").is_none());
+    assert!(summary.get("entity_snapshot").is_none());
+    let (status, details) = request(
+        &pool,
+        "GET",
+        "/api/schedules?include_details=true",
+        Value::Null,
+    )
+    .await;
+    assert_eq!(status, 200);
+    assert_eq!(details["revision"], summaries["revision"]);
+    assert_eq!(details["items"][0]["tasks"].as_array().unwrap().len(), 1);
+    assert!(
+        serde_json::to_vec(&summaries).unwrap().len() < serde_json::to_vec(&details).unwrap().len()
+    );
+}
+#[tokio::test]
 async fn schedule_colors_persist_validate_and_do_not_change_other_schedules() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("colors.sqlite3");
@@ -281,7 +334,7 @@ async fn removing_archive_preserves_schedule_snapshots_and_execution() {
     );
 }
 #[tokio::test]
-async fn snapshots_survive_source_edits_archive_and_reconnect() {
+async fn snapshots_survive_source_edits_and_reconnect() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("app.sqlite3");
     let pool = db::connect(&path).await.unwrap();
@@ -456,7 +509,7 @@ async fn invalid_dates_times_fields_and_filters_do_not_write() {
     pool.close().await;
 }
 #[tokio::test]
-async fn failed_item_insert_rolls_back_all_rows_and_archived_sources_rejected() {
+async fn failed_item_insert_rolls_back_all_rows_and_retired_archiving_cannot_hide_sources() {
     let dir = tempfile::tempdir().unwrap();
     let pool = db::connect(&dir.path().join("db")).await.unwrap();
     let w = create(&pool, "entities", "W").await;
@@ -507,14 +560,14 @@ async fn failed_item_insert_rolls_back_all_rows_and_archived_sources_rejected() 
         request(&pool, "POST", "/api/schedules", body(&w, &[t]))
             .await
             .0,
-        400
+        201
     );
     request(&pool, "DELETE", &format!("/api/entities/{w}"), Value::Null).await;
     assert_eq!(
         request(&pool, "POST", "/api/schedules", body(&w, &[]))
             .await
             .0,
-        400
+        201
     );
     pool.close().await;
 }
@@ -1027,7 +1080,7 @@ async fn page_revision_detects_changes_execution_and_preserves_owner_scope() {
         .execute(&pool)
         .await
         .unwrap();
-    sqlx::query("INSERT INTO schedule_revisions(user_id,revision) VALUES(?,100)")
+    sqlx::query("UPDATE tracks SET revision=100 WHERE user_id=?")
         .bind(other)
         .execute(&pool)
         .await
@@ -1043,6 +1096,54 @@ async fn page_revision_detects_changes_execution_and_preserves_owner_scope() {
         .0,
         200
     );
+}
+
+#[tokio::test]
+async fn legacy_reminders_migrate_to_seven_days_without_changing_schedule_identity() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("legacy-reminders.sqlite3"))
+        .await
+        .unwrap();
+    let work = create(&pool, "entities", "Legacy reminders").await;
+    for (unit, amount, expected_unit, expected_amount) in [
+        ("weeks", 1, "days", 7),
+        ("weeks", 12, "days", 7),
+        ("days", 8, "days", 7),
+        ("hours", 169, "hours", 168),
+        ("minutes", 10081, "minutes", 10080),
+    ] {
+        let (_, saved) = request(&pool, "POST", "/api/schedules", body(&work, &[])).await;
+        let id = saved["id"].as_str().unwrap();
+        sqlx::query("UPDATE schedules SET reminder_enabled=1,reminder_unit=?,reminder_value=?,reminder_start_at=2000000,reminder_at=0 WHERE id=?").bind(unit).bind(amount).bind(id).execute(&pool).await.unwrap();
+        let version: i64 = sqlx::query_scalar("SELECT reminder_version FROM schedules WHERE id=?")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        sqlx::raw_sql(include_str!(
+            "../migrations/202609270002_reminder_seven_days.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let row: (String, i64, i64, i64) = sqlx::query_as("SELECT reminder_unit,reminder_value,reminder_start_at-reminder_at,reminder_version FROM schedules WHERE id=?").bind(id).fetch_one(&pool).await.unwrap();
+        assert_eq!(
+            row,
+            (expected_unit.into(), expected_amount, 604800, version + 1)
+        );
+        sqlx::raw_sql(include_str!(
+            "../migrations/202609270002_reminder_seven_days.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        let after: i64 = sqlx::query_scalar("SELECT reminder_version FROM schedules WHERE id=?")
+            .bind(id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(after, version + 1);
+    }
 }
 
 #[tokio::test]
@@ -1097,9 +1198,30 @@ async fn reminders_save_validate_reschedule_and_filter() {
         json!({"reminder_value":1.5}),
         json!({"reminder_unit":"months"}),
         json!({"reminder_value":53,"reminder_unit":"weeks"}),
+        json!({"reminder_value":1,"reminder_unit":"weeks"}),
+        json!({"reminder_value":8,"reminder_unit":"days"}),
+        json!({"reminder_value":169,"reminder_unit":"hours"}),
+        json!({"reminder_value":10081,"reminder_unit":"minutes"}),
         json!({"scheduled_date":"2026-03-08","end_date":"2026-03-08","start_time":"02:30","end_time":"04:00","time_zone":"America/New_York"}),
     ] {
         assert_eq!(request(&pool, "PATCH", &uri, invalid).await.0, 400);
+    }
+    for (unit, maximum) in [("days", 7), ("hours", 168), ("minutes", 10080)] {
+        let (status, _) = request(
+            &pool,
+            "PATCH",
+            &uri,
+            json!({"reminder_value":maximum,"reminder_unit":unit}),
+        )
+        .await;
+        assert_eq!(status, 200);
+        let difference: i64 =
+            sqlx::query_scalar("SELECT reminder_start_at-reminder_at FROM schedules WHERE id=?")
+                .bind(id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(difference, 604800);
     }
     sqlx::query("UPDATE schedules SET reminder_at=unixepoch('now')-10,reminder_start_at=unixepoch('now')+3600 WHERE id=?").bind(id).execute(&pool).await.unwrap();
     assert_eq!(
@@ -1422,8 +1544,8 @@ async fn unmanaged_promotion_rolls_back_and_name_queries_are_indexed_and_owner_s
     .1;
     assert_eq!(suggestions[0]["id"], hidden);
     for table in ["entities", "task_presets"] {
-        let plan: Vec<(i64,i64,i64,String)>=sqlx::query_as(&format!("EXPLAIN QUERY PLAN SELECT id,name FROM {table} WHERE user_id=? AND unmanaged=1 AND name LIKE ? ESCAPE '!' ORDER BY name COLLATE NOCASE,id LIMIT 10"))
-            .bind(owner).bind("At%").fetch_all(&pool).await.unwrap();
+        let plan: Vec<(i64,i64,i64,String)>=sqlx::query_as(&format!("EXPLAIN QUERY PLAN SELECT id,name FROM {table} WHERE user_id=? AND track_id=? AND unmanaged=1 AND name LIKE ? ESCAPE '!' ORDER BY name COLLATE NOCASE,id LIMIT 10"))
+            .bind(owner).bind(owner).bind("At%").fetch_all(&pool).await.unwrap();
         assert!(
             plan.iter().any(|row| row.3.contains("USING INDEX")
                 && row.3.contains("name>?")

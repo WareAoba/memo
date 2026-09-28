@@ -7,15 +7,10 @@
   input[type='checkbox'] {
     accent-color: var(--accent);
   }
-  .site-header,
   .preset-navigation,
   .preview-notice,
   .day-summary {
     border: 0;
-  }
-  .brand-mark {
-    background: var(--accent);
-    border-radius: var(--radius-control);
   }
   .environment-label,
   .eyebrow,

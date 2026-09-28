@@ -1,0 +1,44 @@
+{
+  "description": "Required project documentation context and change-record gate",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "additionalContextLimit": 24000,
+            "statusMessage": "Checking project documentation",
+            "command": "node -e \"const cp=require('node:child_process');const p=require('node:path');const u=require('node:url');const root=cp.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();import(u.pathToFileURL(p.join(root,'scripts/agent-docs-hook.mjs')).href)\"",
+            "type": "command",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "additionalContextLimit": 24000,
+            "statusMessage": "Checking project documentation",
+            "command": "node -e \"const cp=require('node:child_process');const p=require('node:path');const u=require('node:url');const root=cp.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();import(u.pathToFileURL(p.join(root,'scripts/agent-docs-hook.mjs')).href)\"",
+            "type": "command",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "additionalContextLimit": 24000,
+            "statusMessage": "Checking project documentation",
+            "command": "node -e \"const cp=require('node:child_process');const p=require('node:path');const u=require('node:url');const root=cp.execFileSync('git',['rev-parse','--show-toplevel'],{encoding:'utf8'}).trim();import(u.pathToFileURL(p.join(root,'scripts/agent-docs-hook.mjs')).href)\"",
+            "type": "command",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

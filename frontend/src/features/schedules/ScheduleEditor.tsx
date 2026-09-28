@@ -7,35 +7,47 @@ import { ReminderSettings } from './ReminderSettings';
 import { ScheduleColorPicker } from './ScheduleColorPicker';
 import { MemoButton } from '../shared/MemoButton';
 import { TaskParameterInputs } from '../shared/TaskParameterInputs';
-import { parameterDefaults, parametersValid, renderTaskName } from '../shared/taskParameters';
-import type { TaskCustomization } from '../../api/schedules';
-import { ButtonLink, Input, Button, Textarea, PageHeader } from '../shared/ui';
-import { TaskGroupPicker } from './TaskGroupPicker';
+import { parameterDefaults } from '../shared/taskParameters';
+import { useScheduleTaskDraft, taskDraftError, taskDraftFields } from './useScheduleTaskDraft';
+import {
+  DisclosureSummary,
+  ButtonLink,
+  Input,
+  Button,
+  AutoTextarea,
+  PageHeader,
+} from '../shared/ui';
+import { TaskNameInput } from './TaskNameInput';
 import { IconButton } from '../shared/IconButton';
 import { ActionIcon } from '../shared/ActionIcon';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import { useMobileLayout } from '../shared/useMobileLayout';
 import { ModalActions } from '../shared/PresetModal';
 import { saveSchedule, type ScheduleDetail, type ScheduleFields } from '../../api/schedules';
-import { getWorkTasks } from '../../api/workTasks';
 import { ErrorBox } from '../shared/ErrorBox';
 import { go, message } from '../shared/form';
 import { useEditorActive } from '../useEditorActive';
 import { Picker } from './Picker';
 import { TimeDial } from './TimeDial';
+import { TaskDirectory } from './TaskDirectory';
+import { DatePicker, TimePicker } from '../shared/DateTimePicker';
 import { dateInZone, nextDate } from './timeRange';
 export function ScheduleEditor({
   embedded = false,
-  hideMemo = false,
   initial,
   initialDate,
   onSaved,
   onCancel,
   onDelete,
+  completionControl,
+  taskContent,
+  mutationBusy = false,
   timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 }: {
+  completionControl?: React.ReactNode;
+  taskContent?: React.ReactNode;
+  mutationBusy?: boolean;
   embedded?: boolean;
-  hideMemo?: boolean;
   initial?: ScheduleDetail;
   initialDate?: string;
   onSaved?: () => void;
@@ -48,7 +60,6 @@ export function ScheduleEditor({
   const active = useEditorActive();
   const formId = useId();
   const mobile = useMobileLayout();
-  const taskCard = useRef<HTMLDivElement>(null);
   const [fields, setFields] = useState<ScheduleFields>(() =>
     initial
       ? {
@@ -68,8 +79,8 @@ export function ScheduleEditor({
           title: '',
           scheduled_date: initialDate || dateInZone(timeZone),
           end_date: initialDate || dateInZone(timeZone),
-          start_time: '09:00',
-          end_time: '10:00',
+          start_time: '',
+          end_time: '',
           time_zone: timeZone,
           notes: '',
           color: 'none',
@@ -81,44 +92,16 @@ export function ScheduleEditor({
   const [multiDay, setMultiDay] = useState(
     Boolean(initial && initial.end_date > initial.scheduled_date),
   );
-  const [work, setWork] = useState<{ id: string; name: string }>();
+  const draft = useScheduleTaskDraft();
+  const { work, tasks, customize, move } = draft;
   const [showWorks, setShowWorks] = useState(true);
-  const [showTasks, setShowTasks] = useState(false);
-  useEffect(() => {
-    if (mobile && showTasks) taskCard.current?.scrollIntoView?.({ block: 'nearest' });
-  }, [mobile, showTasks]);
-  const [tasks, setTasks] = useState<{ id: string; name: string }[]>([]);
-  const [customizations, setCustomizations] = useState<Record<string, TaskCustomization>>({});
-  function customize(id: string, changes: TaskCustomization) {
-    setCustomizations((current) => ({ ...current, [id]: { ...current[id], ...changes } }));
-  }
-  const [loading, setLoading] = useState(false);
-  const [defaultsError, setDefaultsError] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const generation = useRef(0);
-  async function choose(w: { id: string; name: string }) {
-    const token = ++generation.current;
-    setWork(w);
-    setShowTasks(false);
+  const [directory, setDirectory] = useState(false);
+  const [addedTask, setAddedTask] = useState(false);
+  function choose(w: { id: string; name: string }) {
     setShowWorks(false);
-    setTasks([]);
-    setCustomizations({});
-    setLoading(true);
-    setDefaultsError('');
-    try {
-      const t = w.id.startsWith('name:') ? [] : await getWorkTasks(w.id);
-      if (active.current && token === generation.current) setTasks(t.filter((x) => !x.archived));
-    } catch (e) {
-      if (active.current && token === generation.current) setDefaultsError(message(e));
-    } finally {
-      if (active.current && token === generation.current) setLoading(false);
-    }
-  }
-  function move(index: number, delta: number) {
-    const next = [...tasks];
-    [next[index], next[index + delta]] = [next[index + delta]!, next[index]!];
-    setTasks(next);
+    return draft.choose(w);
   }
   function toggleMulti(checked: boolean) {
     setMultiDay(checked);
@@ -126,14 +109,17 @@ export function ScheduleEditor({
     setFields((f) => ({
       ...f,
       end_date: checked ? nextDate(f.scheduled_date) : f.scheduled_date,
-      ...(!checked && f.end_time <= f.start_time ? { start_time: '09:00', end_time: '10:00' } : {}),
+      ...(!checked && f.end_time <= f.start_time ? { start_time: '', end_time: '' } : {}),
     }));
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy || mutationBusy) return;
     setError('');
     const endDate = multiDay ? fields.end_date : fields.scheduled_date;
     if (
+      !fields.start_time ||
+      !fields.end_time ||
       fields.end_time === '00:00' ||
       endDate < fields.scheduled_date ||
       (endDate === fields.scheduled_date && fields.end_time <= fields.start_time)
@@ -145,20 +131,16 @@ export function ScheduleEditor({
       setError('ScheduleEditor.forAMultiDayScheduleChooseAnEndDate');
       return;
     }
-    if (!initial && (!work || loading || defaultsError)) return;
-    if (
-      !initial &&
-      tasks.some((task) => !parametersValid(task.name, customizations[task.id]?.parameters ?? {}))
-    ) {
-      setError('ScheduleEditor.fillInTheTaskParametersTheCompletedNameCan');
+    if (!initial && !work?.name.trim()) return;
+    const draftError = initial ? '' : taskDraftError(tasks);
+    if (draftError) {
+      setError(draftError);
       return;
     }
     setBusy(true);
     try {
-      const createFields: Partial<ScheduleFields> = { ...fields };
-      if (hideMemo) delete createFields.notes;
       const values = {
-        ...createFields,
+        ...fields,
         title: initial?.entity_snapshot.name ?? work!.name,
         end_date: endDate,
         time_zone: initial?.time_zone ?? timeZone,
@@ -169,10 +151,7 @@ export function ScheduleEditor({
           : {
               ...values,
               entity_id: work!.id,
-              task_preset_ids: tasks.map((t) => t.id),
-              task_customizations: Object.fromEntries(
-                tasks.map((t) => [t.id, customizations[t.id] ?? {}]),
-              ),
+              ...taskDraftFields(tasks),
             },
         initial?.id,
       );
@@ -205,17 +184,24 @@ export function ScheduleEditor({
         </PageHeader>
       )}
       <form id={formId} onSubmit={(e) => void submit(e)}>
-        <fieldset disabled={busy} className="schedule-form">
+        <fieldset disabled={busy || mutationBusy} className="schedule-form">
           <div className="schedule-compose">
             <div className="schedule-work-selection">
+              <ScheduleColorPicker
+                value={fields.color ?? 'none'}
+                onChange={(color) => setFields({ ...fields, color })}
+              />
               <div className="schedule-panel-heading">
                 <h2>{tr('ScheduleEditor.work')}</h2>
               </div>
               {initial ? (
-                <p className="selected-work">{initial.entity_snapshot.name}</p>
+                <div className="selected-work schedule-work-title">
+                  {completionControl}
+                  <span>{initial.entity_snapshot.name}</span>
+                </div>
               ) : (
                 <>
-                  {work && (
+                  {work && !showWorks && (
                     <div className="selected-work memo-preview">
                       <strong>{work.name}</strong>
                       <Button
@@ -231,56 +217,24 @@ export function ScheduleEditor({
                       </Button>
                     </div>
                   )}
-                  {showWorks && <Picker allowCreate kind="work" onPick={(w) => void choose(w)} />}
+                  {showWorks && (
+                    <Picker
+                      allowCreate
+                      kind="work"
+                      initialName={work?.name}
+                      onNameChange={(w) => void draft.choose(w)}
+                      onPick={(w) => void choose(w)}
+                    />
+                  )}
                 </>
-              )}
-              {loading && <p role="status">{tr('ScheduleEditor.loadingDefaultTasks')}</p>}
-              {defaultsError && (
-                <ErrorBox
-                  error={defaultsError}
-                  retry={() => {
-                    if (work) void choose(work);
-                  }}
-                />
               )}
             </div>
 
             <section className="schedule-time-panel schedule-card-stage">
-              <div className={`schedule-flip-card${showTasks ? ' is-flipped' : ''}`}>
-                {!mobile && !initial && (
-                  <div
-                    className="schedule-card-face schedule-card-back"
-                    ref={taskCard}
-                    inert={!showTasks}
-                    aria-hidden={!showTasks}
-                  >
-                    <div className="schedule-panel-heading">
-                      <h2>{tr('ScheduleEditor.addTask')}</h2>
-                      <IconButton icon="close" type="button" onClick={() => setShowTasks(false)}>
-                        {mobile
-                          ? tr('ScheduleEditor.closeTaskSelection')
-                          : tr('ScheduleEditor.backToDial')}
-                      </IconButton>
-                    </div>
-                    <TaskGroupPicker
-                      selected={tasks.map((t) => t.id)}
-                      onPick={(t) =>
-                        setTasks((rows) =>
-                          rows.length >= 100 || rows.some((x) => x.id === t.id)
-                            ? rows
-                            : [...rows, t],
-                        )
-                      }
-                    />
-                  </div>
-                )}
-                <div
-                  className="schedule-card-face schedule-card-front"
-                  inert={showTasks && !mobile}
-                  aria-hidden={showTasks && !mobile}
-                >
+              <div>
+                <div>
                   <details className="schedule-time-disclosure" open={!mobile}>
-                    <summary>
+                    <DisclosureSummary>
                       <span>{tr('app.time')}</span>
                       <strong>
                         {fields.start_time} — {fields.end_time}
@@ -290,87 +244,54 @@ export function ScheduleEditor({
                           {fields.scheduled_date} → {fields.end_date}
                         </span>
                       )}
-                    </summary>
+                    </DisclosureSummary>
                     <div className="schedule-panel-heading">
                       <h2>{multiDay ? tr('ScheduleEditor.dateAndTime') : tr('app.time')}</h2>
                     </div>
                     {multiDay && (
-                      <label>
-                        {tr('ScheduleEditor.startDate')}
-                        <Input
-                          required
-                          type="date"
-                          min="0001-01-01"
-                          max="9999-12-31"
-                          value={fields.scheduled_date}
-                          onChange={(e) =>
-                            setFields({
-                              ...fields,
-                              scheduled_date: e.target.value,
-                              end_date: multiDay ? fields.end_date : e.target.value,
-                            })
-                          }
-                        />
-                      </label>
+                      <DatePicker
+                        label={tr('ScheduleEditor.startDate')}
+                        value={fields.scheduled_date}
+                        onChange={(date) =>
+                          setFields({
+                            ...fields,
+                            scheduled_date: date,
+                            end_date: multiDay ? fields.end_date : date,
+                          })
+                        }
+                      />
                     )}
 
-                    <TimeDial
-                      independentEndpoints={multiDay}
-                      daySpan={
-                        multiDay
-                          ? Math.max(
-                              0,
-                              (Date.parse(fields.end_date) - Date.parse(fields.scheduled_date)) /
-                                86400000,
-                            ) || 0
-                          : 0
-                      }
-                      start={fields.start_time}
-                      end={fields.end_time}
-                      disabled={busy}
-                      onChange={(range) =>
-                        setFields({ ...fields, start_time: range.start, end_time: range.end })
-                      }
-                    />
+                    {!multiDay && (
+                      <TimeDial
+                        start={fields.start_time}
+                        end={fields.end_time}
+                        disabled={busy}
+                        onChange={(range) =>
+                          setFields({ ...fields, start_time: range.start, end_time: range.end })
+                        }
+                      />
+                    )}
                     {multiDay && (
                       <div className="manual-time-range">
-                        <label>
-                          {tr('ScheduleEditor.endDate')}
-                          <Input
-                            required
-                            type="date"
-                            min={fields.scheduled_date}
-                            max="9999-12-31"
-                            value={fields.end_date}
-                            onChange={(e) => setFields({ ...fields, end_date: e.target.value })}
-                          />
-                        </label>
+                        <DatePicker
+                          label={tr('ScheduleEditor.endDate')}
+                          value={fields.end_date}
+                          onChange={(date) => setFields({ ...fields, end_date: date })}
+                        />
                         <div className="schedule-times">
-                          <label>
-                            {tr('ScheduleEditor.startTime')}
-                            <Input
-                              required
-                              type="time"
-                              step={60}
-                              value={fields.start_time}
-                              onChange={(e) => setFields({ ...fields, start_time: e.target.value })}
-                            />
-                          </label>
-                          <label>
-                            {tr('ScheduleEditor.endTime')}
-                            <Input
-                              min="00:01"
-                              required
-                              type="time"
-                              step={60}
-                              value={fields.end_time}
-                              onChange={(e) => setFields({ ...fields, end_time: e.target.value })}
-                            />
-                          </label>
+                          <TimePicker
+                            label={tr('ScheduleEditor.startTime')}
+                            value={fields.start_time}
+                            onChange={(time) => setFields({ ...fields, start_time: time })}
+                          />
+                          <TimePicker
+                            label={tr('ScheduleEditor.endTime')}
+                            min="00:01"
+                            value={fields.end_time}
+                            onChange={(time) => setFields({ ...fields, end_time: time })}
+                          />
                         </div>
-                        <p className="hint">
-                          {tr('ScheduleEditor.setTheStartAndEndDatesAndTimesTimes')}
-                        </p>
                       </div>
                     )}
                     <label className="multi-day-toggle">
@@ -386,134 +307,113 @@ export function ScheduleEditor({
               </div>
             </section>
             <section className="schedule-content-panel">
-              {!initial && work && !loading && !defaultsError && (
+              {taskContent}
+              {!initial && (
                 <div className="schedule-tasks">
-                  <h3>
-                    {tr('ScheduleEditor.includedTasks')}
-                    <span>{tasks.length}</span>
-                  </h3>
+                  {(addedTask || tasks.length > 0) && (
+                    <IconButton icon="presets" onClick={() => setDirectory(true)}>
+                      {tr('TaskDirectory.title')}
+                    </IconButton>
+                  )}
                   <ol className="work-task-list">
                     {tasks.map((t, i) => (
-                      <li key={t.id} className="compose-task memo-preview">
-                        <Button
-                          variant="danger"
-                          type="button"
-                          className="schedule-todo-remove"
-                          aria-label={tr('ScheduleEditor.removeValue', { v1: t.name })}
-                          title={tr('ScheduleEditor.clickToRemove')}
-                          onClick={() => setTasks((rows) => rows.filter((x) => x.id !== t.id))}
-                        >
-                          <span>
-                            {renderTaskName(t.name, customizations[t.id]?.parameters ?? {})}
-                          </span>
-                          <ActionIcon name="close" />
-                        </Button>
-                        <div className="work-task-actions">
-                          <MemoButton
-                            label={t.name}
-                            value={customizations[t.id]?.execution_notes ?? ''}
-                            onSave={async (execution_notes) => customize(t.id, { execution_notes })}
+                      <li key={t.rowKey} className="compose-task memo-preview">
+                        <div className="schedule-task-row">
+                          <Input
+                            type="checkbox"
+                            className="task-check"
+                            checked={false}
+                            disabled
+                            aria-label={tr('SavedScheduleCard.completeValue', { v1: t.name })}
+                          />
+                          <TaskNameInput
+                            value={t.name}
+                            autoFocus={t.source === 'manual'}
+                            onChange={(choice) => draft.rename(t.rowKey, choice)}
                           />
                           <Button
-                            iconOnly
                             variant="ghost"
-                            type="button"
-                            aria-label={tr('ScheduleEditor.moveValueUp', { v1: t.name })}
-                            disabled={!i}
-                            onClick={() => move(i, -1)}
+                            aria-label={tr('ScheduleEditor.removeValue', { v1: t.name })}
+                            onClick={() => draft.remove(t.rowKey)}
                           >
-                            <ActionIcon name="up" />
-                          </Button>
-                          <Button
-                            iconOnly
-                            variant="ghost"
-                            type="button"
-                            aria-label={tr('ScheduleEditor.moveValueDown', { v1: t.name })}
-                            disabled={i === tasks.length - 1}
-                            onClick={() => move(i, 1)}
-                          >
-                            <ActionIcon name="down" />
+                            <ActionIcon name="close" />
                           </Button>
                         </div>
+                        {t.name.trim() && (
+                          <>
+                            <div className="work-task-actions">
+                              <MemoButton
+                                label={t.name}
+                                value={t.execution_notes ?? ''}
+                                onSave={async (execution_notes) =>
+                                  customize(t.rowKey, { execution_notes })
+                                }
+                              />
+                              <Button
+                                iconOnly
+                                variant="ghost"
+                                type="button"
+                                aria-label={tr('ScheduleEditor.moveValueUp', { v1: t.name })}
+                                disabled={!i}
+                                onClick={() => move(i, -1)}
+                              >
+                                <ActionIcon name="up" />
+                              </Button>
+                              <Button
+                                iconOnly
+                                variant="ghost"
+                                type="button"
+                                aria-label={tr('ScheduleEditor.moveValueDown', { v1: t.name })}
+                                disabled={i === tasks.length - 1}
+                                onClick={() => move(i, 1)}
+                              >
+                                <ActionIcon name="down" />
+                              </Button>
+                            </div>
+                          </>
+                        )}
                         <TaskParameterInputs
                           template={t.name}
-                          values={customizations[t.id]?.parameters ?? parameterDefaults(t.name)}
-                          onChange={(parameters) => customize(t.id, { parameters })}
+                          values={t.parameters ?? parameterDefaults(t.name)}
+                          onChange={(parameters) => customize(t.rowKey, { parameters })}
                         />
                       </li>
                     ))}
                   </ol>
                   <Button
-                    type="button"
+                    variant="ghost"
                     className="schedule-task-toggle"
-                    aria-expanded={showTasks}
-                    onClick={() => setShowTasks(!showTasks)}
+                    disabled={tasks.length >= 100}
+                    onClick={() => {
+                      setAddedTask(true);
+                      draft.add();
+                    }}
                   >
-                    <ActionIcon name={showTasks ? 'close' : 'plus'} />
-                    {tr('ScheduleEditor.addTask')}
+                    {tr('ScheduleTasks.addRow')}
                   </Button>
-                  {mobile && showTasks && (
-                    <div
-                      className="schedule-time-panel mobile-task-selection"
-                      ref={taskCard}
-                      inert={!showTasks}
-                      aria-hidden={!showTasks}
-                    >
-                      <div className="schedule-panel-heading">
-                        <h2>{tr('ScheduleEditor.addTask')}</h2>
-                        <IconButton icon="close" type="button" onClick={() => setShowTasks(false)}>
-                          {mobile
-                            ? tr('ScheduleEditor.closeTaskSelection')
-                            : tr('ScheduleEditor.backToDial')}
-                        </IconButton>
-                      </div>
-                      <TaskGroupPicker
-                        selected={tasks.map((t) => t.id)}
-                        onPick={(t) =>
-                          setTasks((rows) =>
-                            rows.length >= 100 || rows.some((x) => x.id === t.id)
-                              ? rows
-                              : [...rows, t],
-                          )
-                        }
-                      />
-                    </div>
-                  )}
                 </div>
               )}
               <ReminderSettings
+                disabled={busy}
                 value={fields}
                 onChange={(reminder) => setFields({ ...fields, ...reminder })}
               />
-              <ScheduleColorPicker
-                value={fields.color ?? 'none'}
-                onChange={(color) => setFields({ ...fields, color })}
-              />
-              {!hideMemo && (
-                <div className="schedule-notes">
-                  <label>
-                    {tr('ScheduleEditor.scheduleMemo')}
-                    <Textarea
-                      rows={3}
-                      maxLength={5000}
-                      value={fields.notes}
-                      onChange={(e) => setFields({ ...fields, notes: e.target.value })}
-                    />
-                  </label>
-                </div>
-              )}
+              <div className="schedule-notes">
+                <label>
+                  {tr('ScheduleEditor.scheduleMemo')}
+                  <AutoTextarea
+                    rows={3}
+                    maxLength={5000}
+                    value={fields.notes}
+                    onChange={(e) => setFields({ ...fields, notes: e.target.value })}
+                  />
+                </label>
+              </div>
             </section>
           </div>
           {error && <ErrorBox error={error} />}
           <ModalActions>
             <div className="schedule-save">
-              {initial && onDelete && (
-                <DeleteButton
-                  label={initial.entity_snapshot.name}
-                  onDelete={onDelete}
-                  disabled={busy}
-                />
-              )}
               <span>
                 {multiDay
                   ? `${fields.scheduled_date} → ${fields.end_date}`
@@ -524,33 +424,38 @@ export function ScheduleEditor({
                   {fields.start_time} — {fields.end_time}
                 </strong>
               </span>
-              {onCancel && !embedded && (
-                <Button
-                  iconOnly
+              {initial && onDelete && (
+                <DeleteButton
                   variant="ghost"
-                  type="button"
-                  onClick={onCancel}
-                  aria-label={tr('Photos.cancel')}
-                  title={tr('Photos.cancel')}
-                >
-                  <ActionIcon name="close" />
-                </Button>
+                  label={initial.entity_snapshot.name}
+                  onDelete={onDelete}
+                  disabled={busy}
+                />
               )}
+
               <Button
-                variant="primary"
+                variant="ghost"
                 aria-busy={busy || undefined}
 
-                disabled={busy || (!initial && (!work || loading || Boolean(defaultsError)))}
+                disabled={busy || mutationBusy || (!initial && !work?.name.trim())}
                 form={formId}
                 type="submit"
               >
                 <ActionIcon name="save" />
-                {busy ? tr('Photos.saving') : tr('ScheduleEditor.saveSchedule')}
+                {tr('ScheduleEditor.saveSchedule')}
               </Button>
             </div>
           </ModalActions>
         </fieldset>
       </form>
+      {directory && (
+        <TaskDirectory
+          existing={tasks}
+          capacity={100 - tasks.length}
+          onAdd={draft.addMany}
+          onClose={() => setDirectory(false)}
+        />
+      )}
     </section>
   );
 }

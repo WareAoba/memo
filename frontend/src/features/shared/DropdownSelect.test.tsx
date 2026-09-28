@@ -59,3 +59,16 @@ it('selects by pointer, dismisses outside and respects disabled state', () => {
   fireEvent.click(select);
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 });
+
+it('closes on repeated trigger clicks without committing a value', () => {
+  const onChange = vi.fn();
+  render(<DropdownSelect label="Zone" value="Asia/Seoul" options={options} onChange={onChange} />);
+  const select = screen.getByRole('combobox');
+  for (let i = 0; i < 3; i++) {
+    fireEvent.click(select);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    fireEvent.click(select);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  }
+  expect(onChange).not.toHaveBeenCalled();
+});

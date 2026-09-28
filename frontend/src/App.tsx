@@ -1,4 +1,5 @@
 import { Settings } from './features/settings/Settings';
+import { StickyWorkspace } from './features/sticky/StickyWorkspace';
 import { AccountBoundary } from './features/auth/AccountBoundary';
 import type { Account } from './api/auth';
 import { SettingsProvider } from './features/settings/SettingsProvider';
@@ -11,137 +12,134 @@ import { Button, ButtonLink, Surface } from './features/shared/ui';
 import { PresetModal } from './features/shared/PresetModal';
 import { Sidebar } from './features/workspace/Sidebar';
 import { Today } from './features/workspace/Today';
-import { ScheduleEditor, ScheduleView } from './features/schedules/Schedules';
+import { ScheduleModal } from './features/schedules/Schedules';
 import { ErrorBox } from './features/shared/ErrorBox';
-import {
-  TaskPresetDetail,
-  TaskPresetEditor,
-  TaskPresetListView,
-} from './features/tasks/TaskPresets';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { TaskPresetDetail, TaskPresetEditor } from './features/tasks/TaskPresets';
+import { useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from 'react';
+import { parseWorkspaceRoute, workspaceRouteReducer } from './features/workspace/workspaceRoute';
 import { emptyFields } from './api/works';
-import { WorkDetail, WorkEditor, WorkListView } from './features/works/Works';
-import { Calendar, type CalendarMode } from './features/workspace/Calendar';
+import { WorkDetail, WorkEditor } from './features/works/Works';
+import { PresetWorkspace } from './features/workspace/PresetWorkspace';
+import {
+  Calendar,
+  type CalendarMode,
+  type CalendarNavigation,
+} from './features/workspace/Calendar';
 import { useToday } from './features/workspace/useToday';
+import { TrackBoundary } from './features/workspace/TrackBoundary';
+import { useTracks, type TrackControls } from './features/workspace/trackContext';
+import { trackFromHash } from './features/workspace/workspaceRoute';
+import { TrackSelector } from './features/workspace/TrackSelector';
 
-function route() {
-  const hash = window.location.hash.slice(1);
-  if (hash === '/schedules' || hash === '/schedules/') return '/calendar';
-  if (hash === '/presets') return '/presets/works';
-  return hash.replace(/^\/entities(?=\/|$)/, '/presets/works') || '/today';
-}
-type EditTarget = { kind: 'schedules' | 'works' | 'tasks'; id: string };
-function editTarget(path: string): EditTarget | null {
-  const match = /^\/(schedules|presets\/(works|tasks))\/([^/?]+)(?:\/edit)?$/.exec(path);
-  if (!match || match[3] === 'new') return null;
-  return { kind: (match[2] || match[1]) as EditTarget['kind'], id: match[3]! };
-}
-function backgroundRoute(path: string) {
-  const target = editTarget(path);
-  if (target) return target.kind === 'schedules' ? '/today' : '/presets/' + target.kind;
-  return path.split('?')[0] === '/schedules/new'
-    ? '/calendar'
-    : path.replace(/^(\/presets\/(works|tasks))\/new$/, '$1');
-}
 export default function App() {
   return (
     <AccountBoundary>
       {(account) => (
         <SettingsProvider key={account.id}>
-          <Workspace account={account} />
+          <Reminders accountId={account.id}>
+            {(notificationMenu) => (
+              <TrackBoundary accountId={account.id}>
+                <TrackWorkspace account={account} notificationMenu={notificationMenu} />
+              </TrackBoundary>
+            )}
+          </Reminders>
         </SettingsProvider>
       )}
     </AccountBoundary>
   );
 }
-function Workspace({ account }: { account: Account }) {
+function TrackWorkspace({
+  account,
+  notificationMenu,
+}: {
+  account: Account;
+  notificationMenu: ReactNode;
+}) {
+  const tracks = useTracks();
+  return (
+    <Workspace
+      key={tracks.track.id}
+      account={account}
+      tracks={tracks}
+      notificationMenu={notificationMenu}
+    />
+  );
+}
+function Workspace({
+  account,
+  tracks,
+  notificationMenu,
+}: {
+  account: Account;
+  tracks: TrackControls;
+  notificationMenu: ReactNode;
+}) {
   useTranslation();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const touched = useRef(false);
+  useEffect(() => {
+    const beforeSwitch = (event: Event) => {
+      if (touched.current && !window.confirm(tr('Tracks.discard'))) event.preventDefault();
+    };
+    window.addEventListener('track-before-switch', beforeSwitch);
+    return () => window.removeEventListener('track-before-switch', beforeSwitch);
+  }, []);
+  const [navigation, dispatch] = useReducer(
+    workspaceRouteReducer,
+    window.location.hash,
+    parseWorkspaceRoute,
+  );
+  const { page: path, overlay } = navigation;
+  const settingsOpen = overlay?.kind === 'settings';
+  const editor = overlay?.kind === 'edit' ? overlay.target : null;
+  const scheduleDraft = overlay?.kind === 'schedule' ? overlay : null;
+  const presetDraft = overlay?.kind === 'preset' ? overlay.preset : null;
+  function closeOverlay() {
+    dispatch({ type: 'close' });
+    if (parseWorkspaceRoute(window.location.hash).overlay)
+      window.history.replaceState(null, '', '#' + path);
+  }
   const settings = useSettings();
   const [dataRevision, setDataRevision] = useState(0);
-  const [path, setPath] = useState(() => backgroundRoute(route()));
   const main = useRef<HTMLElement>(null);
   useLayoutEffect(() => {
     if (main.current) main.current.scrollTop = 0;
   }, [path, dataRevision]);
-  const [editor, setEditor] = useState<EditTarget | null>(() => editTarget(route()));
+  const [scheduleRevision, setScheduleRevision] = useState(0);
+  const [presetRevision, setPresetRevision] = useState(0);
+  const closePreset = closeOverlay;
+  const closeSchedule = closeOverlay;
   function closeEditor() {
-    setEditor(null);
+    closeOverlay();
     setScheduleRevision((v) => v + 1);
     setPresetRevision((v) => v + 1);
-    if (editTarget(route())) window.history.replaceState(null, '', '#' + path);
-  }
-  const [scheduleDraft, setScheduleDraft] = useState<{ date?: string } | null>(() =>
-    route().split('?')[0] === '/schedules/new'
-      ? { date: new URLSearchParams(route().split('?')[1]).get('date') || undefined }
-      : null,
-  );
-  const [scheduleRevision, setScheduleRevision] = useState(0);
-  const [presetDraft, setPresetDraft] = useState<'works' | 'tasks' | null>(() =>
-    route() === '/presets/works/new' ? 'works' : route() === '/presets/tasks/new' ? 'tasks' : null,
-  );
-  const [presetRevision, setPresetRevision] = useState(0);
-  function closePreset() {
-    setPresetDraft(null);
-    if (/^\/presets\/(works|tasks)\/new$/.test(route()))
-      window.history.replaceState(null, '', '#' + path);
   }
   function savedPreset() {
-    closePreset();
+    closeOverlay();
     setPresetRevision((v) => v + 1);
-  }
-
-  function closeSchedule() {
-    setScheduleDraft(null);
-    if (route().split('?')[0] === '/schedules/new')
-      window.history.replaceState(null, '', '#' + path);
   }
 
   const [menuExpanded, setMenuExpanded] = useState(false);
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month');
+  const calendarNavigation = useRef<CalendarNavigation>(null);
   const [calendarDate, setCalendarDate] = useState<string>();
   const [online, setOnline] = useState(navigator.onLine);
   const timeZone = settings.loaded ? settings.values.time_zone : undefined;
   const today = useToday(timeZone);
   useEffect(() => {
     const change = () => {
-      const next = route();
-      const target = editTarget(next);
-      setEditor(target);
-      if (target) {
-        setSettingsOpen(false);
-        setPresetDraft(null);
-        setScheduleDraft(null);
-        return;
-      }
-      setSettingsOpen(false);
-      if (next === '/presets/works/new' || next === '/presets/tasks/new') {
-        setPresetDraft(next === '/presets/works/new' ? 'works' : 'tasks');
-        setScheduleDraft(null);
-        return;
-      }
-      setPresetDraft(null);
-      if (next.split('?')[0] === '/schedules/new') {
-        setScheduleDraft({
-          date: new URLSearchParams(next.split('?')[1]).get('date') || undefined,
-        });
-        return;
-      }
-      setScheduleDraft(null);
-      setPath(next);
+      const track = trackFromHash(window.location.hash);
+      if (!track || track === tracks.track.id)
+        dispatch({ type: 'navigate', hash: window.location.hash });
     };
     const status = () => setOnline(navigator.onLine);
     window.addEventListener('hashchange', change);
     window.addEventListener('online', status);
     window.addEventListener('offline', status);
     const reset = () => {
-      setEditor(null);
+      dispatch({ type: 'reset' });
       setDataRevision((v) => v + 1);
       setScheduleRevision((v) => v + 1);
       setPresetRevision((v) => v + 1);
-      setPresetDraft(null);
-      setScheduleDraft(null);
-      setPath('/today');
       window.history.replaceState(null, '', '#/today');
     };
     window.addEventListener('data-reset', reset);
@@ -151,9 +149,17 @@ function Workspace({ account }: { account: Account }) {
       window.removeEventListener('online', status);
       window.removeEventListener('offline', status);
     };
-  }, []);
+  }, [tracks.track.id]);
   return (
     <div
+      onChangeCapture={(event) => {
+        const target = event.target as HTMLElement;
+        if (
+          !target.closest('#track-form') &&
+          !(target instanceof HTMLInputElement && target.type === 'search')
+        )
+          touched.current = true;
+      }}
       onClickCapture={(event) => {
         if (
           event.defaultPrevented ||
@@ -168,27 +174,20 @@ function Workspace({ account }: { account: Account }) {
         if (!link || link.target === '_blank' || link.getAttribute('aria-disabled') === 'true')
           return;
         const href = link.getAttribute('href') || '';
-        if (href.startsWith('#/')) setSettingsOpen(false);
-        const target = editTarget(href.slice(1).replace(/^\/entities(?=\/|$)/, '/presets/works'));
-        if (target) {
+        if (!href.startsWith('#/')) return;
+        const nextTrack = trackFromHash(href);
+        if (nextTrack && nextTrack !== tracks.track.id) {
           event.preventDefault();
-          setEditor(target);
+          void tracks.select(nextTrack, href);
           return;
         }
-        if (href === '#/presets/works/new' || href === '#/presets/tasks/new') {
-          event.preventDefault();
-          setPresetDraft(href === '#/presets/works/new' ? 'works' : 'tasks');
-          return;
-        }
-        if (href.split('?')[0] !== '#/schedules/new') return;
         event.preventDefault();
-        setScheduleDraft({
-          date: new URLSearchParams(href.split('?')[1]).get('date') || undefined,
-        });
+        if (!parseWorkspaceRoute(href).overlay && window.location.hash !== href)
+          window.history.pushState(null, '', href);
+        dispatch({ type: 'navigate', hash: href });
       }}
       className={`app-shell ${settingsOpen ? 'settings-open' : ''} ${menuExpanded ? 'menu-expanded' : ''} ${path === '/calendar' ? 'calendar-shell' : path === '/today' ? 'today-shell' : ''}`}
     >
-      {timeZone && <Reminders />}
       <header className="site-header">
         <div className="header-brand-group">
           <div className="menu-button-slot">
@@ -211,6 +210,7 @@ function Workspace({ account }: { account: Account }) {
             </span>
             Preset
           </a>
+          <TrackSelector {...tracks} />
         </div>
         {!settingsOpen && (
           <ButtonLink
@@ -228,12 +228,13 @@ function Workspace({ account }: { account: Account }) {
             {tr('App.addSchedule')}
           </ButtonLink>
         )}
+        <div className="header-notifications">{notificationMenu}</div>
       </header>
       <Sidebar
         account={account}
         settingsOpen={settingsOpen}
         onSettings={() => {
-          setSettingsOpen(true);
+          dispatch({ type: 'settings' });
           setMenuExpanded(false);
         }}
         expanded={menuExpanded}
@@ -241,7 +242,11 @@ function Workspace({ account }: { account: Account }) {
         path={path}
         today={today}
         calendarMode={calendarMode}
-        onCalendarMode={setCalendarMode}
+        onCalendarMode={(mode) => {
+          if (calendarNavigation.current && !settingsOpen)
+            calendarNavigation.current.changeMode(mode);
+          else setCalendarMode(mode);
+        }}
       />
       <main ref={main} hidden={settingsOpen}>
         {!online && (
@@ -250,12 +255,16 @@ function Workspace({ account }: { account: Account }) {
           </Surface>
         )}
         {settings.error && <ErrorBox error={settings.error} retry={settings.retry} />}
-        <div key={`${path}:${dataRevision}`} className="route-content">
+        <div
+          key={`${path.startsWith('/presets/') ? '/presets' : path}:${dataRevision}`}
+          className="route-content"
+        >
           {path === '/today' ? (
             <Today revision={scheduleRevision} today={today} timeZone={timeZone} />
           ) : path === '/calendar' ? (
             timeZone ? (
               <Calendar
+                navigationRef={calendarNavigation}
                 revision={scheduleRevision}
                 today={today}
                 mode={calendarMode}
@@ -265,41 +274,47 @@ function Workspace({ account }: { account: Account }) {
             ) : (
               <p role="status">{tr('App.loadingAppSettings')}</p>
             )
-          ) : path === '/presets/tasks' ? (
-            <TaskPresetListView revision={presetRevision} />
-          ) : path === '/presets/works' ? (
-            <WorkListView revision={presetRevision} />
+          ) : path === '/presets/tasks' || path === '/presets/works' ? (
+            <PresetWorkspace
+              kind={path === '/presets/tasks' ? 'tasks' : 'works'}
+              revision={presetRevision}
+            />
           ) : (
             <ErrorBox error={tr('App.pageNotFound')} />
           )}
         </div>
       </main>
+      <StickyWorkspace
+        accountId={account.id}
+        trackId={tracks.track.id}
+        defaultTrack={tracks.track.id === tracks.tracks.default_id}
+        main={main}
+        hidden={settingsOpen}
+        today={today}
+      />
       {settingsOpen && (
         <main className="settings-main">
           <Settings
+            trackName={tracks.track.name}
             onClose={() => {
-              setSettingsOpen(false);
+              dispatch({ type: 'close' });
               requestAnimationFrame(() => document.getElementById('account-menu-trigger')?.focus());
             }}
           />
         </main>
       )}
-      {editor && (
+      {editor?.kind === 'schedules' && (
+        <ScheduleModal key={editor.id} id={editor.id} onClose={closeEditor} onSaved={closeEditor} />
+      )}
+      {editor && editor.kind !== 'schedules' && (
         <PresetModal
           key={editor.kind + editor.id}
           label={
-            editor.kind === 'schedules'
-              ? tr('ScheduleEditor.editSchedule')
-              : editor.kind === 'works'
-                ? tr('WorkDetail.editWork')
-                : tr('TaskPresetDetail.editTask')
+            editor.kind === 'works' ? tr('WorkDetail.editWork') : tr('TaskPresetDetail.editTask')
           }
-          variant={editor.kind === 'schedules' ? 'schedule' : 'detail'}
           onClose={closeEditor}
         >
-          {editor.kind === 'schedules' ? (
-            <ScheduleView id={editor.id} edit modal onClose={closeEditor} />
-          ) : editor.kind === 'works' ? (
+          {editor.kind === 'works' ? (
             <WorkDetail id={editor.id} edit modal />
           ) : (
             <TaskPresetDetail id={editor.id} edit modal />
@@ -325,27 +340,15 @@ function Workspace({ account }: { account: Account }) {
         </PresetModal>
       )}
       {scheduleDraft && (
-        <PresetModal
-          label={tr('App.addSchedule')}
-          variant="schedule"
-          closeLabel={tr('App.closeNewSchedule')}
+        <ScheduleModal
+          initialDate={scheduleDraft.date}
+          timeZone={timeZone}
           onClose={closeSchedule}
-        >
-          {timeZone ? (
-            <ScheduleEditor
-              embedded
-              timeZone={timeZone}
-              initialDate={scheduleDraft.date}
-              onCancel={closeSchedule}
-              onSaved={() => {
-                closeSchedule();
-                setScheduleRevision((v) => v + 1);
-              }}
-            />
-          ) : (
-            <p role="status">{tr('App.loadingAppSettings')}</p>
-          )}
-        </PresetModal>
+          onSaved={() => {
+            closeSchedule();
+            setScheduleRevision((v) => v + 1);
+          }}
+        />
       )}
     </div>
   );

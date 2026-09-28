@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { WorkDetail } from './WorkDetail';
 import { emptyFields, getWork, saveWork } from '../../api/works';
@@ -8,7 +8,6 @@ vi.mock('../../api/works', async (original) => ({
   getWork: vi.fn(),
   saveWork: vi.fn(),
 }));
-vi.mock('./WorkTasks', () => ({ WorkTasks: () => null }));
 afterEach(() => {
   vi.resetAllMocks();
   vi.unstubAllGlobals();
@@ -34,10 +33,16 @@ it('edits the work memo from mobile detail and keeps all other preset fields', a
   render(<WorkDetail id="work" edit={false} modal />);
   fireEvent.change(await screen.findByLabelText('워크 메모'), { target: { value: '새 메모' } });
   fireEvent.blur(screen.getByLabelText('워크 메모'));
-  expect(await screen.findByText('메모를 저장했습니다.')).toBeVisible();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(saveWork).toHaveBeenCalledWith({ general_notes: '새 메모' }, 'work');
   expect(screen.getByLabelText('워크 메모')).toHaveValue('새 메모');
   expect(screen.getByLabelText('워크 이름 *')).toHaveValue('영어 학습');
-  expect(screen.getByText('학습')).toBeVisible();
+  expect(screen.getByLabelText('태그')).toHaveValue('학습');
+  expect(screen.queryByText('학습')).not.toBeInTheDocument();
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

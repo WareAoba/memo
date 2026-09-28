@@ -58,28 +58,6 @@
   .app-shell {
     margin: auto;
   }
-  .site-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-4);
-    border-bottom: 0;
-  }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 750;
-    text-decoration: none;
-    min-height: 44px;
-  }
-  .brand-mark {
-    display: grid;
-    place-items: center;
-    width: 34px;
-    height: 34px;
-    color: var(--surface);
-  }
   .environment-label {
     font-size: 12px;
     color: var(--muted);
@@ -345,9 +323,6 @@
   @media (max-width: 650px) {
     .app-shell {
       padding: 0 18px;
-    }
-    .site-header {
-      min-height: 76px;
     }
     .environment-label {
       max-width: 110px;

@@ -34,10 +34,6 @@ pub async fn patch(
     let Json(value) = body.map_err(|_| ApiError::InvalidInput)?;
     service::patch(&state.pool, &id, value).await.map(Json)
 }
-pub async fn archive(State(state): State<AppState>, Path(id): Path<String>) -> Result<StatusCode> {
-    service::archive(&state.pool, &id).await?;
-    Ok(StatusCode::NO_CONTENT)
-}
 pub async fn list(
     State(state): State<AppState>,
     query: std::result::Result<Query<ListQuery>, QueryRejection>,

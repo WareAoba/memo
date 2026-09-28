@@ -81,16 +81,6 @@
   .workspace-list-tools select {
     width: 100%;
   }
-  .workspace-navigation-row .settings-tabs {
-    flex-direction: row;
-    overflow: visible;
-    gap: var(--space-2);
-    padding: 0;
-  }
-  .workspace-navigation-row .settings-tabs > button {
-    width: auto;
-    white-space: nowrap;
-  }
   @media (max-width: 700px) {
     .workspace-title-row {
       gap: var(--space-2);
@@ -108,13 +98,5 @@
 @layer features {
   .app-shell > main {
     scrollbar-gutter: stable;
-  }
-  .settings-workspace .settings-body {
-    display: flex;
-    flex-direction: column;
-  }
-  .settings-workspace .settings-panel {
-    flex: 1;
-    padding: 0;
   }
 }

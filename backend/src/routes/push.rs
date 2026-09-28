@@ -15,8 +15,12 @@ pub async fn config(
     State(state): State<AppState>,
     Query(query): Query<ConfigQuery>,
 ) -> push::Result<Json<Value>> {
-    let subscribed: bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM push_subscriptions WHERE user_id=? AND installation_id=? AND enabled=1)")
-        .bind(current_user_id()).bind(query.installation_id).fetch_one(&state.pool).await.map_err(|_|ApiError::DatabaseUnavailable)?;
+    let subscribed = push::is_subscribed(
+        &state.pool,
+        &current_user_id(),
+        query.installation_id.as_deref(),
+    )
+    .await?;
     Ok(Json(
         json!({"enabled":state.push.is_some(),"public_key":state.push.as_ref().map(|p| &p.public_key),"subscribed":subscribed}),
     ))

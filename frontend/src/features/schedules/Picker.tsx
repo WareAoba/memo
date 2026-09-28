@@ -44,14 +44,18 @@ export function Picker({
   onPick,
   disabled = false,
   allowCreate = false,
+  onNameChange,
+  initialName = '',
 }: {
   kind: 'work' | 'task';
   onPick: (v: Choice) => void;
   disabled?: boolean;
   allowCreate?: boolean;
+  onNameChange?: (v: Choice) => void;
+  initialName?: string;
 }) {
   useTranslation();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(initialName);
   const [offset, setOffset] = useState(0);
   const [page, setPage] = useState<Page<Choice>>();
   const [error, setError] = useState('');
@@ -60,7 +64,7 @@ export function Picker({
   function selectTypedName() {
     if (!q.trim()) return;
     onPick({ id: 'name:' + q.trim(), name: q.trim() });
-    search('', 0);
+    if (!onNameChange) search('', 0);
   }
   useEffect(() => {
     if (!searching) return;
@@ -118,14 +122,16 @@ export function Picker({
             }
           }}
           value={q}
-          onChange={(e) => search(e.target.value, 0)}
+          onChange={(e) => {
+            search(e.target.value, 0);
+            if (allowCreate)
+              onNameChange?.({ id: 'name:' + e.target.value.trim(), name: e.target.value });
+          }}
+          onBlur={() => {
+            if (allowCreate && !onNameChange && q.trim()) selectTypedName();
+          }}
         />
       </label>
-      {allowCreate && q.trim() && (
-        <Button variant="option" onClick={selectTypedName}>
-          {tr('Unmanaged.useName', { name: q.trim() })}
-        </Button>
-      )}
       {error && (
         <ErrorBox
           error={error}
@@ -138,32 +144,31 @@ export function Picker({
       {!searching && !allowCreate && (
         <p className="hint">{tr('Picker.enterASearchTermToFindAWork')}</p>
       )}
-      {searching && !page && !error && <p role="status">{tr('Picker.searching')}</p>}
       {searching && page && (
         <>
           {allowCreate && page.items.length > 0 && <p className="hint">{tr('Picker.presets')}</p>}
           <ul className="work-task-list">
-            {page.items.map((v) => (
-              <li key={v.id} className="picker-result memo-preview">
-                <Button
-                  variant="option"
-                  className="picker-choice"
-                  type="button"
-                  onClick={() => onPick(v)}
-                  aria-label={tr('Picker.selectValue', { v1: v.name })}
-                >
-                  <span>
-                    <strong>{v.name}</strong>
-                    {(kind === 'work' ? matchHint(v, q) || v.general_notes : v.default_notes) && (
-                      <small className="picker-match">
-                        {kind === 'work' ? matchHint(v, q) || v.general_notes : v.default_notes}
-                      </small>
-                    )}
-                  </span>
-                  <ActionIcon name={kind === 'work' ? 'right' : 'plus'} />
-                </Button>
-              </li>
-            ))}
+            {page.items.map((v) => {
+              const hint = kind === 'work' ? matchHint(v, q) || v.general_notes : v.default_notes;
+              return (
+                <li key={v.id} className="picker-result memo-preview">
+                  <Button
+                    variant="option"
+                    className="picker-choice"
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => onPick(v)}
+                    aria-label={tr('Picker.selectValue', { v1: v.name })}
+                  >
+                    <span>
+                      <strong>{v.name}</strong>
+                      {hint && <small className="picker-match">{hint}</small>}
+                    </span>
+                    <ActionIcon name={kind === 'work' ? 'right' : 'plus'} />
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
           {!page.total && !allowCreate && (
             <p>{tr('Picker.noResultsCreateAPresetFirstInPresetSettings')}</p>

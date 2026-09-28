@@ -1,15 +1,10 @@
 import { tr } from '../../i18n';
 import type { ScheduleDetail } from '../../api/schedules';
-import { dateInZone } from '../schedules/timeRange';
+import { dateInZone, timeInZone } from '../schedules/timeRange';
 
 export function scheduleAppearance(item: ScheduleDetail, now: Date) {
   const date = dateInZone(item.time_zone, now);
-  const time = now.toLocaleTimeString('en-GB', {
-    timeZone: item.time_zone,
-    hourCycle: 'h23',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  const time = timeInZone(item.time_zone, now);
   const instant = `${date}T${time}`;
   const completed = item.tasks.filter((task) => task.status === 'completed').length;
   const ratio = item.tasks.length

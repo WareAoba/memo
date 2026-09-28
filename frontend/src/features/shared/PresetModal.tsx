@@ -1,3 +1,4 @@
+import { HorizontalNavigation } from './HorizontalNavigation';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
 import { Button } from './ui';
@@ -72,9 +73,8 @@ export function PresetModal({
     exitAnimation.current = animation;
     void animation.finished.then(
       () => {
-        exitAnimation.current = null;
-        delete dialog.dataset.closing;
-        onClose();
+        // Keep the exit state until unmount, including the transparent backdrop.
+        closeCallback.current();
       },
       () => {
         exitAnimation.current = null;
@@ -91,7 +91,8 @@ export function PresetModal({
         e.stopPropagation();
         requestClose();
       }}
-      onClick={(e) => {
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
         if (e.target === e.currentTarget) {
           const r = e.currentTarget.getBoundingClientRect();
           if (
@@ -127,13 +128,13 @@ export function PresetModal({
 export function PresetSwitch({ kind }: { kind: 'works' | 'tasks' }) {
   useTranslation();
   return (
-    <nav className="preset-switch" aria-label={tr('PresetModal.switchPresetType')}>
+    <HorizontalNavigation label={tr('PresetModal.switchPresetType')}>
       <a href="#/presets/works" aria-current={kind === 'works' ? 'page' : undefined}>
         {tr('ScheduleEditor.work')}
       </a>
       <a href="#/presets/tasks" aria-current={kind === 'tasks' ? 'page' : undefined}>
         {tr('ScheduleEditor.task')}
       </a>
-    </nav>
+    </HorizontalNavigation>
   );
 }

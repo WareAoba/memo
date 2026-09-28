@@ -185,3 +185,17 @@ it('does not allow a midnight end handle on multi-day schedules', () => {
   fireEvent.keyDown(screen.getByRole('slider', { name: '시작 시간' }), { key: 'Home' });
   expect(change).toHaveBeenLastCalledWith({ start: '00:00', end: '00:05' });
 });
+
+it('adjusts the focused time with visible arrow buttons', () => {
+  const onChange = vi.fn();
+  render(<TimeDial start="09:00" end="10:00" onChange={onChange} />);
+  expect(screen.queryByRole('button', { name: '시간 늘리기' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: /시작 09:00/ }));
+  const selectedBox = screen
+    .getByRole('button', { name: /시작 09:00/ })
+    .closest('.time-endpoint-box');
+  expect(selectedBox).toHaveAttribute('data-active', 'true');
+  expect(selectedBox).toContainElement(screen.getByRole('button', { name: '시간 늘리기' }));
+  fireEvent.click(screen.getByRole('button', { name: '시간 늘리기' }));
+  expect(onChange).toHaveBeenLastCalledWith({ start: '09:05', end: '10:00' });
+});

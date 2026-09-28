@@ -58,7 +58,7 @@ pub fn app_with_auth(
         push,
         uploads: std::sync::Arc::new(tokio::sync::Semaphore::new(4)),
     };
-    routes::router()
+    routes::router(state.clone())
         .route("/api/auth/me", axum::routing::get(auth::me))
         .route_layer(middleware::from_fn_with_state(
             (state.clone(), mode),

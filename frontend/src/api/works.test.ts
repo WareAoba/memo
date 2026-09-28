@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { archiveWork, emptyFields, getWork, listWorks, saveWork } from './works';
+import { emptyFields, getWork, listWorks, saveWork } from './works';
 const work = { ...emptyFields, id: 'id', name: '현장', created_at: 'now', updated_at: 'now' };
 afterEach(() => vi.unstubAllGlobals());
 it('sends only the requested mutation with same-origin credentials', async () => {
@@ -38,10 +38,6 @@ it('does not show internal server errors', async () => {
     vi.fn().mockResolvedValue(new Response('private SQL details', { status: 503 })),
   );
   await expect(getWork('id')).rejects.toThrow('서버 요청에 실패');
-});
-it('accepts an empty archive response', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
-  await expect(archiveWork('id')).resolves.toBeUndefined();
 });
 
 it('explains network failures without losing user-facing context', async () => {

@@ -85,11 +85,18 @@ export function ScheduleSearch({
         {!page && !error && <p role="status">{tr('ScheduleSearch.findingSchedules')}</p>}
         {page && (
           <>
-            <p role="status">{tr('ScheduleSearch.searchResultsValue', { v1: page.total })}</p>
-            {page.total === 0 && <p className="empty">{tr('ScheduleSearch.noResultsFound')}</p>}
+            <p role="status" className={page.total === 0 ? 'empty' : undefined}>
+              {page.total === 0
+                ? tr('ScheduleSearch.noResultsFound')
+                : tr('ScheduleSearch.searchResultsValue', { v1: page.total })}
+            </p>
             <ul className="schedule-search-results">
               {page.items.map((item) => (
-                <li key={item.id} className="search-preview memo-preview schedule-card">
+                <li
+                  key={item.id}
+                  data-context-content
+                  className="search-preview memo-preview schedule-card"
+                >
                   <a href={'#/schedules/' + item.id}>
                     <strong>{item.title || tr('Schedules.untitledSchedule')}</strong>
                     <span>
@@ -102,6 +109,16 @@ export function ScheduleSearch({
                   </a>
                   <ScheduleCardActions
                     id={item.id}
+                    color={item.color}
+                    onColorSaved={(updated) =>
+                      setPage(
+                        (current) =>
+                          current && {
+                            ...current,
+                            items: current.items.map((s) => (s.id === updated.id ? updated : s)),
+                          },
+                      )
+                    }
                     label={item.title}
                     value={item.notes}
                     onSave={async (notes) => {

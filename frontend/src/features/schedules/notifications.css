@@ -1,0 +1,42 @@
+@layer components {
+  .notification-launcher {
+    position: relative;
+    width: 44px;
+  }
+  .notification-count {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    border-radius: var(--radius-control);
+    background: var(--accent);
+    color: var(--surface);
+    font-size: 11px;
+    padding: 1px 5px;
+    pointer-events: none;
+  }
+  .notification-menu {
+    padding: var(--space-2);
+    overflow-wrap: anywhere;
+  }
+  .notification-heading,
+  .notification-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .notification-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .notification-list li {
+    padding-block: var(--space-3);
+    border-top: 1px solid var(--line);
+  }
+  .notification-menu p {
+    color: var(--muted);
+    font-size: 13px;
+    margin-block: var(--space-2);
+  }
+}

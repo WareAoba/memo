@@ -2,7 +2,7 @@ import type { Account } from '../../api/auth';
 import { AccountMenu } from '../auth/AccountMenu';
 import { useTranslation } from 'react-i18next';
 import { tr, monthLabel } from '../../i18n';
-import { Button } from '../shared/ui';
+import { DisclosureIcon, Button } from '../shared/ui';
 import { ActionIcon } from '../shared/ActionIcon';
 import { useEffect, useRef, useState } from 'react';
 import type { CalendarMode } from './Calendar';
@@ -126,7 +126,7 @@ export function Sidebar({
                 aria-controls="calendar-children"
                 onClick={() => toggleDrawer('calendar')}
               >
-                <ActionIcon name="down" />
+                <DisclosureIcon />
               </Button>
             )}
           </div>
@@ -193,7 +193,7 @@ export function Sidebar({
                 aria-controls="preset-children"
                 onClick={() => toggleDrawer('presets')}
               >
-                <ActionIcon name="down" />
+                <DisclosureIcon />
               </Button>
             )}
           </div>

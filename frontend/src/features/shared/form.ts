@@ -1,8 +1,7 @@
 import { LocalizedError } from '../../i18n/errors';
-import { tr } from '../../i18n';
 export function message(error: unknown) {
   if (error instanceof LocalizedError && error.messageKey) return error.messageKey;
-  return error instanceof Error && error.message ? error.message : tr('form.requestFailedTryAgain');
+  return error instanceof Error && error.message ? error.message : 'form.requestFailedTryAgain';
 }
 export function go(path: string) {
   window.location.hash = path;

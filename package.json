@@ -13,6 +13,11 @@
     "docker:down": "docker compose down",
     "test:frontend": "npm --prefix frontend test --",
     "test:backend": "cargo test --manifest-path backend/Cargo.toml --locked",
-    "check:docs": "node scripts/check-docs.mjs"
+    "check:docs": "node scripts/check-docs.mjs && npm run check:changes",
+    "check:changes": "node scripts/check-changes.mjs",
+    "record:change": "node scripts/check-changes.mjs",
+    "test:harness": "node --test scripts/change-policy.test.mjs",
+    "precheck:frontend": "npm run check:docs",
+    "precheck:backend": "npm run check:docs"
   }
 }

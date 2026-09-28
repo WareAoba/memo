@@ -28,9 +28,9 @@ export default tseslint.config(
       'no-restricted-syntax': [
         'error',
         {
-          selector: 'JSXOpeningElement[name.name=/^(button|input|textarea|select)$/]',
+          selector: 'JSXOpeningElement[name.name=/^(button|input|textarea|select|summary)$/]',
           message:
-            'Use Button, IconButton, Input, Textarea or Select from features/shared so the design reference stays shared.',
+            'Use Button, IconButton, Input, Textarea, Select or DisclosureSummary from features/shared so the design reference stays shared.',
         },
       ],
     },

@@ -16,7 +16,12 @@ it('retains a failed draft after leaving a detail view and retries after reopeni
   render(<MemoEditor draftKey="test:failed-detail" value="원본" onSave={save} />);
   expect(screen.getByLabelText('메모')).toHaveValue('잃으면 안 되는 기록');
   fireEvent.click(await screen.findByRole('button', { name: '다시 시도' }));
-  await screen.findByText('메모를 저장했습니다.');
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
 });
 
 it('edits inline, preserves a failed draft, saves and clears existing notes', async () => {
@@ -41,11 +46,21 @@ it('edits inline, preserves a failed draft, saves and clears existing notes', as
   expect(await screen.findByText('저장 실패')).toBeVisible();
   expect(screen.getByLabelText('워크 메모')).toHaveValue('특이사항');
   fireEvent.blur(screen.getByLabelText('워크 메모'));
-  expect(await screen.findByText('메모를 저장했습니다.')).toBeVisible();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(screen.getByLabelText('워크 메모')).toHaveValue('특이사항');
   fireEvent.change(screen.getByLabelText('워크 메모'), { target: { value: '' } });
   fireEvent.blur(screen.getByLabelText('워크 메모'));
-  await screen.findByText('메모를 저장했습니다.');
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   expect(save).toHaveBeenLastCalledWith('');
   expect(screen.getByLabelText('워크 메모')).toHaveValue('');
 });

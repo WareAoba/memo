@@ -1,3 +1,4 @@
+import { publishScheduleChange } from './scheduleChanges';
 import { LocalizedError } from '../i18n/errors';
 import { requestJson, record, parsePage } from './client';
 import type { Page } from './client';
@@ -88,16 +89,15 @@ export async function getWork(id: string, signal?: AbortSignal): Promise<Work> {
   return work(await request('/api/entities/' + encodeURIComponent(id), 'GET', undefined, signal));
 }
 export async function saveWork(fields: Partial<WorkFields>, id?: string): Promise<Work> {
-  return work(
+  const value = work(
     await request(
       '/api/entities' + (id ? '/' + encodeURIComponent(id) : ''),
       id ? 'PATCH' : 'POST',
       fields,
     ),
   );
-}
-export async function archiveWork(id: string): Promise<void> {
-  await request('/api/entities/' + encodeURIComponent(id), 'DELETE');
+  if (!id) publishScheduleChange({ kind: 'presets' });
+  return value;
 }
 export async function initializeLocalUser(): Promise<string> {
   const result = await request('/api/local-user', 'POST', {

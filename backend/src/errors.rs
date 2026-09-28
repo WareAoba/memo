@@ -7,6 +7,8 @@ use serde::Serialize;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
+    #[error("Track limit reached")]
+    TrackLimit,
     #[error("Authentication required")]
     Unauthorized,
     #[error("Request origin is not allowed")]
@@ -59,6 +61,7 @@ struct ErrorBody {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, code, message) = match self {
+            Self::TrackLimit => (StatusCode::CONFLICT, "TRACK_LIMIT", "Track limit reached"),
             Self::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
                 "UNAUTHORIZED",

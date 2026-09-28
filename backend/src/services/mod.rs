@@ -3,8 +3,8 @@ pub mod schedule_deletion;
 pub mod settings;
 mod task_parameters;
 pub mod task_presets;
+pub mod tracks;
 pub mod unmanaged_presets;
-pub mod work_tasks;
 pub mod works;
 
 use crate::errors::ApiError;

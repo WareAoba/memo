@@ -1,3 +1,4 @@
+use super::tracks::current_track_id;
 use super::{Result, database, identifier, invalid, schedules};
 use crate::{errors::ApiError, local_user::current_user_id};
 use serde_json::Value;
@@ -12,9 +13,10 @@ fn text(value: &Value) -> Result<&str> {
 }
 
 async fn unlocked(conn: &mut SqliteConnection, schedule: &str) -> Result<()> {
-    let row = sqlx::query("SELECT status FROM schedules WHERE id=? AND user_id=?")
+    let row = sqlx::query("SELECT status FROM schedules WHERE id=? AND user_id=? AND track_id=?")
         .bind(schedule)
         .bind(current_user_id())
+        .bind(current_track_id())
         .fetch_optional(conn)
         .await
         .map_err(database)?
@@ -28,6 +30,10 @@ async fn unlocked(conn: &mut SqliteConnection, schedule: &str) -> Result<()> {
 async fn requirements_met(conn: &mut SqliteConnection, task: &str) -> Result<bool> {
     let rows = sqlx::query("SELECT definition,value_boolean,value_text,value_number FROM schedule_task_items WHERE schedule_task_id=?")
         .bind(task).fetch_all(conn).await.map_err(database)?;
+    requirements_satisfied(rows)
+}
+
+fn requirements_satisfied(rows: Vec<sqlx::sqlite::SqliteRow>) -> Result<bool> {
     for row in rows {
         let definition: Value = serde_json::from_str(row.get("definition"))
             .map_err(|_| ApiError::DatabaseUnavailable)?;
@@ -75,8 +81,8 @@ async fn derived_status(conn: &mut SqliteConnection, schedule: &str) -> Result<&
 
 pub(super) async fn refresh_schedule(conn: &mut SqliteConnection, schedule: &str) -> Result<()> {
     let status = derived_status(conn, schedule).await?;
-    sqlx::query("UPDATE schedules SET status=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
-        .bind(status).bind(schedule).bind(current_user_id()).execute(conn).await.map_err(database)?;
+    sqlx::query("UPDATE schedules SET status=?,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=? AND track_id=?")
+        .bind(status).bind(schedule).bind(current_user_id()).bind(current_track_id()).execute(conn).await.map_err(database)?;
     Ok(())
 }
 
@@ -91,9 +97,10 @@ pub async fn task(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
         return Err(invalid());
     }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
-    let row = sqlx::query("SELECT * FROM schedule_tasks WHERE id=? AND user_id=?")
+    let row = sqlx::query("SELECT * FROM schedule_tasks WHERE id=? AND user_id=? AND track_id=?")
         .bind(&id)
         .bind(current_user_id())
+        .bind(current_track_id())
         .fetch_optional(&mut *tx)
         .await
         .map_err(database)?
@@ -171,8 +178,8 @@ pub async fn item(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     }
     let value = fields.get("value").ok_or_else(invalid)?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
-    let row = sqlx::query("SELECT i.*,t.schedule_id,t.status AS task_status FROM schedule_task_items i JOIN schedule_tasks t ON t.id=i.schedule_task_id WHERE i.id=? AND t.user_id=?")
-        .bind(&id).bind(current_user_id()).fetch_optional(&mut *tx).await.map_err(database)?.ok_or(ApiError::ExecutionNotFound)?;
+    let row = sqlx::query("SELECT i.*,t.schedule_id,t.status AS task_status FROM schedule_task_items i JOIN schedule_tasks t ON t.id=i.schedule_task_id WHERE i.id=? AND t.user_id=? AND t.track_id=?")
+        .bind(&id).bind(current_user_id()).bind(current_track_id()).fetch_optional(&mut *tx).await.map_err(database)?.ok_or(ApiError::ExecutionNotFound)?;
     let schedule: String = row.get("schedule_id");
     let task: String = row.get("schedule_task_id");
     unlocked(&mut tx, &schedule).await?;
@@ -237,9 +244,10 @@ pub async fn schedule_status(pool: &SqlitePool, id: &str, value: Value) -> Resul
         return Err(invalid());
     }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
-    let row = sqlx::query("SELECT status FROM schedules WHERE id=? AND user_id=?")
+    let row = sqlx::query("SELECT status FROM schedules WHERE id=? AND user_id=? AND track_id=?")
         .bind(&id)
         .bind(current_user_id())
+        .bind(current_track_id())
         .fetch_optional(&mut *tx)
         .await
         .map_err(database)?
@@ -277,22 +285,24 @@ pub async fn complete_schedule(pool: &SqlitePool, id: &str, value: Value) -> Res
     }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     unlocked(&mut tx, &id).await?;
-    let tasks: Vec<String> =
-        sqlx::query_scalar("SELECT id FROM schedule_tasks WHERE schedule_id=? AND user_id=?")
-            .bind(&id)
-            .bind(current_user_id())
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(database)?;
-    for task in &tasks {
-        if !requirements_met(&mut tx, task).await? {
-            return Err(ApiError::RequirementsIncomplete);
-        }
+    let items = sqlx::query(
+        "SELECT i.definition,i.value_boolean,i.value_text,i.value_number \
+         FROM schedule_task_items i JOIN schedule_tasks t ON t.id=i.schedule_task_id \
+         WHERE t.schedule_id=? AND t.user_id=? AND t.track_id=?",
+    )
+    .bind(&id)
+    .bind(current_user_id())
+    .bind(current_track_id())
+    .fetch_all(&mut *tx)
+    .await
+    .map_err(database)?;
+    if !requirements_satisfied(items)? {
+        return Err(ApiError::RequirementsIncomplete);
     }
-    sqlx::query("UPDATE schedule_tasks SET status='completed',started_at=COALESCE(started_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),completed_at=COALESCE(completed_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE schedule_id=? AND user_id=? AND status<>'completed'")
-        .bind(&id).bind(current_user_id()).execute(&mut *tx).await.map_err(database)?;
-    sqlx::query("UPDATE schedules SET status='completed',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=?")
-        .bind(&id).bind(current_user_id()).execute(&mut *tx).await.map_err(database)?;
+    sqlx::query("UPDATE schedule_tasks SET status='completed',started_at=COALESCE(started_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),completed_at=COALESCE(completed_at,strftime('%Y-%m-%dT%H:%M:%fZ','now')),updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE schedule_id=? AND user_id=? AND track_id=? AND status<>'completed'")
+        .bind(&id).bind(current_user_id()).bind(current_track_id()).execute(&mut *tx).await.map_err(database)?;
+    sqlx::query("UPDATE schedules SET status='completed',updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=? AND user_id=? AND track_id=?")
+        .bind(&id).bind(current_user_id()).bind(current_track_id()).execute(&mut *tx).await.map_err(database)?;
     let result = schedules::in_transaction(&mut tx, &id).await?;
     tx.commit().await.map_err(database)?;
     Ok(result)
@@ -342,8 +352,8 @@ pub async fn reopen_schedule(pool: &SqlitePool, id: &str, value: Value) -> Resul
     }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     unlocked(&mut tx, &id).await?;
-    sqlx::query("UPDATE schedule_tasks SET status='pending',completed_at=NULL,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE schedule_id=? AND user_id=? AND status IN ('completed','skipped')")
-        .bind(&id).bind(current_user_id()).execute(&mut *tx).await.map_err(database)?;
+    sqlx::query("UPDATE schedule_tasks SET status='pending',completed_at=NULL,updated_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE schedule_id=? AND user_id=? AND track_id=? AND status IN ('completed','skipped')")
+        .bind(&id).bind(current_user_id()).bind(current_track_id()).execute(&mut *tx).await.map_err(database)?;
     refresh_schedule(&mut tx, &id).await?;
     let result = schedules::in_transaction(&mut tx, &id).await?;
     tx.commit().await.map_err(database)?;

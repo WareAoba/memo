@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { resetData, type ResetTarget } from '../../api/settings';
 import { tr } from '../../i18n';
@@ -6,7 +7,8 @@ import { PresetModal } from '../shared/PresetModal';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
 
-export function DataReset() {
+export function DataReset({ trackName }: { trackName?: string }) {
+  useTranslation();
   const [target, setTarget] = useState<ResetTarget | null>(null);
   const [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
@@ -15,6 +17,7 @@ export function DataReset() {
   return (
     <div className="settings-reset-list">
       <p>{tr('Settings.resetHint')}</p>
+      {trackName && <p>{tr('Tracks.resetScope', { name: trackName })}</p>}
       {(['schedules', 'works', 'tasks'] as const).map((kind) => (
         <section key={kind} className="settings-reset-row">
           <h3>{tr(`Settings.reset_${kind}`)}</h3>
@@ -41,6 +44,7 @@ export function DataReset() {
           }}
         >
           <h2>{tr(`Settings.reset_${target}`)}</h2>
+          {trackName && <p>{tr('Tracks.resetScope', { name: trackName })}</p>}
           <p>{tr(`Settings.reset_${target}_hint`)}</p>
           <p>{tr('Settings.resetConfirmHint')}</p>
           <label>

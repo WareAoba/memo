@@ -42,20 +42,25 @@ async function open() {
       <TimeDial start="09:00" end="10:00" onChange={clockChange} />
     </SettingsProvider>,
   );
-  await screen.findByText('자동 저장');
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
   return view;
 }
-it('uses horizontal mobile tabs and arrow keys without changing settings', async () => {
+it('uses vertical mobile tabs and arrow keys without changing settings', async () => {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: query === '(max-width: 700px)',
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   }));
   await open();
-  expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'horizontal');
+  expect(screen.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
   const general = screen.getByRole('tab', { name: '일반' });
   general.focus();
-  fireEvent.keyDown(general, { key: 'ArrowRight' });
+  fireEvent.keyDown(general, { key: 'ArrowDown' });
   expect(screen.getByRole('tab', { name: '화면' })).toHaveFocus();
   expect(screen.getByRole('tabpanel', { name: '화면' })).toBeVisible();
   expect(patchSettings).not.toHaveBeenCalled();
@@ -102,7 +107,12 @@ it('serializes quick changes, keeps failed drafts and retries the latest values'
   await waitFor(() =>
     expect(patchSettings).toHaveBeenLastCalledWith({ theme: 'light', accent: 'green' }),
   );
-  await screen.findByText('자동 저장');
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
 });
 it('hot-loads remote changes on focus and changes keyboard clock steps', async () => {
   await open();
@@ -166,4 +176,45 @@ it('tracks system color and motion preferences while explicit choices take prece
   });
   expect(document.documentElement.dataset.theme).toBe('light');
   expect(document.documentElement.dataset.motion).toBe('none');
+});
+
+it('keeps the push switch draft after failure and retries it', async () => {
+  await open();
+  vi.mocked(patchSettings).mockRejectedValueOnce(new Error('push save failed'));
+  fireEvent.click(screen.getByRole('tab', { name: '알림' }));
+  const toggle = screen.getByRole('switch', { name: '푸시 알림 활성화' });
+  expect(toggle).toBeChecked();
+  fireEvent.click(toggle);
+  expect(await screen.findByText('push save failed')).toBeVisible();
+  expect(toggle).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+  await waitFor(() => expect(patchSettings).toHaveBeenLastCalledWith({ push_enabled: false }));
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('tab', { name: '일반' }));
+  fireEvent.click(screen.getByRole('tab', { name: '알림' }));
+  expect(screen.getByRole('switch', { name: '푸시 알림 활성화' })).not.toBeChecked();
+});
+
+it('disables the switch while loading and navigates tabs in both directions', async () => {
+  vi.mocked(bootstrapSettings).mockImplementation(() => new Promise(() => {}));
+  render(
+    <SettingsProvider>
+      <Settings onClose={() => {}} />
+    </SettingsProvider>,
+  );
+  const general = screen.getByRole('tab', { name: '일반' });
+  fireEvent.keyDown(general, { key: 'End' });
+  expect(screen.getByRole('tab', { name: '데이터' })).toHaveFocus();
+  fireEvent.keyDown(screen.getByRole('tab', { name: '데이터' }), { key: 'ArrowUp' });
+  expect(screen.getByRole('tabpanel', { name: '알림' })).toBeVisible();
+  expect(screen.getByRole('switch', { name: '푸시 알림 활성화' })).toBeDisabled();
+  fireEvent.keyDown(screen.getByRole('tab', { name: '알림' }), { key: 'Home' });
+  expect(general).toHaveFocus();
+  expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
+  expect(patchSettings).not.toHaveBeenCalled();
 });

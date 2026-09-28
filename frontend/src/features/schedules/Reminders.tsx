@@ -1,68 +1,95 @@
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { tr } from '../../i18n';
 import { initializePush, pushPresence, pushHistory } from '../../api/push';
-import { useEffect, useState } from 'react';
-import { getReminders, type Reminder } from '../../api/reminders';
+import { getReminders } from '../../api/reminders';
 import { Toast, ToastRegion } from '../shared/Toast';
+import { NotificationMenu } from './NotificationMenu';
+import { reminderDescription, reminderHref } from './reminderInbox';
+import {
+  emptyInbox,
+  inboxStorageKey,
+  readInbox,
+  reconcileInbox,
+  reminderKey,
+  type Inbox,
+} from './reminderInbox';
 
-const storageKey = 'preset.reminders.seen.v2';
-const keyOf = (r: Reminder) => `${r.id}:${r.reminder_version ?? r.reminder_at}`;
-
-export function Reminders() {
+export function Reminders({
+  accountId = 'local',
+  children,
+}: {
+  accountId?: string;
+  children?: (menu: ReactNode) => ReactNode;
+}) {
+  const storageKey = inboxStorageKey(accountId);
   useTranslation();
-  const [items, setItems] = useState<Reminder[]>([]);
+  const [inbox, setInbox] = useState<Inbox>(() => readInbox(storageKey, emptyInbox()));
+  const current = useRef<Inbox>(inbox);
+  const storageAvailable = useRef(true);
+  const [visible, setVisible] = useState<string[]>([]);
+  const change = useCallback(
+    async (update: (value: Inbox) => Inbox) => {
+      const apply = () => {
+        const next = update(
+          storageAvailable.current ? readInbox(storageKey, current.current) : current.current,
+        );
+        current.current = next;
+        try {
+          localStorage.setItem(storageKey, JSON.stringify(next));
+        } catch {
+          // A quota failure can leave readable but stale persisted data.
+          storageAvailable.current = false;
+        }
+        setInbox(next);
+      };
+      if (navigator.locks) await navigator.locks.request(storageKey, apply);
+      else apply();
+    },
+    [storageKey],
+  );
+
   useEffect(() => {
+    const isHidden = () => document.visibilityState === 'hidden';
     let active = true;
     let pending = false;
-    let seen: Record<string, number> = {};
     const controller = new AbortController();
-    function readSeen() {
-      try {
-        const stored: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '{}');
-        if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
-          for (const [key, expires] of Object.entries(stored)) {
-            if (typeof expires === 'number' && Number.isFinite(expires)) seen[key] = expires;
-          }
-        }
-      } catch {
-        /* Storage is optional; keep in-memory deduplication. */
-      }
-      seen = Object.fromEntries(
-        Object.entries(seen).filter(([, expires]) => expires > Date.now() / 1000),
-      );
-    }
     async function poll() {
-      if (!active || pending || document.visibilityState === 'hidden' || !navigator.onLine) return;
+      if (!active || pending || isHidden() || !navigator.onLine) return;
       pending = true;
       try {
         await initializePush().catch(() => undefined);
         await pushPresence().catch(() => undefined);
-        Object.assign(seen, await pushHistory());
-        const reminders = await getReminders(controller.signal);
-        const present = () => {
-          if (!active || document.visibilityState === 'hidden') return;
-          readSeen();
-          const fresh = reminders.filter((r) => !seen[keyOf(r)]);
-          fresh.forEach((r) => {
-            seen[keyOf(r)] = r.start_at;
-          });
-          try {
-            localStorage.setItem(storageKey, JSON.stringify(seen));
-          } catch {
-            /* Memory fallback. */
-          }
-          const valid = new Map(reminders.map((r) => [keyOf(r), r]));
-          setItems((previous) => [...previous.flatMap((r) => valid.get(keyOf(r)) ?? []), ...fresh]);
-        };
-        if (navigator.locks) await navigator.locks.request(storageKey, present);
-        else present();
+        const pushed = await pushHistory();
+        const stored = storageAvailable.current
+          ? readInbox(storageKey, current.current)
+          : current.current;
+        const include = stored.entries.filter((e) => !e.acknowledged).map((e) => e.reminder.id);
+        const reminders = await getReminders(controller.signal, include);
+        if (!active || isHidden()) return;
+        await change((value) => {
+          if (!active) return value;
+          const result = reconcileInbox(value, reminders, pushed, Date.now());
+          setVisible((previous) =>
+            [...new Set([...previous, ...result.show])].filter((key) => {
+              const entry = result.inbox.entries.find((e) => reminderKey(e.reminder) === key);
+              return (
+                entry &&
+                !entry.acknowledged &&
+                entry.snoozeAt === undefined &&
+                result.valid.has(key) &&
+                (entry.replayed || entry.reminder.start_at > Date.now() / 1000)
+              );
+            }),
+          );
+          return result.inbox;
+        });
         await pushPresence(
           reminders
-            .filter((r) => seen[keyOf(r)] && r.reminder_version !== undefined)
+            .filter((r) => current.current.seen[reminderKey(r)] && r.reminder_version !== undefined)
             .map((r) => ({ schedule_id: r.id, reminder_version: r.reminder_version! })),
         ).catch(() => undefined);
       } catch {
-        /* Retry after reconnect or on the next tick. */
+        /* Keep history and snoozes on failure; validate on the next successful poll. */
       } finally {
         pending = false;
       }
@@ -70,12 +97,24 @@ export function Reminders() {
     const refresh = () => {
       void poll();
     };
-    refresh();
-    const timer = window.setInterval(refresh, 15000);
     const visibility = () => {
       if (document.visibilityState === 'hidden')
         void pushPresence([], false).catch(() => undefined);
       else refresh();
+    };
+    const storage = (event: StorageEvent) => {
+      if (storageAvailable.current && event.key === storageKey) {
+        const next = readInbox(storageKey, current.current);
+        current.current = next;
+        setInbox(next);
+        setVisible((previous) =>
+          previous.filter((key) =>
+            next.entries.some(
+              (e) => reminderKey(e.reminder) === key && !e.acknowledged && e.snoozeAt === undefined,
+            ),
+          ),
+        );
+      }
     };
     const pushed = (event: MessageEvent) => {
       const value = event.data;
@@ -85,17 +124,16 @@ export function Reminders() {
         !Number.isFinite(value.start_at)
       )
         return;
-      readSeen();
-      seen[value.notification_id] = value.start_at;
-      try {
-        localStorage.setItem(storageKey, JSON.stringify(seen));
-      } catch {
-        /* Memory fallback. */
-      }
-      setItems((previous) => previous.filter((r) => keyOf(r) !== value.notification_id));
-      refresh();
+      void change((previous) => ({
+        ...previous,
+        seen: { ...previous.seen, [value.notification_id]: value.start_at },
+      })).then(refresh);
+      setVisible((previous) => previous.filter((key) => key !== value.notification_id));
     };
+    refresh();
+    const timer = window.setInterval(refresh, 15000);
     navigator.serviceWorker?.addEventListener('message', pushed);
+    window.addEventListener('storage', storage);
     window.addEventListener('push-state-changed', refresh);
     window.addEventListener('focus', refresh);
     window.addEventListener('online', refresh);
@@ -106,31 +144,64 @@ export function Reminders() {
       controller.abort();
       clearInterval(timer);
       navigator.serviceWorker?.removeEventListener('message', pushed);
+      window.removeEventListener('storage', storage);
       window.removeEventListener('push-state-changed', refresh);
       window.removeEventListener('focus', refresh);
       window.removeEventListener('online', refresh);
       window.removeEventListener('schedules-changed', refresh);
       document.removeEventListener('visibilitychange', visibility);
     };
-  }, []);
+  }, [change, storageKey]);
+
+  const hide = (key: string) => setVisible((previous) => previous.filter((k) => k !== key));
+  const menu = (
+    <NotificationMenu
+      entries={inbox.entries}
+      onAcknowledge={(keys) => {
+        setVisible((previous) => previous.filter((key) => !keys.includes(key)));
+        void change((value) => ({
+          ...value,
+          entries: value.entries.map((e) =>
+            keys.includes(reminderKey(e.reminder))
+              ? { ...e, acknowledged: true, snoozeAt: undefined }
+              : e,
+          ),
+        }));
+      }}
+    />
+  );
   return (
-    <ToastRegion>
-      {items.map((r) => (
-        <Toast
-          key={keyOf(r)}
-          title={r.title}
-          href={`#/schedules/${r.id}`}
-          onClose={() =>
-            setItems((previous) => previous.filter((item) => keyOf(item) !== keyOf(r)))
-          }
-        >
-          {tr('Reminders.valueStartsAtValueValue', {
-            v1: r.scheduled_date,
-            v2: r.start_time,
-            v3: r.time_zone,
+    <>
+      {children ? children(menu) : menu}
+      <ToastRegion>
+        {inbox.entries
+          .filter((e) => visible.includes(reminderKey(e.reminder)))
+          .map((entry) => {
+            const r = entry.reminder;
+            const key = reminderKey(r);
+            return (
+              <Toast
+                key={key}
+                title={r.title}
+                href={reminderHref(r)}
+                onClose={() => hide(key)}
+                onSnooze={(minutes) => {
+                  hide(key);
+                  void change((value) => ({
+                    ...value,
+                    entries: value.entries.map((e) =>
+                      reminderKey(e.reminder) === key && !e.acknowledged
+                        ? { ...e, snoozeAt: Date.now() + minutes * 60000, replayed: false }
+                        : e,
+                    ),
+                  }));
+                }}
+              >
+                {reminderDescription(r)}
+              </Toast>
+            );
           })}
-        </Toast>
-      ))}
-    </ToastRegion>
+      </ToastRegion>
+    </>
   );
 }

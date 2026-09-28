@@ -1,7 +1,8 @@
 import { WorkspaceHeader } from '../shared/WorkspaceHeader';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { ButtonLink, Input, Select, Button, Surface, CardButton } from '../shared/ui';
+import { ButtonLink, Input, Surface, CardButton } from '../shared/ui';
+import { DropdownSelect } from '../shared/DropdownSelect';
 import { ActionIcon } from '../shared/ActionIcon';
 import { PresetMemoButton } from '../shared/PresetMemoButton';
 import { IconButton } from '../shared/IconButton';
@@ -13,11 +14,17 @@ import { listTaskPresets } from '../../api/taskPresets';
 import type { TaskPresetList } from '../../api/taskPresets';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
-export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
+export function TaskPresetListView({
+  revision = 0,
+  heading = true,
+}: {
+  revision?: number;
+  heading?: boolean;
+}) {
   useTranslation();
   const [selected, setSelected] = useState<string>();
   const [draft, setDraft] = useState('');
-  const [filter, setFilter] = useState({ q: '', archived: false, offset: 0, group: '*' });
+  const [filter, setFilter] = useState({ q: '', offset: 0, group: '*' });
   const [data, setData] = useState<TaskPresetList>();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -29,7 +36,7 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
     let active = true;
     listTaskPresets(
       filter.q,
-      filter.archived,
+      false,
       filter.offset,
       controller.signal,
       48,
@@ -70,7 +77,7 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
         </PresetModal>
       )}
       <WorkspaceHeader
-        title={<h1>{tr('TaskPresetListView.taskPresets')}</h1>}
+        title={heading && <h1>{tr('TaskPresetListView.taskPresets')}</h1>}
         actions={
           <ButtonLink
             iconOnly
@@ -84,7 +91,7 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
             <ActionIcon name="plus" />
           </ButtonLink>
         }
-        navigation={<PresetSwitch kind="tasks" />}
+        navigation={heading && <PresetSwitch kind="tasks" />}
         tools={
           <section aria-label={tr('Picker.searchTasks')} className="workspace-list-tools">
             <form
@@ -108,35 +115,17 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
                 {tr('TaskPresetListView.search')}
               </IconButton>
             </form>
-            <label>
-              <span className="sr-only">{tr('design-reference.group')}</span>
-              <Select
-                value={filter.group}
-                onChange={(e) => update({ ...filter, group: e.target.value, offset: 0 })}
-              >
-                <option value="*">{tr('TaskPresetListView.allGroups')}</option>
-                <option value="group:">{tr('TaskGroupPicker.ungrouped')}</option>
-                {groups.names.map((name) => (
-                  <option key={name} value={`group:${name}`}>
-                    {name}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <div className="tabs">
-              <Button
-                aria-pressed={!filter.archived}
-                onClick={() => update({ ...filter, archived: false, offset: 0 })}
-              >
-                {tr('TaskPresetListView.active')}
-              </Button>
-              <Button
-                aria-pressed={filter.archived}
-                onClick={() => update({ ...filter, archived: true, offset: 0 })}
-              >
-                {tr('TaskPresetListView.archive')}
-              </Button>
-            </div>
+            <DropdownSelect
+              hideLabel
+              label={tr('design-reference.group')}
+              value={filter.group}
+              onChange={(group) => update({ ...filter, group, offset: 0 })}
+              options={[
+                { value: '*', label: tr('TaskPresetListView.allGroups') },
+                { value: 'group:', label: tr('TaskGroupPicker.ungrouped') },
+                ...groups.names.map((name) => ({ value: 'group:' + name, label: name })),
+              ]}
+            />
           </section>
         }
       />
@@ -155,30 +144,26 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
       ) : (
         data && (
           <>
-            <p className="result-count">
-              {tr('TaskPresetListView.valueValueValue', {
-                v1: filter.archived
-                  ? tr('TaskPresetDetail.archivedTask')
-                  : tr('ScheduleEditor.task'),
-                v2: data.total,
-                v3: filter.q && tr('TaskPresetListView.resultsForValue', { v1: filter.q }),
-              })}
-            </p>
+            {data.total > 0 && (
+              <p className="result-count">
+                {tr('TaskPresetListView.valueValueValue', {
+                  v1: tr('ScheduleEditor.task'),
+                  v2: data.total,
+                  v3: filter.q && tr('TaskPresetListView.resultsForValue', { v1: filter.q }),
+                })}
+              </p>
+            )}
             {data.items.length === 0 ? (
               <Surface as="section" className="empty">
                 <h2>
                   {filter.q
                     ? tr('ScheduleSearch.noResultsFound')
-                    : filter.archived
-                      ? tr('TaskPresetListView.noArchivedTasks')
-                      : tr('TaskPresetListView.createYourFirstTask')}
+                    : tr('TaskPresetListView.createYourFirstTask')}
                 </h2>
                 <p>
                   {filter.q
                     ? tr('TaskPresetListView.tryAnotherNameOrTag')
-                    : filter.archived
-                      ? tr('TaskPresetListView.youCanRestoreArchivedTasksHere')
-                      : tr('TaskPresetListView.saveFrequentlyUsedActionsAsTasks')}
+                    : tr('TaskPresetListView.saveFrequentlyUsedActionsAsTasks')}
                 </p>
               </Surface>
             ) : (
@@ -192,11 +177,17 @@ export function TaskPresetListView({ revision = 0 }: { revision?: number }) {
                         {data.items
                           .filter((item) => (item.group_name || '') === group)
                           .map((item) => (
-                            <div key={item.id} className="preset-preview memo-preview">
+                            <div
+                              key={item.id}
+                              data-context-content
+                              className="preset-preview memo-preview"
+                            >
                               <CardButton
                                 type="button"
                                 key={item.id}
                                 data-modal-trigger
+                                data-context-action="edit"
+                                data-context-label={tr('App.edit')}
                                 className="work-card"
                                 onClick={() => setSelected(item.id)}
                               >

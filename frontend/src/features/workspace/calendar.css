@@ -1,4 +1,18 @@
 @layer features {
+  .calendar-workspace {
+    position: relative;
+  }
+  .calendar-loading {
+    position: absolute;
+    inset-inline-end: var(--space-4);
+    bottom: var(--space-2);
+    z-index: 1;
+    margin: 0;
+    padding: var(--space-2);
+    background: var(--surface);
+    border-radius: var(--radius-small);
+    pointer-events: none;
+  }
   .calendar-tabs {
     flex-shrink: 0;
     margin-bottom: var(--space-4);

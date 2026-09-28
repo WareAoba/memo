@@ -103,7 +103,7 @@ async fn create(pool: &SqlitePool, body: Value) -> Value {
     value
 }
 #[tokio::test]
-async fn definitions_version_order_partial_patch_archive_and_persistence() {
+async fn definitions_version_order_partial_patch_and_persistence() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("app.sqlite3");
     let pool = db::connect(&path).await.unwrap();
@@ -142,23 +142,25 @@ async fn definitions_version_order_partial_patch_archive_and_persistence() {
     .1;
     assert_eq!(cleared["version"], 3);
     assert_eq!(cleared["items"], json!([]));
-    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 204);
-    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 204);
-    assert_eq!(request(&pool, "GET", &uri, None).await.1["version"], 4);
+    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 405);
     assert_eq!(
-        request(&pool, "GET", "/api/task-presets", None).await.1["total"],
-        0
+        request(&pool, "PATCH", &uri, Some(json!({"archived":true})))
+            .await
+            .0,
+        400
     );
     assert_eq!(
         request(&pool, "GET", "/api/task-presets?archived=true", None)
             .await
-            .1["total"],
+            .0,
+        400
+    );
+    assert_eq!(
+        request(&pool, "GET", "/api/task-presets", None).await.1["total"],
         1
     );
-    let restored = request(&pool, "PATCH", &uri, Some(json!({"archived":false})))
-        .await
-        .1;
-    assert_eq!(restored["version"], 5);
+    let restored = request(&pool, "GET", &uri, None).await.1;
+    assert_eq!(restored["version"], 3);
     pool.close().await;
     let pool = db::connect(&path).await.unwrap();
     assert_eq!(request(&pool, "GET", &uri, None).await.1, restored);
@@ -233,11 +235,7 @@ async fn ownership_and_foreign_item_ids_are_rejected() {
         .await
         .unwrap();
     let uri = format!("/api/task-presets/{foreign}");
-    for (method, body) in [
-        ("GET", None),
-        ("PATCH", Some(json!({"name":"attack"}))),
-        ("DELETE", None),
-    ] {
+    for (method, body) in [("GET", None), ("PATCH", Some(json!({"name":"attack"})))] {
         let response = request(&pool, method, &uri, body).await;
         assert_eq!(response.0, 404);
         assert_eq!(response.1["error"]["code"], "TASK_PRESET_NOT_FOUND");

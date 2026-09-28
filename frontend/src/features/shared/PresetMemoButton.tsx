@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { tr } from '../../i18n';
 import { getWork, saveWork } from '../../api/works';
 import { getTaskPreset, saveTaskPreset } from '../../api/taskPresets';
 import { MemoButton } from './MemoButton';
@@ -23,7 +22,6 @@ export function PresetMemoButton({
       draftKey={kind + ':' + id}
       label={name}
       value={notes}
-      scope={tr('PresetMemoButton.defaultMemoForThePresetExistingScheduleRecordsWill')}
       load={async () =>
         kind === 'work'
           ? (await getWork(id)).general_notes

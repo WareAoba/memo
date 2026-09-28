@@ -1,4 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import { useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { tr } from '../../i18n';
 import { IconButton } from './IconButton';
 import { ErrorBox } from './ErrorBox';
@@ -7,20 +9,25 @@ import { message } from './form';
 export function DeleteButton({
   label,
   onDelete,
+  variant = 'danger',
   disabled = false,
 }: {
+  variant?: 'danger' | 'ghost';
   label: string;
   onDelete: () => Promise<void>;
   disabled?: boolean;
 }) {
+  useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [errorHost, setErrorHost] = useState<HTMLElement | null>(null);
   const lock = useRef(false);
   return (
     <>
       <IconButton
+        data-context-action="trash"
         icon="trash"
-        variant="danger"
+        variant={variant}
         disabled={disabled || busy}
         onClick={async (event) => {
           event.stopPropagation();
@@ -28,6 +35,7 @@ export function DeleteButton({
           lock.current = true;
           setBusy(true);
           setError('');
+          setErrorHost(event.currentTarget.closest<HTMLElement>('[data-context-content]'));
           try {
             await onDelete();
           } catch (e) {
@@ -40,7 +48,12 @@ export function DeleteButton({
       >
         {tr('Delete.item', { name: label })}
       </IconButton>
-      {error && <ErrorBox error={error} />}
+      {error &&
+        (errorHost ? (
+          createPortal(<ErrorBox error={error} />, errorHost)
+        ) : (
+          <ErrorBox error={error} />
+        ))}
     </>
   );
 }

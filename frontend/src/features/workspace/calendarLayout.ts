@@ -1,7 +1,7 @@
-import type { ScheduleDetail } from '../../api/schedules';
+import type { Schedule } from '../../api/schedules';
 import { monthDays, fromDateKey } from './preview';
 
-export function calendarWeeks(month: string, schedules: ScheduleDetail[]) {
+export function calendarWeeks(month: string, schedules: Schedule[]) {
   const cells = monthDays(fromDateKey(month + '-01'));
   return Array.from({ length: cells.length / 7 }, (_, week) => {
     const dates = cells.slice(week * 7, week * 7 + 7);

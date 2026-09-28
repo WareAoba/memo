@@ -171,7 +171,7 @@ it('allows typing only after choosing direct input and locks existing choices', 
   render(<WorkEditor initial={workFields} />);
   const kind = screen.getByRole('combobox', { name: '종류' });
   expect(kind).toHaveAttribute('readonly');
-  fireEvent.focus(kind);
+  fireEvent.click(kind);
   await screen.findByRole('option', { name: '장소' });
   fireEvent.keyDown(kind, { key: 'ArrowDown' });
   fireEvent.keyDown(kind, { key: 'ArrowDown' });

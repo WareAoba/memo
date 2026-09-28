@@ -4,7 +4,12 @@ export function ActionIcon({
 }: {
   className?: string;
   name:
+    | 'sun'
+    | 'notifications'
+    | 'moon'
+    | 'monitor'
     | 'memo'
+    | 'sticky'
     | 'close'
     | 'trash'
     | 'edit'
@@ -28,6 +33,12 @@ export function ActionIcon({
     | 'settings';
 }) {
   const paths = {
+    notifications: 'M6 9a6 6 0 0 1 12 0v5l2 3H4l2-3V9Zm4 11h4',
+    sticky:
+      'M4 4c5-2 10 2 16 0-.8 4 .8 7-.5 10-1.2 3-4 5.5-7 6-3 .5-6-1-9 0 1.5-5-.5-10 .5-16Zm8.5 16c2-2 2.8-4.5 2.2-7 1.4 1 3.2 1.3 4.8 1',
+    sun: 'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5',
+    moon: 'M20 14A8 8 0 0 1 10 4a8 8 0 1 0 10 10Z',
+    monitor: 'M3 4h18v13H3V4Zm9 13v4m-4 0h8',
     presets: 'M4 3h12v14H4V3Zm4 4h4M8 11h4m-4 10h12V7',
     memo: 'M4 3h16v14l-4 4H4V3Zm4 5h8M8 12h8M8 16h4m4 5v-4h4',
     menu: 'M4 6h16M4 12h16M4 18h16',

@@ -1,11 +1,13 @@
+import { enterPopup } from './popupMotion';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, type RefObject, type ReactNode } from 'react';
 import { Button } from './ui';
 import { ActionIcon } from './ActionIcon';
 import { memoPlacement, type MemoCorner } from './memoPlacement';
 
 export function MemoPopover({
+  popupRef: ref,
   anchor,
   id,
   label,
@@ -13,6 +15,7 @@ export function MemoPopover({
   onRequestClose,
   children,
 }: {
+  popupRef: RefObject<HTMLDivElement | null>;
   anchor: HTMLElement;
   id: string;
   label: string;
@@ -21,7 +24,6 @@ export function MemoPopover({
   children: ReactNode;
 }) {
   useTranslation();
-  const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const panel = ref.current!;
     panel.showPopover?.();
@@ -50,6 +52,7 @@ export function MemoPopover({
       panel.dataset.corner = position.corner;
     };
     position();
+    const animation = enterPopup(panel);
     const observer =
       typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(position);
     observer?.observe(panel);
@@ -69,10 +72,13 @@ export function MemoPopover({
       window.visualViewport?.removeEventListener('resize', position);
       window.visualViewport?.removeEventListener('scroll', position);
       panel.hidePopover?.();
+      animation?.cancel();
     };
-  }, [anchor, corner]);
+  }, [anchor, corner, ref]);
   useEffect(() => {
-    const outside = (e: MouseEvent | PointerEvent) => {
+    let blocked = false;
+    const outside = (e: PointerEvent) => {
+      blocked = false;
       if (
         !(e.target instanceof Node) ||
         ref.current?.contains(e.target) ||
@@ -80,9 +86,16 @@ export function MemoPopover({
       )
         return;
       if (!onRequestClose(false)) {
+        blocked = true;
         e.preventDefault();
         e.stopImmediatePropagation();
       }
+    };
+    const click = (e: MouseEvent) => {
+      if (!blocked) return;
+      blocked = false;
+      e.preventDefault();
+      e.stopImmediatePropagation();
     };
     const escape = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
@@ -91,14 +104,14 @@ export function MemoPopover({
       onRequestClose();
     };
     document.addEventListener('pointerdown', outside, true);
-    document.addEventListener('click', outside, true);
+    document.addEventListener('click', click, true);
     document.addEventListener('keydown', escape, true);
     return () => {
       document.removeEventListener('pointerdown', outside, true);
-      document.removeEventListener('click', outside, true);
+      document.removeEventListener('click', click, true);
       document.removeEventListener('keydown', escape, true);
     };
-  }, [anchor, onRequestClose]);
+  }, [anchor, onRequestClose, ref]);
   return (
     <div
       ref={ref}

@@ -14,6 +14,21 @@
   }
 }
 @layer components {
+  .schedule-time-disclosure::details-content {
+    interpolate-size: allow-keywords;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition:
+      height var(--motion-medium) var(--ease-settle),
+      opacity var(--motion-fast) var(--ease-settle),
+      content-visibility var(--motion-medium) allow-discrete;
+  }
+  .schedule-time-disclosure[open]::details-content {
+    height: auto;
+    opacity: 1;
+  }
+
   [data-schedule-color='none'] {
     --schedule-color: var(--subtle);
   }
@@ -92,10 +107,6 @@
     padding: 3px;
     background: transparent;
     background-clip: content-box;
-  }
-  .ui-check.task-check:checked {
-    background-color: var(--accent);
-    border-color: var(--accent);
   }
   .schedule-completion-check {
     border-radius: 3px;
@@ -304,7 +315,7 @@
     overscroll-behavior: contain;
     z-index: 100;
   }
-  .ui-dropdown-menu .ui-menu-option[data-active='true'] {
+  .ui-menu .ui-menu-option[data-active='true'] {
     background: var(--accent-soft);
     color: var(--accent-hover);
     outline: 1px solid var(--accent);
@@ -316,6 +327,133 @@
     min-height: 22px;
     flex-shrink: 0;
     accent-color: var(--accent);
+  }
+
+  .ui-check[type='checkbox'],
+  .schedule-completion-check {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    appearance: none;
+    padding: 0;
+    border: 1.5px solid var(--subtle);
+    border-radius: 3px;
+    background: transparent;
+    vertical-align: middle;
+    cursor: pointer;
+  }
+  /* Two connected strokes grow from their starting points, like drawing a check by hand. */
+  .ui-check[type='checkbox']::before,
+  .ui-check[type='checkbox']::after,
+  .schedule-completion-check::before,
+  .schedule-completion-check::after {
+    content: '';
+    position: absolute;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--success);
+    transform-origin: left center;
+    pointer-events: none;
+  }
+  .ui-check[type='checkbox']::before,
+  .schedule-completion-check::before {
+    left: 18%;
+    top: 46%;
+    width: 31%;
+    transform: rotate(45deg) scaleX(0);
+  }
+  .ui-check[type='checkbox']::after,
+  .schedule-completion-check::after {
+    left: 40%;
+    top: 68%;
+    width: 57%;
+    transform: rotate(-48deg) scaleX(0);
+  }
+  .ui-check[type='checkbox']:is(:checked, :indeterminate),
+  .schedule-completion-check[data-checked='true'] {
+    border-color: var(--success);
+    background: var(--success-soft);
+  }
+  .ui-check[type='checkbox']:checked::before,
+  .schedule-completion-check[data-checked='true']::before {
+    transform: rotate(45deg) scaleX(1);
+  }
+  .ui-check[type='checkbox']:checked::after,
+  .schedule-completion-check[data-checked='true']::after {
+    transform: rotate(-48deg) scaleX(1);
+  }
+  .ui-check[type='checkbox']:indeterminate::before {
+    transform: rotate(45deg) scaleX(0);
+  }
+  .ui-check[type='checkbox']:indeterminate::after {
+    left: 20%;
+    top: calc(50% - 1px);
+    width: 60%;
+    transform: rotate(0deg) scaleX(1);
+  }
+  .ui-check.task-check[type='checkbox'] {
+    border-radius: 50%;
+  }
+  .ui-check.task-check[type='checkbox']::before {
+    inset: 3px;
+    width: auto;
+    height: auto;
+    border-radius: 50%;
+    transform-origin: center;
+    transform: scale(0);
+  }
+  .ui-check.task-check[type='checkbox']:checked::before {
+    transform: scale(1);
+  }
+  .ui-check.task-check[type='checkbox']:not(:indeterminate)::after {
+    content: none;
+  }
+  .ui-check:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .ui-check:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  [aria-expanded='true'] > .ui-disclosure-icon,
+  details[open] > .ui-disclosure-summary > .ui-disclosure-icon {
+    rotate: 180deg;
+  }
+  .ui-disclosure-icon {
+    flex-shrink: 0;
+    rotate: 0deg;
+  }
+  .ui-disclosure-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-height);
+    cursor: pointer;
+    list-style: none;
+  }
+  .ui-disclosure-summary::-webkit-details-marker {
+    display: none;
+  }
+  .ui-disclosure-summary::marker {
+    content: '';
+  }
+  .ui-disclosure-summary > .ui-disclosure-icon {
+    margin-inline-start: auto;
+  }
+  @media (min-width: 701px) {
+    .schedule-time-disclosure > .ui-disclosure-summary {
+      display: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .ui-check[type='checkbox'] {
+      appearance: auto;
+    }
+    .ui-check[type='checkbox']::before,
+    .ui-check[type='checkbox']::after {
+      display: none;
+    }
   }
   .ui-surface {
     min-width: 0;
@@ -432,12 +570,22 @@
   }
   .detail-kind-control:focus-within {
     border-color: var(--accent);
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .detail-kind-control :is(.ui-input, .detail-kind-toggle):focus-visible {
+    outline: none;
+  }
+  .detail-kind-control .ui-button.detail-kind-toggle,
+  .detail-kind-control .ui-button.detail-kind-toggle:not(:disabled):hover {
+    background: transparent;
   }
   .detail-kind-control .ui-input {
     border: 0;
     background: transparent;
   }
   .preset-switch {
+    position: relative;
     background: transparent;
     border-bottom: 1px solid var(--line);
     border-radius: 0;
@@ -456,7 +604,7 @@
   .preset-switch.calendar-view-switch button[aria-pressed='true'] {
     color: var(--accent-hover);
     background: transparent;
-    border-bottom-color: var(--accent);
+    border-bottom-color: transparent;
     box-shadow: none;
   }
   .preset-switch.calendar-view-switch button {
@@ -467,6 +615,28 @@
   }
   .preset-switch.calendar-view-switch button[aria-pressed='true'] {
     color: var(--accent-hover);
+  }
+  .ui-horizontal-indicator {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--accent);
+    pointer-events: none;
+  }
+  .ui-horizontal-page-viewport {
+    overflow-x: clip;
+    min-width: 0;
+  }
+  .preset-workspace > .workspace-page-header {
+    margin-bottom: var(--space-3);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-horizontal-indicator {
+      transition:
+        transform var(--motion-medium) var(--ease-settle),
+        width var(--motion-medium) var(--ease-settle);
+    }
   }
   .brand-mark {
     color: var(--on-accent);
@@ -539,6 +709,43 @@
     }
   }
   @media (prefers-reduced-motion: no-preference) {
+    .ui-check[type='checkbox'],
+    .schedule-completion-check {
+      transition:
+        background-color var(--motion-fast) ease,
+        border-color var(--motion-fast) ease,
+        scale var(--motion-fast) var(--ease-settle);
+    }
+    .ui-check[type='checkbox']::before,
+    .schedule-completion-check::before {
+      transition: transform calc(var(--motion-fast) * 0.35) ease-in calc(var(--motion-fast) * 0.65);
+    }
+    .ui-check[type='checkbox']::after,
+    .schedule-completion-check::after {
+      transition: transform calc(var(--motion-fast) * 0.65) ease-in;
+    }
+    .ui-check[type='checkbox']:checked::before,
+    .schedule-completion-check[data-checked='true']::before {
+      transition: transform calc(var(--motion-medium) * 0.3) ease-in;
+    }
+    .ui-check[type='checkbox']:checked::after,
+    .schedule-completion-check[data-checked='true']::after {
+      transition: transform calc(var(--motion-medium) * 0.7) var(--ease-settle)
+        calc(var(--motion-medium) * 0.3);
+    }
+    .ui-check.task-check[type='checkbox']::before {
+      transition: transform var(--motion-fast) var(--ease-settle);
+    }
+    .ui-check.task-check[type='checkbox']:checked::before {
+      transition-duration: var(--motion-medium);
+    }
+    .ui-check[type='checkbox']:not(:disabled):active {
+      scale: 0.9;
+    }
+    .ui-disclosure-icon {
+      transition: rotate var(--motion-medium) var(--ease-settle);
+    }
+
     .ui-button,
     .ui-input,
     .ui-card-button,
@@ -553,7 +760,6 @@
     }
     .route-content,
     .view-enter,
-    .ui-menu,
     .error-box {
       animation: content-enter var(--motion-medium) var(--ease-settle) both;
     }
@@ -567,10 +773,21 @@
       animation: modal-enter var(--motion-slow) var(--ease-settle) both;
     }
     .preset-modal[open]::backdrop {
-      animation: veil-enter var(--motion-fast) ease both;
+      opacity: 1;
+      backdrop-filter: blur(4px);
+      transition:
+        opacity var(--motion-slow) var(--ease-settle),
+        backdrop-filter var(--motion-slow) var(--ease-settle);
+      @starting-style {
+        opacity: 0;
+        backdrop-filter: blur(0);
+      }
     }
     .preset-modal[data-closing]::backdrop {
-      animation: veil-enter var(--motion-exit) var(--ease-exit) reverse both;
+      opacity: 0;
+      backdrop-filter: blur(0);
+      transition-duration: var(--motion-exit);
+      transition-timing-function: var(--ease-exit);
     }
     .calendar-bar,
     .schedule-search-results a,
@@ -580,11 +797,7 @@
         background-color var(--motion-fast) ease,
         box-shadow var(--motion-fast) ease;
     }
-    .ui-button[aria-busy='true'] .action-icon {
-      animation: saving-breathe 850ms ease-in-out infinite alternate;
-    }
     .schedule-completion-check,
-    .work-state-dot,
     .today-work-arc {
       transition:
         background-color var(--motion-medium) ease,
@@ -612,22 +825,6 @@
       transform: none;
     }
   }
-  @keyframes veil-enter {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
-  @keyframes saving-breathe {
-    from {
-      opacity: 0.45;
-    }
-    to {
-      opacity: 1;
-    }
-  }
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -636,6 +833,277 @@
       animation: none !important;
       transition: none !important;
       scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .ui-option-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .ui-option-label > span:empty {
+    display: none;
+  }
+  .ui-option-label > span {
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+  .ui-accent-swatch {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 1px solid var(--line);
+  }
+  .ui-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: 48px;
+    height: 44px;
+    flex-shrink: 0;
+  }
+  .ui-switch > input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+  .ui-switch-track {
+    width: 48px;
+    height: 28px;
+    padding: 3px;
+    border-radius: var(--radius-pill);
+    background: var(--switch-off);
+  }
+  .ui-switch-track > span {
+    display: block;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--switch-thumb);
+    box-shadow: var(--shadow-hover);
+  }
+  .ui-switch > input:checked + .ui-switch-track {
+    background: var(--success);
+  }
+  .ui-switch > input:checked + .ui-switch-track > span {
+    transform: translateX(20px);
+  }
+  .ui-switch > input:focus-visible + .ui-switch-track {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .ui-switch > input:disabled {
+    cursor: default;
+  }
+  .ui-switch > input:disabled + .ui-switch-track {
+    opacity: 0.5;
+  }
+  .ui-vertical-tabs {
+    display: grid;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: var(--space-6);
+    min-height: 0;
+    flex: 1;
+  }
+  .ui-vertical-tab-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px;
+  }
+  .ui-vertical-tab-list {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    isolation: isolate;
+  }
+  .ui-vertical-tab-list > .ui-button {
+    position: relative;
+    min-height: 48px;
+    padding: var(--space-3);
+    text-align: left;
+    justify-content: flex-start;
+    border: 0;
+    background: transparent;
+    border-radius: var(--radius-control);
+    overflow-wrap: anywhere;
+  }
+  .ui-vertical-tab-list > .ui-button[aria-selected='true'] {
+    background: transparent;
+    color: var(--accent-hover);
+    font-weight: 700;
+  }
+  .ui-vertical-tab-indicator {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 48px;
+    background: var(--accent-soft);
+    border-radius: var(--radius-control);
+    z-index: -1;
+    pointer-events: none;
+  }
+  .ui-vertical-page-viewport {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .ui-vertical-page {
+    height: 100%;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    padding: var(--space-1);
+  }
+  @media (max-width: 700px) {
+    .ui-vertical-tabs {
+      grid-template-columns: 92px minmax(0, 1fr);
+      gap: var(--space-2);
+    }
+    .ui-vertical-tab-list > .ui-button {
+      padding-inline: var(--space-2);
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ui-switch-track {
+      transition: background-color var(--motion-fast) ease;
+    }
+    .ui-switch-track > span {
+      transition: transform var(--motion-medium) var(--ease-settle);
+    }
+    .ui-vertical-tab-indicator {
+      transition:
+        transform var(--motion-medium) var(--ease-settle),
+        height var(--motion-medium) var(--ease-settle);
+    }
+    .ui-vertical-page {
+      animation: vertical-page-next var(--motion-slow) var(--ease-settle) both;
+    }
+    .ui-vertical-page[data-direction='-1'] {
+      animation-name: vertical-page-previous;
+    }
+  }
+  @keyframes vertical-page-next {
+    from {
+      opacity: 0;
+      transform: translateY(56px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes vertical-page-previous {
+    from {
+      opacity: 0;
+      transform: translateY(-56px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @media (forced-colors: active) {
+    .ui-switch > input {
+      opacity: 1;
+      appearance: auto;
+    }
+    .ui-switch-track {
+      visibility: hidden;
+    }
+    .ui-vertical-tab-list > .ui-button[aria-selected='true'] {
+      outline: 2px solid;
+    }
+  }
+}
+@layer components {
+  .date-time-field {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .ui-anchored-popup {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    padding: var(--space-3);
+    box-sizing: border-box;
+    overflow: auto;
+    overscroll-behavior: contain;
+    color: var(--ink);
+  }
+  .ui-time-picker-heading,
+  .ui-time-picker-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .ui-time-picker-actions {
+    justify-content: flex-end;
+  }
+  .ui-time-wheels {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    flex: none;
+  }
+  .ui-time-wheel {
+    height: 220px;
+    width: 96px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+    padding-block: 88px;
+    box-sizing: border-box;
+    scrollbar-width: none;
+    overflow-x: hidden;
+    flex: 0 0 96px;
+    contain: size layout paint;
+    background: linear-gradient(
+      transparent 40%,
+      var(--surface-soft) 40%,
+      var(--surface-soft) 60%,
+      transparent 60%
+    );
+  }
+  .ui-time-wheel .ui-button {
+    display: block;
+    width: 100%;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    scroll-snap-align: center;
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+    color: var(--muted);
+  }
+  .ui-time-wheel .ui-button[aria-selected='true'] {
+    color: var(--ink);
+    font-weight: 650;
+  }
+  .ui-time-wheel-number {
+    display: block;
+    pointer-events: none;
+    backface-visibility: hidden;
+  }
+  :root[data-motion='reduced'] .ui-time-wheel-number,
+  :root[data-motion='none'] .ui-time-wheel-number {
+    transform: none !important;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-time-wheel-number {
+      transform: none !important;
     }
   }
 }

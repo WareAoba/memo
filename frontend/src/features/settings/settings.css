@@ -61,40 +61,6 @@
     width: 100%;
     min-height: 0;
   }
-  .settings-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    flex-shrink: 0;
-    padding-bottom: var(--space-4);
-  }
-  .settings-heading h1 {
-    margin: 0;
-    font-size: 26px;
-  }
-  .settings-body {
-    display: grid;
-    grid-template-columns: 180px minmax(0, 1fr);
-    flex: 1;
-    min-height: 0;
-    gap: var(--space-5);
-  }
-  .settings-tabs {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-    overflow-y: auto;
-  }
-  .settings-tabs > button {
-    flex-shrink: 0;
-  }
-  .settings-panel {
-    min-width: 0;
-    overflow-y: auto;
-    overflow-wrap: anywhere;
-    padding: var(--space-2);
-  }
   .settings-panel h2 {
     margin: 0 0 var(--space-5);
     font-size: 20px;
@@ -117,20 +83,6 @@
     .sidebar-settings .sidebar-label {
       display: none;
     }
-    .settings-body {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto minmax(0, 1fr);
-      gap: var(--space-2);
-    }
-    .settings-tabs {
-      flex-direction: row;
-      overflow-x: auto;
-      padding-bottom: var(--space-2);
-    }
-    .settings-tabs > button {
-      width: auto;
-      padding-inline: var(--space-2);
-    }
   }
 }
 @layer components {
@@ -143,21 +95,10 @@
   .settings-workspace .workspace-title-row h1 {
     padding-right: 56px;
   }
-  .settings-workspace .workspace-navigation-row {
-    flex-basis: 100%;
-    max-width: 100%;
-    justify-content: flex-start;
-    margin-left: 0;
-  }
+
   .settings-workspace .workspace-toolbar-row {
     position: absolute;
     top: 0;
     right: 0;
-  }
-  .settings-workspace .settings-tabs {
-    gap: var(--space-1);
-  }
-  .settings-workspace .settings-tabs > button {
-    padding-inline: var(--space-3);
   }
 }

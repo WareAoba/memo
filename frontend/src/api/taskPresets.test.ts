@@ -1,11 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import {
-  archiveTaskPreset,
-  emptyFields,
-  getTaskPreset,
-  listTaskPresets,
-  saveTaskPreset,
-} from './taskPresets';
+import { emptyFields, getTaskPreset, listTaskPresets, saveTaskPreset } from './taskPresets';
 const preset = {
   ...emptyFields,
   id: 'id',
@@ -56,10 +50,6 @@ it('does not show internal server errors', async () => {
     vi.fn().mockResolvedValue(new Response('private SQL details', { status: 503 })),
   );
   await expect(getTaskPreset('id')).rejects.toThrow('서버 요청에 실패');
-});
-it('accepts an empty archive response', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 204 })));
-  await expect(archiveTaskPreset('id')).resolves.toBeUndefined();
 });
 
 it('explains network failures without losing user-facing context', async () => {

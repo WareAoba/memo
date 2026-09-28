@@ -8,6 +8,25 @@ use sqlx::SqlitePool;
 use tower::ServiceExt;
 const OWNER: &str = "00000000-0000-4000-8000-000000000001";
 const OTHER: &str = "00000000-0000-4000-8000-000000000002";
+
+#[tokio::test]
+async fn batched_tags_stay_with_their_page_and_work() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("app.sqlite3")).await.unwrap();
+    let first = create(&pool, json!({"name":"A","tags":["z","shared","a"]})).await;
+    let second = create(&pool, json!({"name":"B","tags":[]})).await;
+    let third = create(&pool, json!({"name":"C","tags":["shared","c"]})).await;
+    let (status, page) = request(&pool, "GET", "/api/entities?limit=2", None).await;
+    assert_eq!(status, 200);
+    assert_eq!(page["items"], json!([first, second]));
+    assert_eq!(page["total"], 3);
+    let (_, page) = request(&pool, "GET", "/api/entities?limit=2&offset=2", None).await;
+    assert_eq!(page["items"], json!([third]));
+    let (_, page) = request(&pool, "GET", "/api/entities?offset=3", None).await;
+    assert_eq!(page["items"], json!([]));
+    pool.close().await;
+}
+
 async fn request(pool: &SqlitePool, method: &str, path: &str, body: Option<Value>) -> (u16, Value) {
     raw(pool, method, path, body.map(|v| v.to_string()).as_deref()).await
 }
@@ -39,7 +58,7 @@ async fn create(pool: &SqlitePool, body: Value) -> Value {
     value
 }
 #[tokio::test]
-async fn full_crud_search_archive_restore_and_persistence() {
+async fn create_edit_search_retired_archive_and_persistence() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("app.sqlite3");
     let pool = db::connect(&path).await.unwrap();
@@ -74,24 +93,22 @@ async fn full_crud_search_archive_restore_and_persistence() {
     assert_eq!(changed["contact_info"], input["contact_info"]);
     assert_eq!(changed["tags"], json!(["새 태그"]));
     assert!(changed["default_work_start_time"].is_null());
-    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 204);
-    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 204);
+    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 405);
     assert_eq!(
-        request(&pool, "GET", "/api/entities", None).await.1["total"],
-        0
+        request(&pool, "PATCH", &uri, Some(json!({"archived":true})))
+            .await
+            .0,
+        400
     );
     assert_eq!(
         request(&pool, "GET", "/api/entities?archived=true", None)
             .await
-            .1["total"],
-        1
-    );
-    assert_eq!(request(&pool, "GET", &uri, None).await.1["archived"], true);
-    assert_eq!(
-        request(&pool, "PATCH", &uri, Some(json!({"archived":false})))
-            .await
             .0,
-        200
+        400
+    );
+    assert_eq!(
+        request(&pool, "GET", "/api/entities", None).await.1["total"],
+        1
     );
     pool.close().await;
     let pool = db::connect(&path).await.unwrap();
@@ -184,11 +201,7 @@ async fn ownership_is_enforced_for_reads_writes_lists_and_tag_links() {
         .await
         .unwrap();
     let uri = format!("/api/entities/{foreign}");
-    for (method, body) in [
-        ("GET", None),
-        ("PATCH", Some(json!({"name":"attack"}))),
-        ("DELETE", None),
-    ] {
+    for (method, body) in [("GET", None), ("PATCH", Some(json!({"name":"attack"})))] {
         let (status, value) = request(&pool, method, &uri, body).await;
         assert_eq!(status, 404);
         assert_eq!(value["error"]["code"], "ENTITY_NOT_FOUND");
@@ -412,15 +425,9 @@ async fn unnamed_details_and_search_match_kind_and_content_before_pagination() {
     let names = request(&pool, "GET", "/api/work-field-names", None).await.1;
     assert_eq!(names, json!(["Location", "needle"]));
     let uri = format!("/api/entities/{}", a["id"].as_str().unwrap());
-    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 204);
+    assert_eq!(request(&pool, "DELETE", &uri, None).await.0, 405);
     assert_eq!(
         request(&pool, "GET", "/api/entities?q=Seoul", None).await.1["total"],
-        0
-    );
-    assert_eq!(
-        request(&pool, "GET", "/api/entities?q=Seoul&archived=true", None)
-            .await
-            .1["total"],
         1
     );
 }

@@ -84,16 +84,24 @@
   .time-dial-control {
     margin: var(--space-6) -10px 18px;
   }
+  .time-step-actions {
+    --icon-size: 32px;
+    display: flex;
+    justify-content: center;
+  }
   .time-endpoints {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--space-3);
+    /* Keep the dial steady while the endpoint box expands within this row. */
+    height: 132px;
   }
   .time-endpoints > span {
     color: var(--muted);
   }
-  .time-endpoints button {
+  .time-endpoints .time-endpoint-value {
+    width: 100%;
     background: transparent;
     display: grid;
     grid-template-columns: 8px auto;
@@ -104,8 +112,45 @@
     color: var(--muted);
     border-radius: var(--radius-card);
   }
-  .time-endpoints button[aria-pressed='true'] {
-    background: var(--surface);
+  .time-endpoint-box {
+    position: relative;
+    border: 1px solid transparent;
+    border-radius: var(--radius-card);
+    overflow: hidden;
+    transition:
+      background var(--motion-fast),
+      border-color var(--motion-fast);
+  }
+  .time-endpoint-box[data-active='true'] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .time-step-reveal {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      grid-template-rows var(--motion-medium) var(--ease-settle),
+      opacity var(--motion-fast) var(--ease-settle);
+  }
+  .time-step-reveal > .time-step-actions {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .time-endpoint-box[data-active='true'] .time-step-reveal {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .time-step-actions .ui-button {
+    min-width: 48px;
+    min-height: 48px;
+    padding: var(--space-2);
+  }
+  .time-step-actions svg {
+    width: 28px;
+    height: 28px;
   }
   .time-endpoints strong {
     grid-column: 1/-1;
@@ -129,7 +174,7 @@
   .time-dial {
     position: relative;
     width: 100%;
-    max-width: 360px;
+    max-width: 420px;
     aspect-ratio: 1;
     margin: var(--space-2) auto;
     touch-action: none;
@@ -182,8 +227,12 @@
       drop-shadow(-1px -2px 2px var(--dial-highlight));
   }
   .dial-selection {
+    transform-origin: 180px 180px;
+    transition:
+      transform var(--motion-medium) var(--ease-settle),
+      stroke-dasharray var(--motion-medium) var(--ease-settle);
     fill: none;
-    stroke: var(--surface);
+    stroke: var(--dial-selection);
     stroke-width: 32;
     stroke-linecap: round;
     opacity: 1;
@@ -207,7 +256,30 @@
     letter-spacing: -0.04em;
     color: var(--accent-hover);
   }
+  .dial-endpoint-orbit {
+    transform-origin: 180px 180px;
+    transition: transform var(--motion-medium) var(--ease-settle);
+  }
+  .dial-endpoint-label {
+    transform-origin: 180px 42px;
+    transition: transform var(--motion-medium) var(--ease-settle);
+  }
+  .dial-handle-orbit {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: transform var(--motion-medium) var(--ease-settle);
+  }
+  .time-dial[data-dragging='true'] .dial-selection,
+  .time-dial[data-dragging='true'] .dial-endpoint-orbit,
+  .time-dial[data-dragging='true'] .dial-endpoint-label,
+  .time-dial[data-dragging='true'] .dial-handle-orbit {
+    transition: none;
+  }
   .dial-handle {
+    left: 50%;
+    top: 11.666667%;
+    pointer-events: auto;
     position: absolute;
     width: 44px;
     height: 44px;
@@ -291,7 +363,7 @@
     font-size: 12px;
   }
   .schedule-tasks {
-    margin-top: var(--space-6);
+    margin-top: 0;
   }
   .schedule-tasks h3 {
     font-size: 14px;
@@ -311,8 +383,8 @@
     justify-content: space-between;
     align-items: center;
     gap: var(--space-2);
-    margin: var(--space-2) 0;
-    padding: 10px 0;
+    margin: 0;
+    padding: 2px 0;
     border-bottom: 1px solid var(--line);
     font-size: 13px;
   }
@@ -350,11 +422,13 @@
   .schedule-save {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: var(--space-5);
     padding: var(--space-6) var(--space-1);
   }
   .schedule-save > span {
+    margin-right: auto;
     color: var(--muted);
     font-size: 12px;
   }
@@ -366,7 +440,7 @@
     font-variant-numeric: tabular-nums;
   }
   .schedule-save button {
-    gap: 30px;
+    gap: var(--space-2);
   }
   @media (max-width: 700px) {
     .schedule-compose {
@@ -385,11 +459,12 @@
       gap: var(--space-3);
     }
     .schedule-save button {
-      gap: 14px;
+      gap: var(--space-2);
     }
   }
   @media (prefers-reduced-motion: no-preference) {
-    .time-endpoints button {
+    .time-endpoints .time-endpoint-value {
+      width: 100%;
       transition: background var(--motion-fast) ease;
     }
   }
@@ -468,5 +543,55 @@
     cursor: pointer;
     align-content: center;
     font-weight: 600;
+  }
+}
+
+@layer features {
+  .selected-work.schedule-work-title {
+    justify-content: flex-start;
+  }
+  .schedule-work-title,
+  .schedule-task-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .schedule-task-row {
+    padding-block: 0;
+    min-width: 0;
+    flex: 1;
+  }
+  .task-name-input {
+    position: relative;
+    min-width: 0;
+    flex: 1;
+  }
+  .task-name-options {
+    overflow-y: auto;
+  }
+  .schedule-task-toggle {
+    justify-content: flex-start;
+  }
+  .task-directory ul {
+    list-style: none;
+    padding-left: var(--space-6);
+  }
+  .task-directory label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+  }
+  .task-directory details {
+    padding-block: var(--space-2);
+  }
+  .execution-task-list.work-stack {
+    gap: var(--space-1);
+  }
+  .execution-task-list > .icon-button {
+    justify-self: start;
+  }
+  .schedule-task-row .ui-input {
+    margin-top: 0;
   }
 }

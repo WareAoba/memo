@@ -5,15 +5,15 @@ mod push;
 mod schedules;
 mod settings;
 mod task_presets;
+pub(crate) mod tracks;
 mod unmanaged_presets;
-mod work_tasks;
 mod works;
 
 use axum::{Router, routing::get};
 
 use crate::{AppState, errors::ApiError};
 
-pub fn router() -> Router<AppState> {
+pub fn router(state: AppState) -> Router<AppState> {
     Router::new()
         .route(
             "/api/unmanaged-presets/{kind}",
@@ -88,25 +88,19 @@ pub fn router() -> Router<AppState> {
                 .delete(schedules::delete),
         )
         .route(
-            "/api/entities/{id}/task-presets",
-            get(work_tasks::get).put(work_tasks::replace),
-        )
-        .route(
             "/api/task-presets",
             get(task_presets::list).post(task_presets::create),
         )
         .route(
             "/api/task-presets/{id}",
-            get(task_presets::get)
-                .patch(task_presets::patch)
-                .delete(task_presets::archive),
+            get(task_presets::get).patch(task_presets::patch),
         )
         .route("/api/entities", get(works::list).post(works::create))
-        .route(
-            "/api/entities/{id}",
-            get(works::get).patch(works::patch).delete(works::archive),
-        )
+        .route("/api/entities/{id}", get(works::get).patch(works::patch))
         .route("/api/local-user", axum::routing::post(works::local_user))
+        .layer(axum::middleware::from_fn_with_state(state, tracks::scope))
+        .route("/api/tracks", get(tracks::list).post(tracks::create))
+        .route("/api/tracks/{id}", axum::routing::patch(tracks::rename))
         .fallback(|| async { ApiError::NotFound })
         .method_not_allowed_fallback(|| async { ApiError::MethodNotAllowed })
 }

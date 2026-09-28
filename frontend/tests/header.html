@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Header regression fixture</title>
+    <script>
+      const params = new URLSearchParams(location.search);
+      document.documentElement.dataset.theme = params.get('theme') === 'dark' ? 'dark' : 'light';
+      document.documentElement.dataset.motion = params.get('motion') || 'full';
+      document.write(
+        '<link rel="stylesheet" href="/src/tokens.css"><link rel="stylesheet" href="/src/styles.css"><link rel="stylesheet" href="/src/design-system.css"><link rel="stylesheet" href="/src/features/settings/preferences.css">',
+      );
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <div class="header-brand-group">
+          <div class="menu-button-slot">
+            <button data-variant="ghost" class="ui-button menu-expand-button" aria-label="메뉴">
+              ☰
+            </button>
+          </div>
+          <a class="brand" href="#"><span class="brand-mark">P</span>Preset</a>
+          <div
+            class="track-selector"
+            title="아주 긴 트랙 이름으로 공부 운동 업무를 모두 구분하는 테스트"
+          >
+            <div class="ui-dropdown">
+              <button
+                class="ui-button ui-input ui-dropdown-trigger"
+                data-variant="plain"
+                aria-label="트랙 전환"
+              >
+                <span>아주 긴 트랙 이름으로 공부 운동 업무를 모두 구분하는 테스트</span
+                ><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+                  <path d="M4 6L8 10L12 6" fill="none" stroke="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <a data-variant="primary" class="button ui-button header-add-schedule" href="#"
+          >+ 스케줄 추가</a
+        ><button data-variant="ghost" class="ui-button sticky-launcher">스티커 메모</button>
+      </header>
+      <main>Header regression fixture — no API or saved settings</main>
+    </div>
+  </body>
+</html>

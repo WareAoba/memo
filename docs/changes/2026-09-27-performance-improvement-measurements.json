@@ -1,0 +1,442 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-09-27T15:14:32.4869033+09:00",
+  "methodology": "Same Windows Chrome tab, production Vite build with React profiling renderer, synthetic data, 7.5 seconds per Today size, first 800 ms excluded; seven steady commits per size. Before and after each run once. No CPU throttling. Fetch latency simulation is not actual WAN. cachedFormatters=false means the previous audit override is disabled; both runs use the actual product implementation. React durations exclude layout/paint. Source snapshots preserve the uncommitted baseline.",
+  "before": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "viewport": [
+      3072,
+      1594
+    ],
+    "renders": [
+      {
+        "count": 100,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 5,
+        "nodes": 8601,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 5.699999995529652,
+            "at": 80
+          },
+          {
+            "phase": "update",
+            "duration": 87.99999997764826,
+            "at": 230.39999999850988
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 38.00000000745058,
+          "p95": 46.29999999701977,
+          "max": 46.29999999701977
+        }
+      },
+      {
+        "count": 50,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 3,
+        "nodes": 4351,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.1000000014901161,
+            "at": 7697.39999999851
+          },
+          {
+            "phase": "update",
+            "duration": 36.8999999910593,
+            "at": 7739.0999999940395
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 16.899999998509884,
+          "p95": 18.50000000745058,
+          "max": 18.50000000745058
+        }
+      },
+      {
+        "count": 10,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 1,
+        "nodes": 951,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.1000000014901161,
+            "at": 15317.5
+          },
+          {
+            "phase": "update",
+            "duration": 6.799999997019768,
+            "at": 15325.59999999404
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 3.2000000029802322,
+          "p95": 3.6999999955296516,
+          "max": 3.6999999955296516
+        }
+      }
+    ],
+    "appearance": [
+      {
+        "count": 10,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 0.7000000029802322,
+        "p95": 1,
+        "max": 1
+      },
+      {
+        "count": 50,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 3.100000001490116,
+        "p95": 3.5,
+        "max": 3.5
+      },
+      {
+        "count": 100,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 6.4000000059604645,
+        "p95": 7,
+        "max": 7
+      }
+    ],
+    "calendar": [
+      {
+        "count": 100,
+        "layout": {
+          "n": 6,
+          "median": 0.20000000298023224,
+          "p95": 2.100000001490116,
+          "max": 2.100000001490116
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3.600000001490116,
+            "at": 23107.59999999404
+          },
+          {
+            "phase": "update",
+            "duration": 1.8999999985098839,
+            "at": 23112.19999999553
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 1000,
+        "layout": {
+          "n": 6,
+          "median": 1.5999999940395355,
+          "p95": 2.5,
+          "max": 2.5
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 2.5,
+            "at": 24141.69999999553
+          },
+          {
+            "phase": "update",
+            "duration": 2.7000000029802322,
+            "at": 24149.09999999404
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 5000,
+        "layout": {
+          "n": 6,
+          "median": 15.099999994039536,
+          "p95": 16,
+          "max": 16
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3,
+            "at": 25280.29999999702
+          },
+          {
+            "phase": "update",
+            "duration": 18.399999998509884,
+            "at": 25314.59999999404
+          }
+        ],
+        "nodes": 733
+      }
+    ],
+    "requests": [
+      {
+        "count": 100,
+        "simulatedLatencyMs": 0,
+        "firstMs": 0.3999999985098839,
+        "revisitMs": 0.29999999701976776,
+        "totalCalls": 10
+      },
+      {
+        "count": 100,
+        "simulatedLatencyMs": 40,
+        "firstMs": 237.10000000149012,
+        "revisitMs": 232.20000000298023,
+        "totalCalls": 10
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 0,
+        "firstMs": 2.3000000044703484,
+        "revisitMs": 2,
+        "totalCalls": 100
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 40,
+        "firstMs": 2328.1999999955297,
+        "revisitMs": 2345.10000000149,
+        "totalCalls": 100
+      }
+    ]
+  },
+  "after": {
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36",
+    "viewport": [
+      3072,
+      1594
+    ],
+    "renders": [
+      {
+        "count": 100,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 1,
+        "nodes": 8601,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 6.899999998509884,
+            "at": 65.89999999850988
+          },
+          {
+            "phase": "update",
+            "duration": 82.20000000298023,
+            "at": 171.5
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 5.699999995529652,
+          "p95": 7.200000002980232,
+          "max": 7.200000002980232
+        }
+      },
+      {
+        "count": 50,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 1,
+        "nodes": 4351,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1.4000000059604645,
+            "at": 7669.70000000298
+          },
+          {
+            "phase": "update",
+            "duration": 31.299999997019768,
+            "at": 7705.70000000298
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 2.5,
+          "p95": 2.899999998509884,
+          "max": 2.899999998509884
+        }
+      },
+      {
+        "count": 10,
+        "tasksPerSchedule": 3,
+        "cachedFormatters": false,
+        "requests": 1,
+        "nodes": 951,
+        "initial": [
+          {
+            "phase": "mount",
+            "duration": 1,
+            "at": 15280.89999999851
+          },
+          {
+            "phase": "update",
+            "duration": 6.5,
+            "at": 15288.10000000149
+          }
+        ],
+        "steady": {
+          "n": 7,
+          "median": 1,
+          "p95": 1.4000000059604645,
+          "max": 1.4000000059604645
+        }
+      }
+    ],
+    "appearance": [
+      {
+        "count": 10,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 0.09999999403953552,
+        "p95": 0.10000000149011612,
+        "max": 0.10000000149011612
+      },
+      {
+        "count": 50,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 0.29999999701976776,
+        "p95": 0.3999999985098839,
+        "max": 0.3999999985098839
+      },
+      {
+        "count": 100,
+        "cachedFormatters": false,
+        "n": 12,
+        "median": 0.3999999985098839,
+        "p95": 0.5,
+        "max": 0.5
+      }
+    ],
+    "calendar": [
+      {
+        "count": 100,
+        "layout": {
+          "n": 6,
+          "median": 0.20000000298023224,
+          "p95": 0.3999999985098839,
+          "max": 0.3999999985098839
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3.700000010430813,
+            "at": 22912.89999999851
+          },
+          {
+            "phase": "update",
+            "duration": 1.8000000044703484,
+            "at": 22917
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 1000,
+        "layout": {
+          "n": 6,
+          "median": 1.6000000014901161,
+          "p95": 2,
+          "max": 2
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3,
+            "at": 23943.89999999851
+          },
+          {
+            "phase": "update",
+            "duration": 4.200000002980232,
+            "at": 23953.29999999702
+          }
+        ],
+        "nodes": 733
+      },
+      {
+        "count": 5000,
+        "layout": {
+          "n": 6,
+          "median": 14.899999998509884,
+          "p95": 15.5,
+          "max": 15.5
+        },
+        "commits": [
+          {
+            "phase": "mount",
+            "duration": 3.100000001490116,
+            "at": 25086.79999999702
+          },
+          {
+            "phase": "update",
+            "duration": 16.700000002980232,
+            "at": 25115.79999999702
+          }
+        ],
+        "nodes": 733
+      }
+    ],
+    "requests": [
+      {
+        "count": 100,
+        "simulatedLatencyMs": 0,
+        "firstMs": 0.29999999701976776,
+        "revisitMs": 0.30000000447034836,
+        "totalCalls": 2
+      },
+      {
+        "count": 100,
+        "simulatedLatencyMs": 40,
+        "firstMs": 46.5,
+        "revisitMs": 46.100000001490116,
+        "totalCalls": 2
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 0,
+        "firstMs": 1.6000000014901161,
+        "revisitMs": 1.5,
+        "totalCalls": 20
+      },
+      {
+        "count": 1000,
+        "simulatedLatencyMs": 40,
+        "firstMs": 463.80000000447035,
+        "revisitMs": 466.8999999985099,
+        "totalCalls": 20
+      }
+    ]
+  },
+  "beforeSources": {
+    "frontend/src/api/schedules.ts": "import { publishScheduleChange } from './scheduleChanges';\nimport { readSchedules } from './scheduleReads';\nimport { LocalizedError } from '../i18n/errors';\nimport type { ReminderFields } from './reminderFields';\nimport { emptyFields, type WorkFields } from './works';\nimport { ApiError, parsePage, record, requestJson } from './client';\nimport type { PresetItem } from './taskPresets';\nimport { scheduleColors, type ScheduleColor } from './scheduleColors';\nexport type { ScheduleColor } from './scheduleColors';\nexport type ScheduleFields = ReminderFields & {\n  title: string;\n  scheduled_date: string;\n  end_date: string;\n  start_time: string;\n  end_time: string;\n  time_zone: string;\n  notes: string;\n  color?: ScheduleColor;\n};\nexport type Schedule = ScheduleFields & {\n  id: string;\n  entity_id: string | null;\n  entity_name?: string;\n  status: string;\n  created_at: string;\n  updated_at: string;\n};\nexport type ScheduleDetail = Schedule & {\n  entity_snapshot: WorkFields;\n  tasks: {\n    id: string;\n    status: string;\n    execution_notes: string;\n    name_snapshot: string;\n    name_template_snapshot?: string;\n    parameter_values?: Record<string, string>;\n    default_notes_snapshot: string;\n    source_task_preset_version: number;\n    items: {\n      id: string;\n      definition: PresetItem;\n      value_boolean: boolean | null;\n      value_text: string | null;\n      value_number: number | null;\n      completed: boolean;\n    }[];\n  }[];\n};\nexport function parseSchedule(v: unknown): Schedule {\n  if (\n    !record(v) ||\n    (v.entity_name !== undefined && typeof v.entity_name !== 'string') ||\n    (v.color !== undefined && !scheduleColors.includes(v.color as ScheduleColor)) ||\n    !(v.entity_id === null || typeof v.entity_id === 'string') ||\n    ![\n      'id',\n      'title',\n      'scheduled_date',\n      'end_date',\n      'start_time',\n      'end_time',\n      'time_zone',\n      'notes',\n      'status',\n      'created_at',\n      'updated_at',\n    ].every((k) => typeof v[k] === 'string')\n  )\n    throw new LocalizedError('client.couldNotReadTheServerResponse');\n  return v as Schedule;\n}\nfunction detail(v: unknown): ScheduleDetail {\n  parseSchedule(v);\n  if (\n    !record(v) ||\n    !record(v.entity_snapshot) ||\n    !Object.entries(emptyFields).every(([k, expected]) => {\n      const actual = (v.entity_snapshot as Record<string, unknown>)[k];\n      return expected === null\n        ? actual === null || typeof actual === 'string'\n        : Array.isArray(expected)\n          ? Array.isArray(actual) && actual.every((x) => typeof x === 'string')\n          : typeof actual === typeof expected;\n    }) ||\n    !Array.isArray(v.tasks) ||\n    !v.tasks.every(\n      (t) =>\n        record(t) &&\n        typeof t.id === 'string' &&\n        ['pending', 'in_progress', 'completed', 'skipped'].includes(String(t.status)) &&\n        typeof t.execution_notes === 'string' &&\n        typeof t.name_snapshot === 'string' &&\n        (t.name_template_snapshot === undefined || typeof t.name_template_snapshot === 'string') &&\n        (t.parameter_values === undefined ||\n          (record(t.parameter_values) &&\n            Object.values(t.parameter_values).every((v) => typeof v === 'string'))) &&\n        typeof t.default_notes_snapshot === 'string' &&\n        Number.isInteger(t.source_task_preset_version) &&\n        Array.isArray(t.items) &&\n        t.items.every(\n          (i) =>\n            record(i) &&\n            typeof i.id === 'string' &&\n            typeof i.completed === 'boolean' &&\n            (i.value_boolean === null || typeof i.value_boolean === 'boolean') &&\n            (i.value_text === null || typeof i.value_text === 'string') &&\n            (i.value_number === null ||\n              (typeof i.value_number === 'number' && Number.isFinite(i.value_number))) &&\n            record(i.definition) &&\n            typeof i.definition.label === 'string' &&\n            typeof i.definition.required === 'boolean' &&\n            typeof i.definition.unit === 'string' &&\n            ['checkbox', 'text', 'number'].includes(String(i.definition.item_type)) &&\n            (i.definition.default_value === null ||\n              ['boolean', 'string', 'number'].includes(typeof i.definition.default_value)),\n        ),\n    )\n  )\n    throw new LocalizedError('client.couldNotReadTheServerResponse');\n  return v as ScheduleDetail;\n}\nexport async function listSchedules(date: string, offset: number, signal?: AbortSignal) {\n  return parsePage(\n    await requestJson(\n      '/api/schedules?' +\n        new URLSearchParams({\n          ...(date ? { date } : {}),\n          offset: String(offset),\n          limit: '20',\n        }),\n      'GET',\n      undefined,\n      signal,\n    ),\n    parseSchedule,\n  );\n}\nexport async function getSchedule(id: string, signal?: AbortSignal) {\n  return readSchedules(\n    `detail:${id}`,\n    async (sharedSignal) =>\n      detail(\n        await requestJson(\n          '/api/schedules/' + encodeURIComponent(id),\n          'GET',\n          undefined,\n          sharedSignal,\n        ),\n      ),\n    signal,\n  );\n}\nfunction saved(value: unknown) {\n  const schedule = detail(value);\n  publishScheduleChange({ kind: 'saved', id: schedule.id, schedule });\n  return schedule;\n}\nexport async function searchSchedules(q: string, offset: number, signal?: AbortSignal) {\n  return parsePage(\n    await requestJson(\n      '/api/schedules?' +\n        new URLSearchParams({\n          q: q.trim(),\n          limit: '20',\n          offset: String(offset),\n        }),\n      'GET',\n      undefined,\n      signal,\n    ),\n    parseSchedule,\n  );\n}\nfunction presetReference(id: string) {\n  return id.startsWith('name:') ? { name: id.slice(5) } : id;\n}\nexport async function saveSchedule(\n  fields: Partial<ScheduleFields> & {\n    entity_id?: string;\n    task_preset_ids?: string[];\n    task_customizations?: Record<string, TaskCustomization>;\n  },\n  id?: string,\n) {\n  return saved(\n    await requestJson(\n      '/api/schedules' + (id ? '/' + encodeURIComponent(id) : ''),\n      id ? 'PATCH' : 'POST',\n      id\n        ? fields\n        : {\n            ...fields,\n            ...(fields.entity_id?.startsWith('name:')\n              ? { entity_id: undefined, entity_name: fields.entity_id.slice(5) }\n              : {}),\n            task_preset_ids: fields.task_preset_ids?.map(presetReference),\n          },\n    ),\n  );\n}\nexport async function getDaySchedules(date: string, signal?: AbortSignal) {\n  return getRangeSchedules(date, date, signal);\n}\n\nexport function getRangeSchedules(from: string, to: string, signal?: AbortSignal) {\n  return readSchedules(\n    `details:${from}/${to}`,\n    (sharedSignal) => rangeSchedules(from, to, detail, true, sharedSignal),\n    signal,\n  );\n}\nexport function getRangeScheduleSummaries(from: string, to: string, signal?: AbortSignal) {\n  return readSchedules(\n    `summary:${from}/${to}`,\n    (sharedSignal) => rangeSchedules(from, to, parseSchedule, false, sharedSignal),\n    signal,\n  );\n}\nasync function rangeSchedules<T extends Schedule>(\n  from: string,\n  to: string,\n  parse: (value: unknown) => T,\n  includeDetails: boolean,\n  signal?: AbortSignal,\n): Promise<T[]> {\n  for (let attempt = 0; attempt < 3; attempt++) {\n    const items: T[] = [];\n    const ids = new Set<string>();\n    let revision: number | undefined;\n    let total: number | undefined;\n    try {\n      while (true) {\n        const raw = await requestJson(\n          '/api/schedules?' +\n            new URLSearchParams({\n              from,\n              to,\n              include_details: String(includeDetails),\n              limit: '20',\n              offset: String(items.length),\n              ...(revision === undefined ? {} : { revision: String(revision) }),\n            }),\n          'GET',\n          undefined,\n          signal,\n        );\n        const page = parsePage(raw, parse);\n        if (!record(raw) || !Number.isSafeInteger(raw.revision) || Number(raw.revision) < 0)\n          throw new LocalizedError('schedules.couldNotReadTheScheduleListVersion');\n        if (\n          (revision !== undefined && revision !== raw.revision) ||\n          (total !== undefined && total !== page.total) ||\n          page.offset !== items.length ||\n          page.items.some((item) => ids.has(item.id))\n        )\n          throw new ApiError('schedules.theScheduleListHasChanged', 409, 'SCHEDULE_LIST_CHANGED');\n        revision = Number(raw.revision);\n        total = page.total;\n        for (const item of page.items) {\n          if (ids.has(item.id))\n            throw new ApiError('schedules.theScheduleListHasChanged', 409, 'SCHEDULE_LIST_CHANGED');\n          ids.add(item.id);\n          items.push(item);\n        }\n        if (items.length === total) return items;\n        if (items.length > total || !page.items.length)\n          throw new ApiError('schedules.theScheduleListHasChanged', 409, 'SCHEDULE_LIST_CHANGED');\n      }\n    } catch (e) {\n      if (!(e instanceof ApiError) || e.code !== 'SCHEDULE_LIST_CHANGED') throw e;\n    }\n  }\n  throw new LocalizedError('schedules.theScheduleListKeepsChangingTryAgain');\n}\n\nexport type ScheduleTask = ScheduleDetail['tasks'][number];\nexport type TaskCustomization = { parameters?: Record<string, string>; execution_notes?: string };\nexport type ExecutionItem = ScheduleTask['items'][number];\nexport async function updateTask(\n  id: string,\n  changes: {\n    status?: string;\n    execution_notes?: string;\n    name?: string;\n    parameters?: Record<string, string>;\n  },\n) {\n  return saved(\n    await requestJson('/api/schedule-tasks/' + encodeURIComponent(id), 'PATCH', changes),\n  );\n}\nexport async function updateItem(id: string, value: boolean | string | number | null) {\n  return saved(\n    await requestJson('/api/schedule-task-items/' + encodeURIComponent(id), 'PATCH', { value }),\n  );\n}\nexport async function updateScheduleStatus(id: string, status: string) {\n  return saved(\n    await requestJson('/api/schedules/' + encodeURIComponent(id) + '/status', 'PATCH', { status }),\n  );\n}\n\nexport async function completeSchedule(id: string) {\n  return saved(\n    await requestJson('/api/schedules/' + encodeURIComponent(id) + '/complete', 'POST', {}),\n  );\n}\nexport async function addScheduleTask(\n  id: string,\n  taskPresetId: string,\n  customization?: TaskCustomization,\n) {\n  return saved(\n    await requestJson('/api/schedules/' + encodeURIComponent(id) + '/tasks', 'POST', {\n      task_preset_id: presetReference(taskPresetId),\n      ...customization,\n    }),\n  );\n}\n\nexport async function reopenSchedule(id: string) {\n  return saved(\n    await requestJson('/api/schedules/' + encodeURIComponent(id) + '/reopen', 'POST', {}),\n  );\n}\nexport async function deleteSchedule(id: string) {\n  await requestJson('/api/schedules/' + encodeURIComponent(id), 'DELETE');\n  publishScheduleChange({ kind: 'deleted', id });\n}\nexport async function deleteScheduleTask(id: string) {\n  return saved(await requestJson('/api/schedule-tasks/' + encodeURIComponent(id), 'DELETE'));\n}\n",
+    "frontend/src/features/workspace/TodayDial.tsx": "import { useTranslation } from 'react-i18next';\nimport { tr } from '../../i18n';\nimport { scheduleAppearance } from './scheduleAppearance';\nimport type { ScheduleDetail } from '../../api/schedules';\nimport { DialFace } from '../schedules/DialFace';\nimport { point } from '../schedules/dialGeometry';\nimport { toMinutes } from '../schedules/timeRange';\nimport '../schedules/schedules.css';\n\nexport function TodayDial({\n  today,\n  timeZone,\n  now,\n  items,\n}: {\n  today: string;\n  timeZone?: string;\n  now: Date;\n  items?: ScheduleDetail[];\n}) {\n  useTranslation();\n  const time = timeZone\n    ? now.toLocaleTimeString('en-GB', {\n        timeZone,\n        hourCycle: 'h23',\n        hour: '2-digit',\n        minute: '2-digit',\n      })\n    : undefined;\n  const current = time ? toMinutes(time) : undefined;\n  const marker = point(current ?? 0, 138);\n  const handStart = point(current ?? 0, 48);\n  const schedules = (items ?? []).filter(\n    (item) => item.status !== 'cancelled' && item.scheduled_date <= today && item.end_date >= today,\n  );\n  const lanes: number[] = [];\n  const heights: number[] = [];\n  const ranges = schedules\n    .map((item) => ({\n      item,\n      start: item.scheduled_date < today ? 0 : toMinutes(item.start_time),\n      end: item.end_date > today ? 1440 : toMinutes(item.end_time),\n    }))\n    .sort((a, b) => a.start - b.start)\n    .map((range) => {\n      let lane = lanes.findIndex((end) => end <= range.start);\n      if (lane < 0) lane = lanes.length;\n      lanes[lane] = range.end;\n      // Stable pseudo-random heights keep adjacent arcs distinct without flicker.\n      const hash = Array.from(range.item.id).reduce(\n        (value, char) => (value * 31 + char.charCodeAt(0)) >>> 0,\n        0,\n      );\n      let height = hash % 5;\n      if (height === heights.at(-1)) height = (height + 1) % 5;\n      heights.push(height);\n      return { ...range, lane, height };\n    });\n  return (\n    <div className=\"today-dial-wrap\">\n      <div\n        className=\"time-dial today-schedule-dial\"\n        role=\"img\"\n        aria-label={tr('TodayDial.todayS24HourScheduleDialValueSchedulesValue', {\n          v1: time ? tr('TodayDial.nowValue', { v1: time }) : '',\n          v2: schedules.length,\n        })}\n      >\n        <div className=\"dial-daylight\" aria-hidden=\"true\" />\n        <svg viewBox=\"0 0 360 360\" aria-hidden=\"true\">\n          <DialFace />\n          {ranges.map(({ item, start, end, lane, height }) => {\n            const baseRadius =\n              lanes.length === 1 ? 138 : 126 + (lane / Math.max(1, lanes.length - 1)) * 28;\n            const extra = height * Math.min(2, 4 / lanes.length);\n            const width = (lanes.length === 1 ? 28 : Math.max(2, 24 / lanes.length)) + extra;\n            const radius = baseRadius + extra / 2;\n            const appearance = scheduleAppearance(item, now);\n            const circumference = 2 * Math.PI * radius;\n            return (\n              <g key={item.id} className=\"today-work-arc\" data-state={appearance.state}>\n                <title>\n                  {tr('TodayDial.valueValueValueValueTasksValueComplete', {\n                    v1: item.entity_snapshot.name,\n                    v2: item.start_time,\n                    v3: item.end_time,\n                    v4: appearance.label,\n                    v5: Math.round(appearance.ratio * 100),\n                  })}\n                </title>\n                <circle\n                  cx=\"180\"\n                  cy=\"180\"\n                  r={radius}\n                  fill=\"none\"\n                  stroke={appearance.color}\n                  strokeWidth={width}\n                  strokeDasharray={`${((end - start) / 1440) * circumference} ${circumference}`}\n                  strokeDashoffset={-(start / 1440) * circumference}\n                  transform=\"rotate(-90 180 180)\"\n                />\n                {appearance.state === 'overdue' && appearance.ratio > 0 && (\n                  <circle\n                    cx=\"180\"\n                    cy=\"180\"\n                    r={radius}\n                    fill=\"none\"\n                    stroke={appearance.green}\n                    strokeWidth={width}\n                    strokeDasharray={`${((end - start) / 1440) * circumference * appearance.ratio} ${circumference}`}\n                    strokeDashoffset={-(start / 1440) * circumference}\n                    transform=\"rotate(-90 180 180)\"\n                  />\n                )}\n              </g>\n            );\n          })}\n          {current !== undefined && (\n            <g>\n              <line\n                x1={handStart.x}\n                y1={handStart.y}\n                x2={marker.x}\n                y2={marker.y}\n                stroke=\"var(--accent-hover)\"\n                strokeWidth=\"2\"\n              />\n              <circle\n                cx={marker.x}\n                cy={marker.y}\n                r=\"5\"\n                fill=\"var(--accent-hover)\"\n                stroke=\"white\"\n                strokeWidth=\"2\"\n              />\n            </g>\n          )}\n        </svg>\n        <div className=\"today-dial-caption\">\n          <span>{tr('TodayDial.currentTime')}</span>\n          <strong>{time ?? '—:—'}</strong>\n        </div>\n      </div>\n      <ul className=\"dial-status-legend\" aria-label={tr('TodayDial.scheduleColorGuide')}>\n        <li>\n          <i style={{ background: 'var(--status-upcoming)' }} />\n          {tr('progress.scheduled')}\n        </li>\n        <li>\n          <i style={{ background: 'var(--status-current)' }} />\n          {tr('progress.inProgress')}\n        </li>\n        <li>\n          <i style={{ background: 'var(--status-overdue)' }} />\n          {tr('ScheduleBlock.incomplete')}\n        </li>\n        <li>\n          <i style={{ background: 'hsl(140 32% 56%)' }} />\n          {tr('design-reference.completed')}\n        </li>\n      </ul>\n      <p className=\"today-dial-legend\">{tr('TodayDial.greenGetsDarkerAsYouCompleteMoreTasks')}</p>\n    </div>\n  );\n}\n",
+    "frontend/src/features/workspace/Today.tsx": "import { toggleScheduleCompletion } from '../schedules/scheduleCompletion';\nimport { WorkspaceHeader } from '../shared/WorkspaceHeader';\nimport { ScheduleSearchControl } from '../schedules/ScheduleSearchControl';\nimport { ScheduleCardActions } from '../shared/ScheduleCardActions';\nimport { LocalizedError } from '../../i18n/errors';\nimport { useTranslation } from 'react-i18next';\nimport { tr, locale } from '../../i18n';\n\nimport { saveSchedule, deleteSchedule } from '../../api/schedules';\nimport { Button, Surface } from '../shared/ui';\nimport { useEffect, useRef, useState } from 'react';\nimport { getDaySchedules, type ScheduleDetail } from '../../api/schedules';\nimport { ErrorBox } from '../shared/ErrorBox';\nimport { message } from '../shared/form';\nimport { TodayDial } from './TodayDial';\nimport { TodayScheduleCard } from './TodayScheduleCard';\nimport { progressOf } from './progress';\nimport { fromDateKey } from './preview';\nimport { scheduleAppearance } from './scheduleAppearance';\n\nexport function Today({\n  today,\n  timeZone,\n  revision = 0,\n}: {\n  today: string;\n  timeZone?: string;\n  revision?: number;\n}) {\n  useTranslation();\n  const [result, setResult] = useState<{ date: string; items: ScheduleDetail[] }>();\n  const [now, setNow] = useState(() => new Date());\n  const [error, setError] = useState('');\n  const [attempt, setAttempt] = useState(0);\n  const [busy, setBusy] = useState(false);\n  const [editing, setEditing] = useState<string>();\n  const [adding, setAdding] = useState<string>();\n  const [selected, setSelected] = useState<string>();\n  // Keep the current editing session mounted across an automatic date change.\n  const displayDate = result && (editing || adding || busy) ? result.date : today;\n  const rolloverPending = displayDate !== today;\n  const lock = useRef(false);\n  const generation = useRef(0);\n  const loadedRevision = useRef<number | undefined>(undefined);\n  useEffect(() => {\n    const timer = window.setInterval(() => setNow(new Date()), 1000);\n    return () => window.clearInterval(timer);\n  }, []);\n  useEffect(() => {\n    if (!timeZone) return;\n    let controller: AbortController | undefined;\n    let active = true;\n    let requested = loadedRevision.current !== revision;\n    loadedRevision.current = revision;\n    function refresh() {\n      if (\n        !active ||\n        lock.current ||\n        rolloverPending ||\n        (!requested && (editing || adding || document.visibilityState === 'hidden'))\n      )\n        return;\n      requested = false;\n      controller?.abort();\n      controller = new AbortController();\n      const request = controller;\n      const version = generation.current;\n      getDaySchedules(today, request.signal)\n        .then((items) => {\n          if (active && !request.signal.aborted && generation.current === version) {\n            setResult({ date: today, items });\n            setError('');\n          }\n        })\n        .catch((e) => {\n          if (active && !request.signal.aborted && generation.current === version)\n            setError(message(e));\n        });\n    }\n    function changed() {\n      requested = true;\n      refresh();\n    }\n    refresh();\n    const timer = window.setInterval(refresh, 30000);\n    window.addEventListener('focus', refresh);\n    window.addEventListener('online', refresh);\n    window.addEventListener('schedules-changed', changed);\n    document.addEventListener('visibilitychange', refresh);\n    return () => {\n      active = false;\n      controller?.abort();\n      window.clearInterval(timer);\n      window.removeEventListener('focus', refresh);\n      window.removeEventListener('online', refresh);\n      window.removeEventListener('schedules-changed', changed);\n      document.removeEventListener('visibilitychange', refresh);\n    };\n  }, [today, timeZone, attempt, editing, adding, revision, rolloverPending]);\n  const items = result?.date === displayDate ? result.items : undefined;\n  const count = progressOf(items || []);\n  async function mutate(operation: () => Promise<ScheduleDetail>) {\n    if (lock.current) throw new LocalizedError('Schedules.savingIsInProgressTryAgainShortly');\n    lock.current = true;\n    generation.current++;\n    setBusy(true);\n    setError('');\n    try {\n      const updated = await operation();\n      setResult((current) =>\n        current\n          ? {\n              ...current,\n              items: current.items.map((item) => (item.id === updated.id ? updated : item)),\n            }\n          : current,\n      );\n    } finally {\n      lock.current = false;\n      setBusy(false);\n    }\n  }\n  async function remove(id: string) {\n    if (lock.current) throw new LocalizedError('Schedules.savingIsInProgressTryAgainShortly');\n    lock.current = true;\n    generation.current++;\n    setBusy(true);\n    try {\n      await deleteSchedule(id);\n      setResult((current) =>\n        current ? { ...current, items: current.items.filter((item) => item.id !== id) } : current,\n      );\n    } finally {\n      lock.current = false;\n      setBusy(false);\n    }\n  }\n  async function finishSchedule(item: ScheduleDetail) {\n    try {\n      await mutate(() => toggleScheduleCompletion(item));\n    } catch (e) {\n      setError(message(e));\n    }\n  }\n  return (\n    <section className=\"today-workspace\">\n      <WorkspaceHeader\n        title={<h1>{tr('Calendar.today')}</h1>}\n        tools={\n          <>\n            <ScheduleSearchControl />\n            <p className=\"eyebrow\">\n              {fromDateKey(displayDate).toLocaleDateString(locale(), {\n                month: 'long',\n                day: 'numeric',\n                weekday: 'long',\n              })}\n            </p>\n          </>\n        }\n      />\n      {rolloverPending && <p role=\"status\">{tr('Today.theDateHasChangedSaveYourInputAndClose')}</p>}\n      {error && (\n        <ErrorBox\n          error={error}\n          retry={() => {\n            setError('');\n            setAttempt((n) => n + 1);\n          }}\n        />\n      )}\n      <div className=\"today-overview\">\n        <TodayDial today={displayDate} timeZone={timeZone} now={now} items={items} />\n        <section className=\"today-schedule-list\" aria-label={tr('Today.todaySScheduleList')}>\n          <div className=\"section-heading\">\n            <h2>{tr('Today.summary')}</h2>\n            <span>{tr('Calendar.value', { v1: items?.length ?? 0 })}</span>\n          </div>\n          {!items && !error && (\n            <p role=\"status\">\n              {timeZone ? tr('Today.loadingTodaySSchedules') : tr('App.loadingAppSettings')}\n            </p>\n          )}\n          <div className=\"schedule-completion-list\">\n            {items?.map((item) => {\n              const appearance = scheduleAppearance(item, now);\n              const completed = item.status === 'completed';\n              const progress = progressOf([item]);\n              return (\n                <div key={item.id} className=\"completion-preview memo-preview schedule-card\">\n                  <Button\n                    variant=\"plain\"\n                    key={item.id}\n                    className=\"schedule-completion-row\"\n                    disabled={busy || !!editing || !!adding || item.status === 'cancelled'}\n                    aria-label={\n                      completed\n                        ? tr('Delete.reopen', { name: item.entity_snapshot.name })\n                        : tr('Today.completeAllTasksInValue', { v1: item.entity_snapshot.name })\n                    }\n                    onClick={() => void finishSchedule(item)}\n                  >\n                    <span\n                      className=\"schedule-completion-check\"\n                      data-checked={completed}\n                      aria-hidden=\"true\"\n                    />\n                    <span className=\"schedule-completion-description\">\n                      <strong>{item.entity_snapshot.name}</strong>\n                      <span>\n                        {item.start_time}–{item.end_time} · {appearance.label}\n                      </span>\n                    </span>\n                    <span className=\"schedule-completion-count\">\n                      {progress.completed}/{progress.total}\n                    </span>\n                    <i\n                      className=\"work-state-dot\"\n                      style={{ background: appearance.color }}\n                      aria-hidden=\"true\"\n                    />\n                  </Button>\n                  <ScheduleCardActions\n                    id={item.id}\n                    label={item.entity_snapshot.name}\n                    value={item.notes}\n                    disabled={busy || !!editing || !!adding}\n                    onOpenChange={(open) => setEditing(open ? 'memo-' + item.id : undefined)}\n                    onSave={async (notes) => {\n                      await mutate(() => saveSchedule({ notes }, item.id));\n                    }}\n                  />\n                </div>\n              );\n            })}\n          </div>\n          {items && (\n            <div className=\"today-progress\">\n              <span aria-label={tr('Today.todaySTaskProgress')}>\n                {tr('Today.tasksValueValueCompletedValueSkipped', {\n                  v1: count.completed,\n                  v2: count.total,\n                  v3: count.skipped,\n                })}\n              </span>\n            </div>\n          )}\n        </section>\n      </div>\n      <div\n        className=\"today-detail-scroll\"\n        tabIndex={0}\n        role=\"region\"\n        aria-label={tr('Today.todaySDetailedSummary')}\n      >\n        <div className=\"section-heading\">\n          <h2>{tr('Today.todaySSchedules')}</h2>\n        </div>\n        <div className=\"today-schedule-cards\">\n          {items?.map((value) => (\n            <TodayScheduleCard\n              key={value.id}\n              value={value}\n              selected={selected === value.id}\n              onSelect={() => setSelected(selected === value.id ? undefined : value.id)}\n              busy={busy}\n              editing={editing}\n              onEditing={setEditing}\n              adding={adding === value.id}\n              onAdding={(open) => setAdding(open ? value.id : undefined)}\n              otherAdding={!!adding && adding !== value.id}\n              mutate={mutate}\n              onDelete={() => remove(value.id)}\n            />\n          ))}\n        </div>\n        {items && !items.length && (\n          <Surface as=\"section\" className=\"empty\">\n            <h2>{tr('Today.noSchedulesSavedForToday')}</h2>\n            <p>{tr('Today.addAScheduleWithTheButtonAtTheTop')}</p>\n          </Surface>\n        )}\n      </div>\n    </section>\n  );\n}\n",
+    "frontend/src/features/schedules/timeRange.ts": "export const toMinutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));\nexport function toTime(minutes: number) {\n  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;\n}\nexport function pointToMinutes(x: number, y: number, step = 5) {\n  const angle = (Math.atan2(x, -y) + Math.PI * 2) % (Math.PI * 2);\n  return Math.min(1440 - step, Math.round(((angle / (Math.PI * 2)) * 1440) / step) * step);\n}\nexport function changeRange(\n  start: string,\n  end: string,\n  target: 'start' | 'end',\n  minute: number,\n  step = 5,\n) {\n  const value = Math.max(0, Math.min(1440 - step, Math.round(minute / step) * step));\n  const fixed = toMinutes(target === 'start' ? end : start);\n  if (value === fixed) return { start, end };\n  return { start: toTime(Math.min(value, fixed)), end: toTime(Math.max(value, fixed)) };\n}\nexport function nextDate(date: string) {\n  const d = new Date(`${date}T12:00:00Z`);\n  if (!Number.isFinite(d.getTime())) return date;\n  d.setUTCDate(d.getUTCDate() + 1);\n  const result = d.toISOString().slice(0, 10);\n  return result.startsWith('+') ? date : result;\n}\nexport function dateInZone(zone: string, now = new Date()) {\n  const parts = new Intl.DateTimeFormat('en-US', {\n    timeZone: zone,\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n  }).formatToParts(now);\n  const part = (type: string) => parts.find((p) => p.type === type)!.value;\n  return `${part('year')}-${part('month')}-${part('day')}`;\n}\n",
+    "frontend/src/features/workspace/scheduleAppearance.ts": "import { tr } from '../../i18n';\nimport type { ScheduleDetail } from '../../api/schedules';\nimport { dateInZone } from '../schedules/timeRange';\n\nexport function scheduleAppearance(item: ScheduleDetail, now: Date) {\n  const date = dateInZone(item.time_zone, now);\n  const time = now.toLocaleTimeString('en-GB', {\n    timeZone: item.time_zone,\n    hourCycle: 'h23',\n    hour: '2-digit',\n    minute: '2-digit',\n  });\n  const instant = `${date}T${time}`;\n  const completed = item.tasks.filter((task) => task.status === 'completed').length;\n  const ratio = item.tasks.length\n    ? completed / item.tasks.length\n    : item.status === 'completed'\n      ? 1\n      : 0;\n  const green = `color-mix(in srgb, hsl(140 32% ${86 - ratio * 30}%) var(--progress-mix, 100%), var(--surface))`;\n  if (item.status === 'cancelled')\n    return {\n      state: 'cancelled',\n      label: tr('status.cancelled'),\n      color: 'var(--status-cancelled)',\n      ratio,\n      green,\n    };\n  if (instant < `${item.scheduled_date}T${item.start_time}`)\n    return {\n      state: 'upcoming',\n      label: tr('progress.scheduled'),\n      color: 'var(--status-upcoming)',\n      ratio,\n      green,\n    };\n  if (instant < `${item.end_date}T${item.end_time}`)\n    return {\n      state: 'current',\n      label: tr('scheduleAppearance.inTimeSlot'),\n      color: 'var(--status-current)',\n      ratio,\n      green,\n    };\n  if (item.status === 'completed' || ratio === 1)\n    return {\n      state: 'completed',\n      label: tr('design-reference.completed'),\n      color: green,\n      ratio,\n      green,\n    };\n  return {\n    state: 'overdue',\n    label: tr('scheduleAppearance.timeEndedIncomplete'),\n    color: 'var(--status-overdue)',\n    ratio,\n    green,\n  };\n}\n"
+  },
+  "afterSourceSha256": {
+    "frontend/src/features/schedules/timeRange.ts": "876fa3afa0c08a42cd844749158763158eba8fea6b62d255218baac3767f8f69",
+    "frontend/src/features/workspace/scheduleAppearance.ts": "f724d653aa4ccf60408f6ddbce11898fae4280e9677b73832b95f2d8b69f7cbf",
+    "frontend/src/features/workspace/Today.tsx": "d92963dd12b9d0a2a034e9177baded1585c0db8276bed5c55396d60a8a38177b",
+    "frontend/src/features/workspace/TodayOverview.tsx": "2cd0a90ec2ac569b21f3ce87bc5d414222f1074b03a10c1ea013a256a52baeb0",
+    "frontend/src/api/schedules.ts": "78791a181229c3e5d914ba90af1788ea099c8d0b6df26019e81755650ff9a326",
+    "frontend/src/features/workspace/TodayDial.tsx": "28f355a578df8676b2987f4e8e1c40900c14d5312e498a652af669db46bdc4a0"
+  },
+  "harness": {
+    "index.html": "<!doctype html><html><head><meta charset=\"UTF-8\"><title>Isolated performance audit</title></head><body><pre id=\"status\">Running isolated synthetic benchmark…</pre><div id=\"root\"></div><script type=\"module\" src=\"/main.tsx\"></script></body></html>\n",
+    "main.tsx": "import React, { Profiler } from 'react';\nimport { createRoot } from 'react-dom/client';\nimport { Today } from '../../frontend/src/features/workspace/Today';\nimport { Calendar } from '../../frontend/src/features/workspace/Calendar';\nimport { scheduleAppearance } from '../../frontend/src/features/workspace/scheduleAppearance';\nimport { calendarWeeks } from '../../frontend/src/features/workspace/calendarLayout';\nimport { getRangeScheduleSummaries } from '../../frontend/src/api/schedules';\nimport { emptyFields } from '../../frontend/src/api/works';\nimport i18n from '../../frontend/src/i18n';\nimport '../../frontend/src/styles.css';\nimport '../../frontend/src/design-system.css';\nconst realFetch=window.fetch.bind(window), sleep=(ms)=>new Promise(r=>setTimeout(r,ms));\nconst root=createRoot(document.getElementById('root')!);\nconst results:any={userAgent:navigator.userAgent,viewport:[innerWidth,innerHeight],renders:[],appearance:[],calendar:[],requests:[]};\nlet items:any[]=[],calls=0,latency=0,commits:any[]=[],cached=false;\nconst df=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'});\nconst tf=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Tokyo',hourCycle:'h23',hour:'2-digit',minute:'2-digit'});\nwindow.auditTime=(now,locale,opts)=>cached?tf.format(now):now.toLocaleTimeString(locale,opts);\nwindow.auditDate=(zone,now,original)=>{if(!cached)return original(zone,now);const parts=df.formatToParts(now), part=t=>parts.find(p=>p.type===t)!.value;return `${part('year')}-${part('month')}-${part('day')}`;};\nwindow.fetch=async (url,options)=>{const u=new URL(String(url),location.href);if(!u.pathname.startsWith('/api/'))return realFetch(url,options);calls++;if(latency)await sleep(latency);if(u.pathname==='/api/schedules'){const offset=Number(u.searchParams.get('offset')||0),limit=Number(u.searchParams.get('limit')||20);return new Response(JSON.stringify({items:items.slice(offset,offset+limit),total:items.length,offset,limit,revision:1}),{headers:{'Content-Type':'application/json'}});}return new Response(JSON.stringify({items:[],total:0,limit:20,offset:0}),{headers:{'Content-Type':'application/json'}});};\nconst make=(n,tasks=3)=>Array.from({length:n},(_,i)=>({id:'s'+i,entity_id:'e',entity_name:'Work '+i,title:'Work '+i,scheduled_date:'2026-09-27',end_date:'2026-09-27',start_time:'09:00',end_time:'10:00',time_zone:'Asia/Tokyo',status:'planned',notes:'',created_at:'',updated_at:'',entity_snapshot:{...emptyFields,name:'Work '+i},tasks:Array.from({length:tasks},(_,j)=>({id:`t${i}-${j}`,status:'pending',execution_notes:'',name_snapshot:'Task '+j,default_notes_snapshot:'',source_task_preset_version:1,items:[]}))}));\nconst stats=(a)=>{const s=[...a].sort((a,b)=>a-b);return {n:s.length,median:s[Math.floor(s.length/2)]??0,p95:s[Math.min(s.length-1,Math.ceil(s.length*.95)-1)]??0,max:s.at(-1)??0};};\nconst onRender=(id,phase,duration,base,start,commit)=>commits.push({phase,duration,at:performance.now()});\nasync function run(){await i18n.changeLanguage('ko');\nfor(const count of [100,50,10]) for(const cache of [false]){cached=cache;items=make(count);calls=0;commits=[];const start=performance.now();root.render(<Profiler id=\"Today\" onRender={onRender}><Today key={`${count}-${cache}`} today=\"2026-09-27\" timeZone=\"Asia/Tokyo\"/></Profiler>);await sleep(7500);const steady=commits.filter(c=>c.at>start+800);results.renders.push({count,tasksPerSchedule:3,cachedFormatters:cache,requests:calls,nodes:document.getElementById('root')!.querySelectorAll('*').length,initial:commits.filter(c=>c.at<=start+800),steady:stats(steady.map(c=>c.duration))});document.getElementById('status')!.textContent=JSON.stringify(results,null,2);root.render(null);await sleep(100);}\nfor(const count of [10,50,100]){items=make(count);for(const cache of [false]){cached=cache;const times=[];for(let r=0;r<15;r++){const t=performance.now();for(const item of items)scheduleAppearance(item,new Date('2026-09-27T04:00:00Z'));times.push(performance.now()-t);}results.appearance.push({count,cachedFormatters:cache,...stats(times.slice(3))});}}\nfor(const count of [100,1000,5000]){items=make(count,0).map((x,i)=>({...x,scheduled_date:`2026-${String(1+i%12).padStart(2,'0')}-15`,end_date:`2026-${String(1+i%12).padStart(2,'0')}-15`}));const times=[];for(let r=0;r<8;r++){const start=performance.now();for(let m=1;m<=12;m++)calendarWeeks(`2026-${String(m).padStart(2,'0')}`,items);times.push(performance.now()-start);}commits=[];root.render(<Profiler id=\"Calendar\" onRender={onRender}><Calendar key={count} today=\"2026-09-27\" mode=\"year\"/></Profiler>);await sleep(900);results.calendar.push({count,layout:stats(times.slice(2)),commits,nodes:document.getElementById('root')!.querySelectorAll('*').length});root.render(null);await sleep(100);}\nfor(const count of [100,1000]){items=make(count,0);for(const delay of [0,40]){latency=delay;calls=0;const start=performance.now();await getRangeScheduleSummaries('2026-01-01','2026-12-31');const first=performance.now()-start;const again=performance.now();await getRangeScheduleSummaries('2026-01-01','2026-12-31');results.requests.push({count,simulatedLatencyMs:delay,firstMs:first,revisitMs:performance.now()-again,totalCalls:calls});}}latency=0;\ndocument.getElementById('status')!.textContent='COMPLETE\\n'+JSON.stringify(results,null,2);await realFetch('/results',{method:'POST',body:JSON.stringify(results,null,2)});}\nrun().catch(async e=>{document.getElementById('status')!.textContent=e.stack;await realFetch('/results',{method:'POST',body:JSON.stringify({error:e.stack,partial:results})});});\n",
+    "build.mjs": "import { build } from '../../frontend/node_modules/vite/dist/node/index.js';\nconst root='C:/Git/memo',base=root+'/test-results/performance-improvement';\nawait build({configFile:false,root:base,resolve:{alias:[{find:'react-dom/client',replacement:root+'/frontend/node_modules/react-dom/profiling.js'},{find:'react',replacement:root+'/frontend/node_modules/react'},{find:'react-dom',replacement:root+'/frontend/node_modules/react-dom'}]},build:{outDir:base+'/dist',emptyOutDir:true}});",
+    "server.mjs": "import http from 'node:http';import fs from 'node:fs';import path from 'node:path';\nconst base='C:/Git/memo/test-results/performance-improvement';\nhttp.createServer(async(req,res)=>{if(req.url==='/results'&&req.method==='POST'){let body='';for await(const chunk of req)body+=chunk;fs.writeFileSync(base+'/browser-results.json',body);res.end('ok');return;}const url=new URL(req.url,'http://localhost');const file=path.join(base,'dist',url.pathname==='/'?'index.html':url.pathname);if(!file.startsWith(path.join(base,'dist'))||!fs.existsSync(file)){res.statusCode=404;res.end();return;}res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.css')?'text/css':'text/html');res.end(fs.readFileSync(file));}).listen(15180,'127.0.0.1',()=>console.log('Audit http://127.0.0.1:15180'));\n"
+  }
+}
