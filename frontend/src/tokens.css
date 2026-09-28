@@ -39,6 +39,8 @@
   --status-current: #f4dfa0;
   --status-overdue: #edb3af;
   --status-cancelled: #dedbd8;
+  --progress-saturation: 32%;
+  --status-completed: hsl(140 var(--progress-saturation) 56%);
   --heat-low: hsl(4 78% 76%);
   --heat-low-end: hsl(4 78% 90%);
   --heat-high: hsl(145 58% 79%);
@@ -117,9 +119,9 @@
   --info-soft: #29394c;
   --peach: #49372d;
   --rose: #452f3a;
-  --status-upcoming: #302c36;
-  --status-current: #655028;
-  --status-overdue: #ffffff;
+  --status-upcoming: #ffffff;
+  --status-current: #ffda32;
+  --status-overdue: #ff5252;
   --status-cancelled: #3a3740;
   --heat-low: hsl(4 35% 32%);
   --heat-low-end: hsl(4 35% 22%);
@@ -137,7 +139,7 @@
   --dial-evening: #423048;
   --dial-end: #d89d83;
   --dial-highlight: rgb(255 255 255 / 12%);
-  --progress-mix: 35%;
+  --progress-saturation: 85%;
 }
 :root[data-theme='light'] {
   color-scheme: light;

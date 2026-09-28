@@ -371,14 +371,14 @@ it('refreshes the summary arc immediately after a schedule write', async () => {
   vi.mocked(getDaySchedules).mockResolvedValue([first]);
   const view = render(<Today today="2026-09-24" timeZone="Asia/Tokyo" />);
   await screen.findByRole('article', { name: '저장된 워크' });
-  const arc = () => view.container.querySelector('.today-work-arc > circle')!;
+  const arc = () => view.container.querySelector('.today-work-arc circle')!;
   const before = arc().getAttribute('stroke-dashoffset');
   vi.mocked(getDaySchedules).mockResolvedValue([
     { ...first, start_time: '13:00', end_time: '15:00' },
   ]);
   act(() => window.dispatchEvent(new Event('schedules-changed')));
   await waitFor(() => expect(arc().getAttribute('stroke-dashoffset')).not.toBe(before));
-  expect(arc().parentElement).toHaveTextContent('13:00');
+  expect(arc().closest('.today-work-arc')).toHaveTextContent('13:00');
 });
 
 it('deletes only the selected schedule or task after confirmation', async () => {
@@ -437,4 +437,50 @@ it('retains a parameterized task draft after failure and uses the shared directo
   expect(addScheduleTask).toHaveBeenLastCalledWith('s', 'name:연습 [n]번', {
     parameters: { n: '5' },
   });
+});
+
+it('reveals task addition on hover or keyboard focus without selecting the card', async () => {
+  vi.mocked(getDaySchedules).mockResolvedValue([schedule]);
+  vi.mocked(listTaskPresets).mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 });
+  render(<Today today="2026-09-24" timeZone="Asia/Tokyo" />);
+  const card = await screen.findByRole('article', { name: '저장된 워크' });
+  fireEvent.mouseEnter(card);
+  expect(within(card).getByRole('button', { name: '+ 태스크 추가' })).toBeVisible();
+  expect(card).toHaveAttribute('data-selected', 'false');
+  fireEvent.mouseLeave(card);
+  expect(within(card).queryByRole('button', { name: '+ 태스크 추가' })).not.toBeInTheDocument();
+  const title = within(card).getByRole('button', { name: '저장된 워크' });
+  fireEvent.focus(title);
+  expect(within(card).getByRole('button', { name: '+ 태스크 추가' })).toBeVisible();
+  fireEvent.blur(title, { relatedTarget: document.body });
+  fireEvent.mouseEnter(card);
+  fireEvent.click(within(card).getByRole('button', { name: '+ 태스크 추가' }));
+  fireEvent.mouseLeave(card);
+  expect(within(card).getByRole('button', { name: '추가 닫기' })).toBeVisible();
+});
+
+it('applies completion responses to the dial without reloading schedules', async () => {
+  const future = { ...schedule, scheduled_date: '2099-09-24', end_date: '2099-09-24', tasks: [] };
+  vi.mocked(getDaySchedules).mockResolvedValue([future]);
+  vi.mocked(completeSchedule).mockImplementation(async () => {
+    window.dispatchEvent(new Event('schedules-changed'));
+    return { ...future, status: 'completed' };
+  });
+  vi.mocked(reopenSchedule).mockResolvedValue(future);
+  const view = render(<Today today="2099-09-24" timeZone="Asia/Tokyo" />);
+  fireEvent.click(await screen.findByRole('button', { name: '저장된 워크 모든 태스크 완료' }));
+  await waitFor(() =>
+    expect(view.container.querySelector('.today-work-arc')).toHaveAttribute(
+      'data-state',
+      'completed',
+    ),
+  );
+  fireEvent.click(screen.getByRole('checkbox', { name: '저장된 워크 완료 취소' }));
+  await waitFor(() =>
+    expect(view.container.querySelector('.today-work-arc')).toHaveAttribute(
+      'data-state',
+      'upcoming',
+    ),
+  );
+  expect(getDaySchedules).toHaveBeenCalledTimes(1);
 });

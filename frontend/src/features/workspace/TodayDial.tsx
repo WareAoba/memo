@@ -1,3 +1,7 @@
+import { useId, useMemo } from 'react';
+import { todayDialLayout, dialStrokeGeometry, dialTailFadeEnd } from './todayDialLayout';
+import { TodayDialStroke } from './TodayDialStroke';
+import { TodayDialSeparation } from './TodayDialSeparation';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
 import { scheduleAppearance } from './scheduleAppearance';
@@ -23,32 +27,9 @@ export function TodayDial({
   const current = time ? toMinutes(time) : undefined;
   const marker = point(current ?? 0, 138);
   const handStart = point(current ?? 0, 48);
-  const schedules = (items ?? []).filter(
-    (item) => item.status !== 'cancelled' && item.scheduled_date <= today && item.end_date >= today,
-  );
-  const lanes: number[] = [];
-  const heights: number[] = [];
-  const ranges = schedules
-    .map((item) => ({
-      item,
-      start: item.scheduled_date < today ? 0 : toMinutes(item.start_time),
-      end: item.end_date > today ? 1440 : toMinutes(item.end_time),
-    }))
-    .sort((a, b) => a.start - b.start)
-    .map((range) => {
-      let lane = lanes.findIndex((end) => end <= range.start);
-      if (lane < 0) lane = lanes.length;
-      lanes[lane] = range.end;
-      // Stable pseudo-random heights keep adjacent arcs distinct without flicker.
-      const hash = Array.from(range.item.id).reduce(
-        (value, char) => (value * 31 + char.charCodeAt(0)) >>> 0,
-        0,
-      );
-      let height = hash % 5;
-      if (height === heights.at(-1)) height = (height + 1) % 5;
-      heights.push(height);
-      return { ...range, lane, height };
-    });
+  const filterId = useId();
+  const ranges = useMemo(() => todayDialLayout(items ?? [], today), [items, today]);
+  const scheduleCount = ranges.filter((range) => !range.tail).length;
   return (
     <div className="today-dial-wrap">
       <div
@@ -56,58 +37,160 @@ export function TodayDial({
         role="img"
         aria-label={tr('TodayDial.todayS24HourScheduleDialValueSchedulesValue', {
           v1: time ? tr('TodayDial.nowValue', { v1: time }) : '',
-          v2: schedules.length,
+          v2: scheduleCount,
         })}
       >
         <div className="dial-daylight" aria-hidden="true" />
         <svg viewBox="0 0 360 360" aria-hidden="true">
+          <defs>
+            <TodayDialSeparation id={`${filterId}-separation`} ranges={ranges} />
+            {[
+              { name: 'blur', radius: 2.5 },
+              { name: 'haze', radius: 6 },
+            ].map(({ name, radius }) => (
+              <filter
+                key={name}
+                id={`${filterId}-${name}`}
+                filterUnits="userSpaceOnUse"
+                x="0"
+                y="0"
+                width="360"
+                height="360"
+              >
+                <feGaussianBlur stdDeviation={radius} />
+              </filter>
+            ))}
+          </defs>
           <DialFace />
-          {ranges.map(({ item, start, end, lane, height }) => {
-            const baseRadius =
-              lanes.length === 1 ? 138 : 126 + (lane / Math.max(1, lanes.length - 1)) * 28;
-            const extra = height * Math.min(2, 4 / lanes.length);
-            const width = (lanes.length === 1 ? 28 : Math.max(2, 24 / lanes.length)) + extra;
-            const radius = baseRadius + extra / 2;
-            const appearance = scheduleAppearance(item, now);
-            const circumference = 2 * Math.PI * radius;
-            return (
-              <g key={item.id} className="today-work-arc" data-state={appearance.state}>
-                <title>
-                  {tr('TodayDial.valueValueValueValueTasksValueComplete', {
-                    v1: item.entity_snapshot.name,
-                    v2: item.start_time,
-                    v3: item.end_time,
-                    v4: appearance.label,
-                    v5: Math.round(appearance.ratio * 100),
-                  })}
-                </title>
-                <circle
-                  cx="180"
-                  cy="180"
-                  r={radius}
-                  fill="none"
-                  stroke={appearance.color}
-                  strokeWidth={width}
-                  strokeDasharray={`${((end - start) / 1440) * circumference} ${circumference}`}
-                  strokeDashoffset={-(start / 1440) * circumference}
-                  transform="rotate(-90 180 180)"
-                />
-                {appearance.state === 'overdue' && appearance.ratio > 0 && (
-                  <circle
-                    cx="180"
-                    cy="180"
-                    r={radius}
-                    fill="none"
-                    stroke={appearance.green}
-                    strokeWidth={width}
-                    strokeDasharray={`${((end - start) / 1440) * circumference * appearance.ratio} ${circumference}`}
-                    strokeDashoffset={-(start / 1440) * circumference}
-                    transform="rotate(-90 180 180)"
-                  />
-                )}
-              </g>
-            );
-          })}
+          <g data-schedule-layer>
+            {ranges
+              .filter(({ item }) => item.end_time)
+              .map(({ item, start, end, tail, parts }) => {
+                const appearance = scheduleAppearance(item, now);
+                return (
+                  <g
+                    key={`${item.id}-${tail ? 'tail' : 'day'}`}
+                    className="today-work-arc"
+                    data-state={appearance.state}
+                    data-continuation={tail || undefined}
+                    mask={`url(#${filterId}-separation${tail ? '-markers' : ''})`}
+                  >
+                    <title>
+                      {tr('TodayDial.valueValueValueValueTasksValueComplete', {
+                        v1: item.entity_snapshot.name,
+                        v2: item.start_time,
+                        v3: item.end_time,
+                        v4: appearance.label,
+                        v5: Math.round(appearance.ratio * 100),
+                      })}
+                    </title>
+                    {parts.map((part) => {
+                      const { radius, width } = dialStrokeGeometry(part);
+                      const fadeEnd = point(dialTailFadeEnd, radius);
+                      // The gradient end line follows the 01:30 radial line, so
+                      // the entire stroke width (including blur) is transparent there.
+                      const fadeAngle = (dialTailFadeEnd / 1440) * 2 * Math.PI;
+                      const fadeLength = radius * Math.sin(fadeAngle);
+                      const fadeStart = {
+                        x: fadeEnd.x - Math.cos(fadeAngle) * fadeLength,
+                        y: fadeEnd.y - Math.sin(fadeAngle) * fadeLength,
+                      };
+                      const maskId = `${filterId}-${item.id}`;
+                      const completeEnd = Math.min(
+                        part.end,
+                        start + (end - start) * appearance.ratio,
+                      );
+                      const arc = (color: string, arcEnd: number) => (
+                        <TodayDialStroke
+                          start={part.start}
+                          end={arcEnd}
+                          radius={radius}
+                          width={width}
+                          color={color}
+                        />
+                      );
+                      const strokes = (
+                        <>
+                          {arc(appearance.color, part.end)}
+                          {appearance.state === 'overdue' &&
+                            completeEnd > part.start &&
+                            arc(appearance.green, completeEnd)}
+                        </>
+                      );
+                      return (
+                        <g key={part.start} data-lanes={part.count}>
+                          {tail ? (
+                            <>
+                              <defs>
+                                {(['sharp', 'soft', 'haze', 'fade'] as const).map((kind) => (
+                                  <linearGradient
+                                    key={kind}
+                                    id={`${maskId}-${kind}-gradient`}
+                                    gradientUnits="userSpaceOnUse"
+                                    x1={fadeStart.x}
+                                    y1={fadeStart.y}
+                                    x2={fadeEnd.x}
+                                    y2={fadeEnd.y}
+                                  >
+                                    {Array.from({ length: 11 }, (_, index) => {
+                                      const t = index / 10;
+                                      const opacity =
+                                        kind === 'sharp'
+                                          ? (1 - t) ** 2
+                                          : kind === 'soft'
+                                            ? 2 * t * (1 - t)
+                                            : kind === 'haze'
+                                              ? t ** 2
+                                              : (1 - t) ** 2 * (1 + 2 * t);
+                                      return (
+                                        <stop
+                                          key={index}
+                                          offset={t}
+                                          stopColor="white"
+                                          stopOpacity={opacity}
+                                        />
+                                      );
+                                    })}
+                                  </linearGradient>
+                                ))}
+                                {(['sharp', 'soft', 'haze', 'fade'] as const).map((kind) => (
+                                  <mask
+                                    key={kind}
+                                    id={`${maskId}-${kind}`}
+                                    maskUnits="userSpaceOnUse"
+                                    x="0"
+                                    y="0"
+                                    width="360"
+                                    height="360"
+                                  >
+                                    <rect
+                                      width="360"
+                                      height="360"
+                                      fill={`url(#${maskId}-${kind}-gradient)`}
+                                    />
+                                  </mask>
+                                ))}
+                              </defs>
+                              <g mask={`url(#${maskId}-fade)`} data-tail-fade-end={dialTailFadeEnd}>
+                                <g mask={`url(#${maskId}-sharp)`}>{strokes}</g>
+                                <g filter={`url(#${filterId}-blur)`}>
+                                  <g mask={`url(#${maskId}-soft)`}>{strokes}</g>
+                                </g>
+                                <g filter={`url(#${filterId}-haze)`}>
+                                  <g mask={`url(#${maskId}-haze)`}>{strokes}</g>
+                                </g>
+                              </g>
+                            </>
+                          ) : (
+                            strokes
+                          )}
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })}
+          </g>
           {current !== undefined && (
             <g>
               <line
@@ -128,6 +211,29 @@ export function TodayDial({
               />
             </g>
           )}
+          <g data-marker-layer>
+            {ranges
+              .filter(({ item }) => !item.end_time)
+              .map(({ item, start, end }) => (
+                <g
+                  key={item.id}
+                  className="today-work-marker"
+                  data-state={scheduleAppearance(item, now).state}
+                >
+                  <title>
+                    {item.entity_snapshot.name} ·{' '}
+                    {tr('DateTime.startOnly', { time: item.start_time })}
+                  </title>
+                  <TodayDialStroke
+                    start={start}
+                    end={end}
+                    marker
+                    width={4}
+                    color={scheduleAppearance(item, now).color}
+                  />
+                </g>
+              ))}
+          </g>
         </svg>
         <div className="today-dial-caption">
           <span>{tr('TodayDial.currentTime')}</span>
@@ -148,7 +254,7 @@ export function TodayDial({
           {tr('ScheduleBlock.incomplete')}
         </li>
         <li>
-          <i style={{ background: 'hsl(140 32% 56%)' }} />
+          <i style={{ background: 'var(--status-completed)' }} />
           {tr('design-reference.completed')}
         </li>
       </ul>

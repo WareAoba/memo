@@ -7,6 +7,8 @@
 - 기존 리마인드 7일 제한 이관: `backend/migrations/202609270002_reminder_seven_days.sql`; 서비스 검증과 회귀는 `backend/src/services/schedules.rs`, `backend/tests/schedules.rs`.
 
 - 날짜·시/분 휠 공통 선택기: `frontend/src/features/shared/DateTimePicker.tsx`와 인접 테스트. CalendarDatePicker를 재사용하고 design-reference.tsx의 date-time-reference에 등록한다.
+- 순차 시간 입력·날짜 범위: `frontend/src/features/schedules/TimeEndpoint.tsx`, `ScheduleDateRange.tsx`, `ScheduleTimeText.tsx`(같은 폴더). TimeDial과 date-time-reference에서 공통 조절 박스를 사용하고 목록에는 시간 미지정/시작만 표현을 공유한다.
+- 선택적 일정 시각 DB 이관: `backend/migrations/202609280001_optional_schedule_times.sql`, 검증·회귀는 schedules 서비스와 `backend/tests/schedules.rs`.
 - 그룹별 태스크 다중 선택: `frontend/src/features/schedules/TaskDirectory.tsx`와 인접 테스트. 생성은 useScheduleTaskDraft, 저장된 일정은 ScheduleTaskRows에서 연결하며 task-directory-reference에 상태 예시가 있다.
 - 자동 높이 메모: `frontend/src/features/shared/ui.tsx`의 AutoTextarea. ScheduleEditor와 MemoEditor에서 사용한다.
 
@@ -15,6 +17,8 @@
 루트 기준 경로. 먼저 해당 행의 파일을 찾고 관련 심볼·테스트로 범위를 좁힌다.
 
 ## 문서·에이전트 검사
+
+- 개발 도구 버전: 루트 `.nvmrc`(Node 24), `rust-toolchain.toml`(Rust 1.94.0·rustfmt·clippy). macOS 설치·실행은 루트 `README.md`를 참고한다.
 
 - 구조 검사: `frontend/scripts/check-structure.mjs`와 `check-structure-tests.mjs` (같은 폴더). 프런트 lint에서 순환·미사용 모듈·계층 경계를 확인한다.
 - 탐색 상태와 호환 URL: `frontend/src/features/workspace/workspaceRoute.ts`와 인접 테스트. `App.tsx`는 페이지와 단일 overlay 상태를 렌더한다.
@@ -55,6 +59,8 @@
 
 - 팝업 하단 저장 영역: `frontend/src/features/shared/PresetModal.tsx`의 `ModalActions`와 `frontend/src/styles/preset-modal.css`. 폼 외부 버튼은 폼 ID와 명시적 disabled를 연결한다.
 - Today의 1초 시계 갱신·요약 렌더 경계: `frontend/src/features/workspace/TodayOverview.tsx`; 상세 카드 갱신 격리 회귀: `Today.rendering.test.tsx` (같은 폴더). 시간대별 포맷터 재사용·날짜/시각 변환: `frontend/src/features/schedules/timeRange.ts`와 인접 테스트.
+- 요약 시계의 cap/자정 경계를 포함한 고정 열·자정 연속 범위: `frontend/src/features/workspace/todayDialLayout.ts`와 인접 테스트. TodayDial에서 날짜·일정 변경 시에만 계산한다.
+- 요약 시계의 공통 원/막대 도형·투명 외곽 마스크: `frontend/src/features/workspace/TodayDialStroke.tsx`, `TodayDialSeparation.tsx`(같은 폴더). TodayDial과 지정 레퍼런스에서 재사용한다.
 - 요약 시계의 호·저장 후 갱신: `frontend/src/features/workspace/TodayDial.tsx`, `Today.tsx` (같은 폴더). 드래그 경계는 `frontend/src/features/schedules/TimeDial.tsx`.
 
 - 일정·실행 태스크 삭제: `backend/src/services/schedule_deletion.rs`, `frontend/src/features/shared/SwipeDelete.tsx`. 완료 취소는 `backend/src/services/execution.rs`; 실행·삭제 API와 첨부 정리 회귀는 `backend/tests/execution.rs`.

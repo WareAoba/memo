@@ -1,3 +1,4 @@
+import { ScheduleTimeText } from '../schedules/ScheduleTimeText';
 import { toggleScheduleCompletion } from '../schedules/scheduleCompletion';
 import { SwipeDelete, DeleteButton } from '../shared/SwipeDelete';
 import { ScheduleCardActions } from '../shared/ScheduleCardActions';
@@ -125,7 +126,7 @@ export function SavedScheduleCard({
             <h2 className="schedule-card-title">
               <a href={'#/schedules/' + value.id}>{value.entity_snapshot.name}</a>
               <span className="schedule-card-time">
-                {value.start_time} — {value.end_time}
+                <ScheduleTimeText start={value.start_time} end={value.end_time} />
               </span>
             </h2>
             {value.title !== value.entity_snapshot.name && <p>{value.title}</p>}

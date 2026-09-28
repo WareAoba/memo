@@ -6,16 +6,16 @@
   }
   .today-overview {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
     gap: 30px;
     min-height: 0;
     flex: 0 0 auto;
     padding: 0 var(--space-2) var(--space-4);
   }
   .today-overview .today-schedule-dial {
-    width: min(380px, 37dvh);
+    width: min(100%, 380px, 37dvh);
   }
-  .today-work-arc {
+  .today-work-arc:not([data-continuation]) {
     filter: drop-shadow(0 2px 2px var(--dial-shadow));
   }
   .dial-status-legend {
@@ -42,6 +42,7 @@
     flex-shrink: 0;
   }
   .today-schedule-list {
+    container: today-summary / inline-size;
     min-width: 0;
     min-height: 0;
     display: flex;
@@ -90,7 +91,9 @@
     gap: 5px;
   }
   .schedule-completion-description strong {
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     font-size: 15px;
   }
   .schedule-completion-description > span,
@@ -145,7 +148,7 @@
     gap: var(--space-2);
     min-height: var(--control-height);
     padding: 0;
-    margin-top: var(--space-3);
+    margin-top: 0;
   }
   .today-task-cards:empty,
   .today-schedule-card > .tags:empty {
@@ -163,7 +166,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
-    margin-top: var(--space-4);
+    margin-top: var(--space-2);
     align-items: start;
   }
   .today-task-card {
@@ -218,10 +221,25 @@
     margin: var(--space-2) 0;
     background: var(--canvas);
   }
-  @media (max-width: 850px) {
-    .today-overview {
-      gap: var(--space-3);
-      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  .schedule-completion-description > span {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .schedule-completion-count {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  @container today-summary (max-width: 520px) {
+    .today-schedule-list .completion-preview > .schedule-completion-row {
+      padding-right: 14px;
+      padding-bottom: calc(14px + min(var(--schedule-actions-space), 44px));
+      --control-layout-transition: padding-bottom var(--motion-medium) var(--ease-settle);
+    }
+    .today-schedule-list .completion-preview > .schedule-hover-actions {
+      top: auto;
+      bottom: 8px;
+      transform: none;
     }
   }
   @media (max-width: 700px) {

@@ -72,17 +72,17 @@ it('updates clock and schedule boundaries without rendering detail cards or losi
   });
   const renders = vi.mocked(TodayScheduleCard).mock.calls.length;
   const summary = within(screen.getByRole('region', { name: '오늘의 스케줄 목록' }));
-  expect(summary.getByText(/09:00–10:00 · 예정/)).toBeVisible();
+  expect(summary.getByText(/09:00 — 10:00 · 예정/)).toBeVisible();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1000);
   });
   expect(screen.getByRole('img', { name: /현재 09:00/ })).toBeVisible();
-  expect(summary.getByText(/09:00–10:00 · 진행 시간/)).toBeVisible();
+  expect(summary.getByText(/09:00 — 10:00 · 진행 시간/)).toBeVisible();
   vi.setSystemTime(new Date('2026-09-27T09:59:59+09:00'));
   await act(async () => {
     await vi.advanceTimersByTimeAsync(1000);
   });
-  expect(summary.getByText(/09:00–10:00 · 시간 종료/)).toBeVisible();
+  expect(summary.getByText(/09:00 — 10:00 · 시간 종료/)).toBeVisible();
   expect(TodayScheduleCard).toHaveBeenCalledTimes(renders);
   expect(screen.getByRole('textbox', { name: '기록' })).toHaveValue('미저장 초안');
   view.unmount();

@@ -1,3 +1,4 @@
+import { ScheduleTimeText } from '../schedules/ScheduleTimeText';
 import { SwipeDelete, DeleteButton } from '../shared/SwipeDelete';
 import { ScheduleCardActions } from '../shared/ScheduleCardActions';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +48,8 @@ export function TodayScheduleCard({
 }) {
   useTranslation();
   const [error, setError] = useState('');
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const locked = value.status === 'cancelled';
   const completed = value.status === 'completed';
   const selectionLocked = busy || !!editing || adding || otherAdding;
@@ -66,6 +69,12 @@ export function TodayScheduleCard({
         as="article"
         className="today-schedule-card memo-preview schedule-card"
         data-selected={selected}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onFocusCapture={() => setFocused(true)}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(false);
+        }}
         data-context-content
         data-schedule-color={value.color ?? 'none'}
         aria-label={value.entity_snapshot.name}
@@ -104,7 +113,7 @@ export function TodayScheduleCard({
                   {value.entity_snapshot.name}
                 </Button>
                 <span className="schedule-card-time">
-                  {value.start_time} — {value.end_time}
+                  <ScheduleTimeText start={value.start_time} end={value.end_time} />
                 </span>
               </h2>
               {value.end_date !== value.scheduled_date && (
@@ -225,7 +234,7 @@ export function TodayScheduleCard({
           ))}
         </div>
         <footer className="today-card-footer">
-          {selected && (
+          {(selected || hovered || focused || adding) && (
             <>
               <Button
                 variant="ghost"

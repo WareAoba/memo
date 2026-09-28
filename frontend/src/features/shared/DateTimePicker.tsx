@@ -1,4 +1,11 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type KeyboardEvent,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
 import { CalendarDatePicker } from '../workspace/CalendarDatePicker';
@@ -15,11 +22,13 @@ export function DatePicker({
   label,
   onChange,
   disabled = false,
+  hideLabel = false,
 }: {
   value: string;
   label: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  hideLabel?: boolean;
 }) {
   useTranslation();
   const today = dateInZone(useSettings().values.time_zone);
@@ -27,7 +36,7 @@ export function DatePicker({
   const [open, setOpen] = useState(false);
   return (
     <div className="date-time-field">
-      <span>{label}</span>
+      <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
       <Button
         ref={anchor}
         disabled={disabled}
@@ -170,12 +179,22 @@ export function TimePicker({
   onChange,
   disabled = false,
   min = '00:00',
+  isAllowed = () => true,
+  allowClear = false,
+  trigger,
+  beforeOpen,
+  onKeyDown,
 }: {
   value: string;
   label: string;
   onChange: (value: string) => void;
   disabled?: boolean;
   min?: string;
+  isAllowed?: (value: string) => boolean;
+  allowClear?: boolean;
+  trigger?: ReactNode;
+  beforeOpen?: () => boolean;
+  onKeyDown?: (event: KeyboardEvent) => void;
 }) {
   useTranslation();
   const anchor = useRef<HTMLButtonElement>(null);
@@ -190,22 +209,29 @@ export function TimePicker({
   const [hour, minute] = draft.split(':').map(Number);
   return (
     <div className="date-time-field">
-      <span>{label}</span>
+      <span className={trigger ? 'sr-only' : undefined}>{label}</span>
       <Button
         ref={anchor}
+        variant={trigger ? 'plain' : undefined}
+        className={trigger ? 'time-endpoint-value' : undefined}
+        onKeyDown={onKeyDown}
         disabled={disabled}
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => {
           if (open) close();
-          else {
+          else if (!beforeOpen || beforeOpen()) {
             setDraft(value || min);
             setOpen(true);
           }
         }}
       >
-        {value || '—'}
+        {trigger ?? (
+          <span className={!value ? 'time-unspecified' : undefined}>
+            {value || tr('DateTime.unspecified')}
+          </span>
+        )}
       </Button>
       {open && (
         <AnchoredPopup anchor={anchor} popupRef={popup} label={label} onClose={close}>
@@ -235,9 +261,24 @@ export function TimePicker({
             />
           </div>
           <div className="ui-time-picker-actions">
+            {allowClear && value && (
+              <Button
+                variant="ghost"
+                disabled={disabled}
+                onClick={() =>
+                  setOpen(false, () => {
+                    onChange('');
+                    anchor.current?.focus();
+                  })
+                }
+              >
+                {tr('DateTime.clear')}
+              </Button>
+            )}
+
             <Button
               variant="primary"
-              disabled={draft < min}
+              disabled={disabled || draft < min || !isAllowed(draft)}
               onClick={() => {
                 setOpen(false, () => {
                   onChange(draft);

@@ -4,6 +4,17 @@
 
 | 날짜 | 작업 | 기록 |
 | --- | --- | --- |
+| 2026-09-28 | 자정 연속 호 02:00 렌더·01:30 완전 투명화 | [변경과 검증](changes/2026-09-28-today-fixed-midnight-fade.md) |
+| 2026-09-28 | 즉발 막대 최상단·블러 마스크 분리와 곡선 감쇠 | [변경과 검증](changes/2026-09-28-today-marker-blur-layers.md) |
+| 2026-09-28 | 시계판 투명 경계·둥근 끝을 포함한 열 분리 | [변경과 검증](changes/2026-09-28-today-transparent-boundaries.md) |
+| 2026-09-28 | 둥근 호·겹침 고정 두께·연속 블러와 요약 반응형 보정 | [변경과 검증](changes/2026-09-28-today-fixed-arcs-responsive.md) |
+| 2026-09-28 | 시계판 구간별 겹침·자정 연속·단발 상태와 태스크 동작 정리 | [변경과 검증](changes/2026-09-28-today-overlap-task-actions.md) |
+| 2026-09-28 | 당일 시계판 상태색·완료 반영·태스크 추가 간격 및 호버 | [변경과 검증](changes/2026-09-28-today-status-feedback.md) |
+| 2026-09-28 | 여러 날 레퍼런스 전환 복구·시작/종료 시각 항상 표시 | [변경과 검증](changes/2026-09-28-multi-day-controls.md) |
+| 2026-09-28 | 시간 중복 표시 제거·단계별 다이얼·시작/종료 섹션 배치 교정 | [변경과 검증](changes/2026-09-28-time-endpoint-layout.md) |
+| 2026-09-28 | 시간 선택 생략·순차 입력·반응형 날짜 범위·당일 시계판 표시 | [변경과 검증](changes/2026-09-28-optional-schedule-times.md) |
+| 2026-09-28 | 자정 통과 일정·24시간 상한·시작/종료 날짜 입력 정리 | [변경과 검증](changes/2026-09-28-overnight-schedules.md) |
+| 2026-09-28 | macOS 네이티브 개발 환경 설치·도구 버전 지정 | [변경과 검증](changes/2026-09-28-macos-development-setup.md) |
 | 2026-09-28 | 직접 시·분 휠 회전·팝업 크기 안정화, 앞선 원판 수정 철회 | [변경과 검증](changes/2026-09-28-time-wheel-motion.md) |
 | 2026-09-28 | 시간 원판 클릭 회전 복구·회전 영역 크기 제한 | [변경과 검증](changes/2026-09-28-time-dial-motion-bounds.md) |
 | 2026-09-28 | UX 재점검 후속: 중복·안내 정리, 팝업 배치·Today 태스크 공통화 | [변경과 검증](changes/2026-09-28-ux-pattern-improvements.md) |

@@ -327,10 +327,9 @@ it('creates a schedule in a dialog while preserving the calendar date and route'
     expect(within(dialog).getByRole('button', { name: /스케줄 저장/ })).toBeEnabled(),
   );
   const before = vi.mocked(getRangeSchedules).mock.calls.length;
-  for (let i = 0; i < 10; i++)
-    fireEvent.keyDown(within(dialog).getByRole('slider', { name: '종료 시간' }), { key: 'PageUp' });
   for (let i = 0; i < 9; i++)
     fireEvent.keyDown(within(dialog).getByRole('slider', { name: '시작 시간' }), { key: 'PageUp' });
+  fireEvent.keyDown(within(dialog).getByRole('slider', { name: '종료 시간' }), { key: 'PageUp' });
   fireEvent.click(within(dialog).getByRole('button', { name: /스케줄 저장/ }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(saveSchedule).toHaveBeenCalledWith(
@@ -482,7 +481,7 @@ describe('unified edit dialogs', () => {
     entity_snapshot: work,
     title: work.name,
     scheduled_date: '2026-09-25',
-    end_date: '2026-09-26',
+    end_date: '2026-09-27',
     start_time: '23:00',
     end_time: '01:00',
     time_zone: 'Asia/Tokyo',
@@ -502,7 +501,7 @@ describe('unified edit dialogs', () => {
       const dialog = await screen.findByRole('dialog', { name: '스케줄 수정' });
       expect(await within(dialog).findByLabelText('시작 시간')).toHaveTextContent('23:00');
       expect(within(dialog).queryByTestId('time-dial')).not.toBeInTheDocument();
-      expect(within(dialog).getByLabelText('종료 날짜')).toHaveTextContent('2026-09-26');
+      expect(within(dialog).getByLabelText('종료 날짜')).toHaveTextContent('2026-09-27');
       fireEvent.click(within(dialog).getByRole('button', { name: '상세 닫기' }));
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       expect(window.location.hash).toBe('#/today');
@@ -526,6 +525,7 @@ describe('unified edit dialogs', () => {
     const dialog = screen.getByRole('dialog', { name: '스케줄 수정' });
     const start = await within(dialog).findByLabelText('시작 시간');
     fireEvent.click(start);
+    fireEvent.click(start);
     fireEvent.click(
       within(screen.getByRole('listbox', { name: '분' })).getByRole('option', { name: '05' }),
     );
@@ -537,7 +537,7 @@ describe('unified edit dialogs', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: '스케줄 저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(saveSchedule).toHaveBeenLastCalledWith(
-      expect.objectContaining({ start_time: '23:05', end_date: '2026-09-26' }),
+      expect.objectContaining({ start_time: '23:05', end_date: '2026-09-27' }),
       'schedule-edit',
     );
     expect(vi.mocked(saveSchedule).mock.calls[1]![0]).toHaveProperty('notes', '');

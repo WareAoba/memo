@@ -24,3 +24,15 @@ it('reuses lanes after an event ends and retains overflow events for daily count
   ])[0]!.bars;
   expect(bars.map((bar) => bar.lane)).toEqual([0, 1, 2, 3, 4, 5, 0]);
 });
+
+it('spans both calendar dates for a short overnight schedule', () => {
+  const overnight = {
+    ...schedule('night', '2026-09-28', '2026-09-29'),
+    start_time: '23:30',
+    end_time: '00:30',
+  };
+  const week = calendarWeeks('2026-09', [overnight]).find((week) => week.bars.length)!;
+  const bar = week.bars[0]!;
+  expect(week.dates[bar.start]).toBe('2026-09-28');
+  expect(week.dates[bar.end]).toBe('2026-09-29');
+});

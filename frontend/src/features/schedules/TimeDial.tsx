@@ -1,35 +1,26 @@
 import { useSettings } from '../settings/settingsContext';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
-import { ActionIcon } from '../shared/ActionIcon';
 import { Button } from '../shared/ui';
+import { TimeEndpoint } from './TimeEndpoint';
 import { DialFace } from './DialFace';
 import { useId, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent } from 'react';
-import { changeRange, pointToMinutes, toMinutes, toTime } from './timeRange';
+import { changeRange, pointToMinutes, toMinutes } from './timeRange';
 import './schedules.css';
 type Endpoint = 'start' | 'end';
 type Props = {
   start: string;
   end: string;
-  onChange: (range: { start: string; end: string }) => void;
+  onChange: (range: { start: string; end: string; daySpan: number }) => void;
   disabled?: boolean;
-  independentEndpoints?: boolean;
   daySpan?: number;
 };
-export function TimeDial({
-  start,
-  end,
-  onChange,
-  disabled = false,
-  independentEndpoints = false,
-  daySpan = 0,
-}: Props) {
+export function TimeDial({ start, end, onChange, disabled = false, daySpan = 0 }: Props) {
   useTranslation();
   const step = useSettings().values.clock_step;
-  const [adjusting, setAdjusting] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [selected, setSelected] = useState<Endpoint>('start');
+  const [selection, setSelected] = useState<Endpoint>('start');
   const drag = useRef<{
     id: number;
     endpoint: Endpoint;
@@ -40,32 +31,19 @@ export function TimeDial({
   const face = useRef<HTMLDivElement>(null);
   const hint = useId();
   const s = start ? toMinutes(start) : 0,
-    e = end ? toMinutes(end) : 0;
-  const duration = independentEndpoints ? Math.max(0, daySpan * 1440 + e - s) : Math.max(0, e - s);
+    e = end ? toMinutes(end) + daySpan * 1440 : 0;
+  const selected = start ? selection : 'start';
+  const endpoints = start ? (['start', 'end'] as const) : (['start'] as const);
+  const duration = Math.max(0, e - s);
+  function clockMinute(endpoint: Endpoint, minute: number) {
+    if (endpoint === 'start') return minute;
+    if (!end) return minute + (start && minute <= s ? 1440 : 0);
+    return minute + Math.round((e - minute) / 1440) * 1440;
+  }
   function update(endpoint: Endpoint, minute: number) {
     if (disabled) return endpoint;
-    const value = Math.max(
-      independentEndpoints && endpoint === 'end' ? step : 0,
-      Math.min(1440 - step, Math.round(minute / step) * step),
-    );
-    if (!start || !end) {
-      onChange({
-        start,
-        end,
-        [endpoint]: toTime(endpoint === 'end' ? Math.max(step, value) : value),
-      });
-      return endpoint;
-    }
-    if (independentEndpoints) {
-      onChange({ start, end, [endpoint]: toTime(value) });
-      return endpoint;
-    }
-    const fixed = endpoint === 'start' ? e : s;
-    const nextEndpoint = value === fixed ? endpoint : value < fixed ? 'start' : 'end';
-    onChange(changeRange(start, end, endpoint, value, step));
-    setSelected(nextEndpoint);
-    if (drag.current) drag.current.endpoint = nextEndpoint;
-    return nextEndpoint;
+    onChange(changeRange(start, end, endpoint, minute, step, daySpan));
+    return endpoint;
   }
   function locate(event: PointerEvent) {
     const r = face.current!.getBoundingClientRect();
@@ -89,13 +67,13 @@ export function TimeDial({
       id: event.pointerId,
       endpoint,
       advance: !handle,
-      previous: minute ?? (endpoint === 'start' ? s : e),
-      position: handle ? (endpoint === 'start' ? s : e) : minute!,
+      previous: minute ?? (endpoint === 'start' ? s : e % 1440),
+      position: handle ? (endpoint === 'start' ? s : e) : clockMinute(endpoint, minute!),
     };
     setDragging(true);
     setSelected(endpoint);
     face.current!.setPointerCapture(event.pointerId);
-    if (!handle && minute !== null) update(endpoint, minute);
+    if (!handle && minute !== null) update(endpoint, drag.current.position);
   }
   function finish(event: PointerEvent, cancelled = false) {
     const current = drag.current;
@@ -107,7 +85,7 @@ export function TimeDial({
     if (!cancelled && current.advance) setSelected(current.endpoint === 'start' ? 'end' : 'start');
   }
   function key(event: KeyboardEvent, endpoint: Endpoint) {
-    const value = endpoint === 'start' ? s : e;
+    const value = endpoint === 'start' ? s : end ? e : s;
     const next = {
       ArrowRight: value + step,
       ArrowUp: value + step,
@@ -115,8 +93,8 @@ export function TimeDial({
       ArrowDown: value - step,
       PageUp: value + 60,
       PageDown: value - 60,
-      Home: 0,
-      End: 1440 - step,
+      Home: endpoint === 'end' ? daySpan * 1440 : 0,
+      End: (endpoint === 'end' ? daySpan * 1440 : 0) + 1440 - step,
     }[event.key];
     if (next !== undefined) {
       event.preventDefault();
@@ -126,59 +104,43 @@ export function TimeDial({
     }
   }
   return (
-    <div
-      className="time-dial-control"
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setAdjusting(false);
-      }}
-    >
-      <div className="time-endpoints" aria-label={tr('TimeDial.timeToAdjust')}>
-        {(['start', 'end'] as const).map((endpoint) => (
-          <div
+    <div className="time-dial-control">
+      <div className="time-endpoints" aria-label={tr('TimeDial.timeToAdjust')} data-single={!start}>
+        {endpoints.map((endpoint) => (
+          <TimeEndpoint
             key={endpoint}
-            className="time-endpoint-box"
-            data-active={adjusting && selected === endpoint}
-          >
-            <Button
-              variant="plain"
-              className="time-endpoint-value"
-              disabled={disabled}
-              aria-pressed={adjusting && selected === endpoint}
-              onClick={() => {
-                setSelected(endpoint);
-                setAdjusting(!(adjusting && selected === endpoint));
-              }}
-              onKeyDown={(event) => key(event, endpoint)}
-            >
-              <span className={`endpoint-dot ${endpoint}-dot`} />
-              {endpoint === 'start' ? tr('TaskExecution.start') : tr('TimeDial.end')}
-              <strong>{(endpoint === 'start' ? start : end) || '—'}</strong>
-            </Button>
-            <div
-              className="time-step-reveal"
-              inert={!(adjusting && selected === endpoint)}
-              aria-hidden={!(adjusting && selected === endpoint)}
-            >
-              <div className="time-step-actions">
-                <Button
-                  variant="ghost"
-                  disabled={disabled}
-                  aria-label={tr('TimeDial.decreaseTime')}
-                  onClick={() => update(endpoint, (endpoint === 'start' ? s : e) - step)}
-                >
-                  <ActionIcon name="down" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  disabled={disabled}
-                  aria-label={tr('TimeDial.increaseTime')}
-                  onClick={() => update(endpoint, (endpoint === 'start' ? s : e) + step)}
-                >
-                  <ActionIcon name="up" />
-                </Button>
-              </div>
-            </div>
-          </div>
+            endpoint={endpoint}
+            labelled={Boolean(start)}
+            value={endpoint === 'start' ? start : end}
+            disabled={disabled}
+            onSelect={() => setSelected(endpoint)}
+            onKeyDown={(event) => key(event, endpoint)}
+            onStep={(direction) =>
+              update(endpoint, (endpoint === 'start' ? s : end ? e : s) + direction * step)
+            }
+            isAllowed={(time) => {
+              const value = clockMinute(endpoint, toMinutes(time));
+              return endpoint === 'start'
+                ? !start || !end || (value >= 0 && value < 1440 && value < e && e - value <= 1440)
+                : value > s && value - s <= 1440;
+            }}
+            onChange={(time) => {
+              if (!time) {
+                onChange({ start: endpoint === 'start' ? '' : start, end: '', daySpan: 0 });
+                return;
+              }
+              onChange(
+                changeRange(
+                  start,
+                  end,
+                  endpoint,
+                  clockMinute(endpoint, toMinutes(time)),
+                  1,
+                  daySpan,
+                ),
+              );
+            }}
+          />
         ))}
       </div>
       <div
@@ -195,7 +157,18 @@ export function TimeDial({
               let delta = m - current.previous;
               if (delta > 720) delta -= 1440;
               if (delta < -720) delta += 1440;
-              current.position = Math.max(0, Math.min(1440 - step, current.position + delta));
+              const range = changeRange(
+                start,
+                end,
+                current.endpoint,
+                current.position + delta,
+                step,
+                daySpan,
+              );
+              current.position =
+                current.endpoint === 'start'
+                  ? toMinutes(range.start)
+                  : toMinutes(range.end) + range.daySpan * 1440;
               current.previous = m;
               update(current.endpoint, current.position);
             }
@@ -223,7 +196,7 @@ export function TimeDial({
                 strokeDasharray: `${(Math.min(duration, 1440) / 1440) * 2 * Math.PI * 138} ${2 * Math.PI * 138}`,
               }}
             />
-            {(['start', 'end'] as const).map((endpoint) => {
+            {endpoints.map((endpoint) => {
               const angle = (endpoint === 'start' ? s : e) / 4;
               return (
                 <g
@@ -255,9 +228,9 @@ export function TimeDial({
         </svg>
         <div className="dial-center" aria-hidden="true">
           <span>{tr('TimeDial.selectedDuration')}</span>
-          <strong>
+          <strong className={!start || !end ? 'time-unspecified' : undefined}>
             {!start || !end
-              ? '—'
+              ? tr('DateTime.unspecified')
               : Math.floor(duration / 60) > 0
                 ? tr('TimeDial.valueH', { v1: Math.floor(duration / 60) })
                 : ''}
@@ -270,9 +243,9 @@ export function TimeDial({
                   : ''}
           </strong>
         </div>
-        {(['start', 'end'] as const).map((endpoint) => {
+        {endpoints.map((endpoint) => {
           const angle = (endpoint === 'start' ? s : e) / 4;
-          const value = endpoint === 'start' ? s : e;
+          const value = endpoint === 'start' ? s : end ? e : s;
           return (
             <div
               key={endpoint}
@@ -291,10 +264,12 @@ export function TimeDial({
                     ? tr('ScheduleEditor.startTime')
                     : tr('ScheduleEditor.endTime')
                 }
-                aria-valuemin={independentEndpoints && endpoint === 'end' ? step : 0}
-                aria-valuemax={1439}
+                aria-valuemin={endpoint === 'start' ? Math.max(0, e - 1440) : start ? s + 1 : 0}
+                aria-valuemax={
+                  endpoint === 'start' ? Math.min(1439, start && end ? e - 1 : 1439) : s + 1440
+                }
                 aria-valuenow={value}
-                aria-valuetext={endpoint === 'start' ? start : end}
+                aria-valuetext={(endpoint === 'start' ? start : end) || tr('DateTime.unspecified')}
                 aria-describedby={hint}
                 onFocus={() => setSelected(endpoint)}
                 onKeyDown={(event) => key(event, endpoint)}

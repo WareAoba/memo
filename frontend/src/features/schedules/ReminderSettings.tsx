@@ -25,6 +25,7 @@ export function ReminderSettings({
       <label className="reminder-toggle">
         <Input
           type="checkbox"
+          disabled={disabled}
           checked={value.reminder_enabled ?? false}
           onChange={(e) =>
             onChange({

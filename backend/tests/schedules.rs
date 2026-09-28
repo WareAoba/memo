@@ -1609,3 +1609,179 @@ async fn completed_promoted_task_allows_metadata_edits_without_revalidating_comp
         409
     );
 }
+
+#[tokio::test]
+async fn optional_times_round_trip_without_allowing_end_only_or_untimed_reminders() {
+    let dir = tempfile::tempdir().unwrap();
+    let pool = db::connect(&dir.path().join("optional.sqlite3"))
+        .await
+        .unwrap();
+    let work = create(&pool, "entities", "Optional time").await;
+    let mut input = body(&work, &[]);
+    input.as_object_mut().unwrap().remove("start_time");
+    input.as_object_mut().unwrap().remove("end_time");
+    let (status, untimed) = request(&pool, "POST", "/api/schedules", input.clone()).await;
+    assert_eq!(status, 201, "{untimed}");
+    assert_eq!(untimed["start_time"], "");
+    assert_eq!(untimed["end_time"], "");
+    let url = format!("/api/schedules/{}", untimed["id"].as_str().unwrap());
+    assert_eq!(
+        request(&pool, "PATCH", &url, json!({"end_time":"10:00"}))
+            .await
+            .0,
+        400
+    );
+    assert_eq!(
+        request(&pool, "PATCH", &url, json!({"reminder_enabled":true}))
+            .await
+            .0,
+        400
+    );
+    let (status, started) = request(
+        &pool,
+        "PATCH",
+        &url,
+        json!({"start_time":"23:30", "reminder_enabled":true}),
+    )
+    .await;
+    assert_eq!(status, 200, "{started}");
+    assert_eq!(started["end_time"], "");
+    let (status, cleared) = request(
+        &pool,
+        "PATCH",
+        &url,
+        json!({"start_time":"", "end_time":"", "reminder_enabled":false}),
+    )
+    .await;
+    assert_eq!(status, 200, "{cleared}");
+    assert_eq!(cleared["entity_snapshot"], untimed["entity_snapshot"]);
+    let row: (Option<i64>, Option<i64>, i64) = sqlx::query_as(
+        "SELECT reminder_at,reminder_start_at,reminder_version FROM schedules WHERE id=?",
+    )
+    .bind(untimed["id"].as_str().unwrap())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(row, (None, None, 3));
+    input["start_time"] = json!("");
+    input["end_time"] = json!("10:00");
+    assert_eq!(
+        request(&pool, "POST", "/api/schedules", input.clone())
+            .await
+            .0,
+        400
+    );
+    input["start_time"] = json!("24:00");
+    input["end_time"] = json!("");
+    assert_eq!(request(&pool, "POST", "/api/schedules", input).await.0, 400);
+}
+
+#[tokio::test]
+async fn optional_time_migration_preserves_graph_indexes_and_revisions() {
+    use sqlx::{Column, Row};
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(
+            sqlx::sqlite::SqliteConnectOptions::new()
+                .in_memory(true)
+                .foreign_keys(true),
+        )
+        .await
+        .unwrap();
+    let mut historical = sqlx::migrate!("./migrations");
+    historical.migrations = std::borrow::Cow::Owned(
+        historical
+            .iter()
+            .filter(|m| m.version < 202609280001)
+            .cloned()
+            .collect(),
+    );
+    historical.run(&pool).await.unwrap();
+    sqlx::raw_sql(r#"INSERT INTO entities(id,user_id,name) VALUES('legacy-work','00000000-0000-4000-8000-000000000001','Original work');
+        INSERT INTO task_presets(id,user_id,name) VALUES('legacy-task','00000000-0000-4000-8000-000000000001','Original task');
+        INSERT INTO tags(id,user_id,name) VALUES('legacy-tag','00000000-0000-4000-8000-000000000001','shared');
+        INSERT INTO entity_tags(entity_id,tag_id,user_id) VALUES('legacy-work','legacy-tag','00000000-0000-4000-8000-000000000001');
+        INSERT INTO task_preset_tags(task_preset_id,tag_id,user_id) VALUES('legacy-task','legacy-tag','00000000-0000-4000-8000-000000000001');
+        INSERT INTO work_task_presets(entity_id,task_preset_id,user_id,position) VALUES('legacy-work','legacy-task','00000000-0000-4000-8000-000000000001',0);
+        INSERT INTO schedules(id,user_id,entity_id,title,scheduled_date,end_date,start_time,end_time,time_zone) VALUES('10000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','legacy-work','Original','2077-01-01','2077-01-01','09:00','10:00','Asia/Tokyo');
+        INSERT INTO schedule_entity_snapshot(id,schedule_id,definition) VALUES('snapshot','10000000-0000-4000-8000-000000000001','{"name":"Original work"}');
+        INSERT INTO schedule_tasks(id,schedule_id,user_id,source_task_preset_id,source_task_preset_version,name_snapshot,default_notes_snapshot,position,execution_notes) VALUES('legacy-execution','10000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','legacy-task',1,'Original task','',0,'Saved memo');
+        INSERT INTO schedule_task_items(id,schedule_task_id,source_preset_item_id,position,definition,value_text,completed) VALUES('legacy-item','legacy-execution','source-item',0,'{}','Saved value',1);
+        INSERT INTO photos(id,user_id,schedule_id,filename,mime_type,size_bytes,state) VALUES('20000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000001','10000000-0000-4000-8000-000000000001','old.png','image/png',100,'ready');"#)
+        .execute(&pool).await.unwrap();
+
+    sqlx::raw_sql(r#"INSERT INTO push_subscriptions(id,user_id,installation_id,endpoint,p256dh,auth) VALUES('subscription','00000000-0000-4000-8000-000000000001','installation','https://example.test/push','key','auth');
+    INSERT INTO push_deliveries(id,subscription_id,schedule_id,reminder_version,status,attempts) VALUES('delivery','subscription','10000000-0000-4000-8000-000000000001',1,'sent',1);"#).execute(&pool).await.unwrap();
+    // SQLite quote() preserves NULL, text, numbers and every column for exact comparison.
+    let mut queries = Vec::new();
+    for table in [
+        "schedules",
+        "schedule_entity_snapshot",
+        "schedule_tasks",
+        "schedule_task_items",
+        "photos",
+        "push_deliveries",
+        "tracks",
+    ] {
+        let row = sqlx::query(&format!("SELECT * FROM {table} LIMIT 1"))
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let columns = row
+            .columns()
+            .iter()
+            .map(|column| format!("quote({})", column.name()))
+            .collect::<Vec<_>>()
+            .join(" || '|' || ");
+        queries.push(format!("SELECT {columns} FROM {table} ORDER BY id"));
+    }
+    queries.push("SELECT type || name || sql FROM sqlite_master WHERE type IN ('index','trigger') AND sql IS NOT NULL ORDER BY name".into());
+    let mut before = Vec::new();
+    for query in &queries {
+        before.push(
+            sqlx::query_scalar::<_, String>(query)
+                .fetch_all(&pool)
+                .await
+                .unwrap(),
+        );
+    }
+    sqlx::migrate!("./migrations").run(&pool).await.unwrap();
+    for (query, expected) in queries.iter().zip(before) {
+        assert_eq!(
+            sqlx::query_scalar::<_, String>(query)
+                .fetch_all(&pool)
+                .await
+                .unwrap(),
+            expected,
+            "{query}"
+        );
+    }
+    assert!(
+        sqlx::query("PRAGMA foreign_key_check")
+            .fetch_all(&pool)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let revision: i64 = sqlx::query_scalar("SELECT revision FROM tracks LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE schedules SET start_time='',end_time='' ")
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert!(
+        sqlx::query_scalar::<_, i64>("SELECT revision FROM tracks LIMIT 1")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+            > revision
+    );
+    assert!(
+        sqlx::query("UPDATE schedules SET end_time='10:00'")
+            .execute(&pool)
+            .await
+            .is_err()
+    );
+}

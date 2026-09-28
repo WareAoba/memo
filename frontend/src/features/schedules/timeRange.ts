@@ -12,11 +12,39 @@ export function changeRange(
   target: 'start' | 'end',
   minute: number,
   step = 5,
+  daySpan = 0,
 ) {
-  const value = Math.max(0, Math.min(1440 - step, Math.round(minute / step) * step));
-  const fixed = toMinutes(target === 'start' ? end : start);
-  if (value === fixed) return { start, end };
-  return { start: toTime(Math.min(value, fixed)), end: toTime(Math.max(value, fixed)) };
+  const s = start ? toMinutes(start) : 0;
+  const endDay = !start && end && target === 'start' && minute >= toMinutes(end) ? 1 : daySpan;
+  const e = end ? toMinutes(end) + endDay * 1440 : 0;
+  const min = target === 'start' ? (end ? Math.max(0, e - 1440) : 0) : start ? s + 1 : 0;
+  const max = target === 'start' ? (end ? Math.min(1439, e - 1) : 1439) : start ? s + 1440 : 1439;
+  const value = Math.max(min, Math.min(max, Math.round(minute / step) * step));
+  const nextStart = target === 'start' ? toTime(value) : start;
+  const nextEnd = target === 'end' ? toTime(value % 1440) : end;
+  return {
+    start: nextStart,
+    end: nextEnd,
+    daySpan: target === 'end' ? Math.floor(value / 1440) : endDay,
+  };
+}
+export function dateSpan(start: string, end: string) {
+  return Math.round((Date.parse(`${end}T12:00:00Z`) - Date.parse(`${start}T12:00:00Z`)) / 86400000);
+}
+export function scheduleMinutes(fields: {
+  scheduled_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+}) {
+  return (
+    dateSpan(fields.scheduled_date, fields.end_date) * 1440 +
+    toMinutes(fields.end_time) -
+    toMinutes(fields.start_time)
+  );
+}
+export function orderedDates(start: string, end: string) {
+  return { scheduled_date: start <= end ? start : end, end_date: start <= end ? end : start };
 }
 export function nextDate(date: string) {
   const d = new Date(`${date}T12:00:00Z`);

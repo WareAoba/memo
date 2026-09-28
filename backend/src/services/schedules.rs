@@ -14,7 +14,9 @@ struct Fields {
     scheduled_date: String,
     #[serde(default)]
     end_date: String,
+    #[serde(default)]
     start_time: String,
+    #[serde(default)]
     end_time: String,
     time_zone: String,
     #[serde(default)]
@@ -137,11 +139,11 @@ fn validate(f: &mut Fields) -> Result<()> {
     f.title = f.title.trim().to_owned();
     f.notes = f.notes.trim().to_owned();
     if !date(&f.scheduled_date)
-        || !time(&f.start_time)
-        || !time(&f.end_time)
+        || (!f.start_time.is_empty() && !time(&f.start_time))
+        || (!f.end_time.is_empty() && (!time(&f.end_time) || f.start_time.is_empty()))
         || !date(&f.end_date)
         || f.end_date < f.scheduled_date
-        || (f.end_date == f.scheduled_date && f.start_time >= f.end_time)
+        || (!f.end_time.is_empty() && f.end_date == f.scheduled_date && f.start_time >= f.end_time)
         || f.time_zone.parse::<chrono_tz::Tz>().is_err()
         || f.title.chars().count() > 200
         || f.notes.chars().count() > 5000
@@ -298,9 +300,6 @@ pub(super) async fn in_transaction(conn: &mut SqliteConnection, id: &str) -> Res
     detail(conn, schedule).await
 }
 pub async fn create(pool: &SqlitePool, mut value: Value) -> Result<Value> {
-    if value["end_time"] == "00:00" {
-        return Err(invalid());
-    }
     let obj = value.as_object_mut().ok_or_else(invalid)?;
     let work_input = match (obj.remove("entity_id"), obj.remove("entity_name")) {
         (Some(id), None) => id,
@@ -380,9 +379,6 @@ pub async fn create(pool: &SqlitePool, mut value: Value) -> Result<Value> {
 pub async fn patch(pool: &SqlitePool, id: &str, value: Value) -> Result<Value> {
     let id = identifier(id)?;
     let changes = value.as_object().ok_or_else(invalid)?;
-    if changes.get("end_time").and_then(Value::as_str) == Some("00:00") {
-        return Err(invalid());
-    }
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await.map_err(database)?;
     let s = read(&mut tx, &id).await?;
     let mut fields = serde_json::to_value(&s.fields).map_err(|_| invalid())?;

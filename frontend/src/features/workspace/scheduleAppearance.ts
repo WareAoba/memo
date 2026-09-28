@@ -12,7 +12,7 @@ export function scheduleAppearance(item: ScheduleDetail, now: Date) {
     : item.status === 'completed'
       ? 1
       : 0;
-  const green = `color-mix(in srgb, hsl(140 32% ${86 - ratio * 30}%) var(--progress-mix, 100%), var(--surface))`;
+  const green = `hsl(140 var(--progress-saturation) ${86 - ratio * 30}%)`;
   if (item.status === 'cancelled')
     return {
       state: 'cancelled',
@@ -21,6 +21,26 @@ export function scheduleAppearance(item: ScheduleDetail, now: Date) {
       ratio,
       green,
     };
+  if (item.status === 'completed' || ratio === 1)
+    return {
+      state: 'completed',
+      label: tr('design-reference.completed'),
+      color: green,
+      ratio,
+      green,
+    };
+  if (!item.end_time) {
+    const overdue = Boolean(
+      item.start_time && instant >= `${item.scheduled_date}T${item.start_time}`,
+    );
+    return {
+      state: overdue ? 'overdue' : 'upcoming',
+      label: overdue ? tr('ScheduleBlock.incomplete') : tr('progress.scheduled'),
+      color: overdue ? 'var(--status-overdue)' : 'var(--status-upcoming)',
+      ratio,
+      green,
+    };
+  }
   if (instant < `${item.scheduled_date}T${item.start_time}`)
     return {
       state: 'upcoming',
@@ -34,14 +54,6 @@ export function scheduleAppearance(item: ScheduleDetail, now: Date) {
       state: 'current',
       label: tr('scheduleAppearance.inTimeSlot'),
       color: 'var(--status-current)',
-      ratio,
-      green,
-    };
-  if (item.status === 'completed' || ratio === 1)
-    return {
-      state: 'completed',
-      label: tr('design-reference.completed'),
-      color: green,
       ratio,
       green,
     };

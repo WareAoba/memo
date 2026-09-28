@@ -249,10 +249,6 @@
   "TaskExecution.executionMemo": "Execution memo",
   "TaskExecution.saveMemo": "Save memo",
   "TaskExecution.start": "Start",
-  "TaskExecution.undoCompletion": "Undo completion",
-  "TaskExecution.completeTask": "Complete task",
-  "TaskExecution.undoSkip": "Undo skip",
-  "TaskExecution.skip": "Skip",
   "TaskExecution.runValue": "Run {{v1}}",
   "TaskGroupPicker.expandAGroupToAddTasks": "Expand a group to add tasks.",
   "TaskGroupPicker.ungrouped": "Ungrouped",
@@ -625,5 +621,11 @@
   "Notifications.scheduled": "Reminder set for {{time}}",
   "Notifications.resetDemo": "Reset notification examples",
   "Notifications.hours_one": "In {{count}} hour",
-  "Notifications.hours_other": "In {{count}} hours"
+  "Notifications.hours_other": "In {{count}} hours",
+  "DateTime.unspecified": "Not set",
+  "DateTime.from": "From",
+  "DateTime.until": "Until",
+  "DateTime.clear": "Clear time",
+  "DateTime.startOnly": "From {{time}}",
+  "DateTime.reminderNeedsTime": "Set a start time to enable a reminder."
 }

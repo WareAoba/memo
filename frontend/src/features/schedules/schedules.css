@@ -95,7 +95,7 @@
     align-items: flex-start;
     gap: var(--space-3);
     /* Keep the dial steady while the endpoint box expands within this row. */
-    height: 132px;
+    min-height: 180px;
   }
   .time-endpoints > span {
     color: var(--muted);
@@ -103,8 +103,9 @@
   .time-endpoints .time-endpoint-value {
     width: 100%;
     background: transparent;
-    display: grid;
-    grid-template-columns: 8px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     column-gap: var(--space-2);
     row-gap: 3px;
     padding: var(--space-3) var(--space-5);
@@ -112,11 +113,28 @@
     color: var(--muted);
     border-radius: var(--radius-card);
   }
+  .time-endpoint {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .time-endpoint-caption {
+    justify-content: center;
+    color: var(--muted);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .time-endpoint[data-label-position='after'] > .time-endpoint-caption {
+    order: 1;
+  }
   .time-endpoint-box {
     position: relative;
+    min-width: 0;
     border: 1px solid transparent;
     border-radius: var(--radius-card);
-    overflow: hidden;
     transition:
       background var(--motion-fast),
       border-color var(--motion-fast);
@@ -134,7 +152,7 @@
       grid-template-rows var(--motion-medium) var(--ease-settle),
       opacity var(--motion-fast) var(--ease-settle);
   }
-  .time-step-reveal > .time-step-actions {
+  .time-step-reveal > .time-step-content {
     min-height: 0;
     overflow: hidden;
   }
@@ -142,6 +160,12 @@
     grid-template-rows: 1fr;
     opacity: 1;
     pointer-events: auto;
+  }
+  .time-step-content .date-time-field > span {
+    display: none;
+  }
+  .time-step-content .date-time-field {
+    padding: 0 var(--space-2);
   }
   .time-step-actions .ui-button {
     min-width: 48px;
@@ -343,8 +367,44 @@
   }
   .manual-time-range {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 18px;
     margin: var(--space-5) 0;
+    min-height: 0;
+  }
+  .schedule-date-section {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  .schedule-date-section legend {
+    padding: 0 0 var(--space-3);
+    font-weight: 600;
+  }
+  .time-endpoint-clear {
+    width: 100%;
+  }
+  .time-endpoint-box > .date-time-field {
+    gap: 0;
+  }
+
+  @media (max-width: 700px) {
+    .manual-time-range {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .time-endpoints:not(.manual-time-range) {
+      flex-direction: column;
+      align-items: center;
+      min-height: 0;
+    }
+    .time-endpoint {
+      width: 100%;
+    }
   }
   .selected-work {
     display: flex;

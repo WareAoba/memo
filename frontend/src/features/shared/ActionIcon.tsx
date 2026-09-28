@@ -22,8 +22,6 @@ export function ActionIcon({
     | 'right'
     | 'up'
     | 'down'
-    | 'play'
-    | 'skip'
     | 'archive'
     | 'camera'
     | 'calendar'
@@ -50,8 +48,6 @@ export function ActionIcon({
     right: 'M9 5l7 7-7 7',
     up: 'M5 15l7-7 7 7',
     down: 'M5 9l7 7 7-7',
-    play: 'm7 4 14 8-14 8V4Z',
-    skip: 'm4 5 11 7-11 7V5Zm15 0v14',
     archive: 'M3 3h18v5H3V3Zm2 5v13h14V8M9 12h6',
     camera: 'M3 7h4l2-3h6l2 3h4v14H3V7Zm13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     calendar: 'M3 5h18v16H3V5Zm4-3v6m10-6v6M3 11h18',

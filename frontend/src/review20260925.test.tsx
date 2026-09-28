@@ -67,7 +67,7 @@ const schedule: ScheduleDetail = {
   ],
 };
 
-it('review: successful trimmed rename should allow completion', async () => {
+it('review: successful trimmed rename normalizes the saved draft', async () => {
   vi.mocked(updateTask).mockResolvedValue({
     ...schedule,
     tasks: [{ ...schedule.tasks[0]!, name_snapshot: 'Renamed' }],
@@ -96,7 +96,8 @@ it('review: successful trimmed rename should allow completion', async () => {
     screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
   ).not.toBeInTheDocument();
   expect(updateTask).toHaveBeenCalledWith('t', { name: 'Renamed' });
-  expect(screen.getByRole('button', { name: '태스크 완료' })).toBeEnabled();
+  expect(screen.getByLabelText('태스크 이름')).toHaveValue('Renamed');
+  expect(screen.getByRole('button', { name: '이름 저장' })).toBeDisabled();
 });
 
 it('review: schedule detail should expose saved custom information', async () => {

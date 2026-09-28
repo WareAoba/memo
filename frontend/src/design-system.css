@@ -227,6 +227,23 @@
     gap: 0;
     flex-shrink: 0;
   }
+  .task-hover-actions > .ui-button[data-variant='danger'],
+  .task-hover-actions > .ui-button[data-variant='danger']:not(:disabled):hover {
+    background: transparent;
+    color: var(--danger);
+  }
+  @media (min-width: 701px) and (pointer: fine) {
+    .task-hover-actions {
+      --control-height: 32px;
+      --icon-size: 16px;
+    }
+    .task-hover-actions > .ui-button:not([data-variant='plain']) {
+      padding: var(--space-1) var(--space-2);
+    }
+    .task-hover-actions > .ui-button.ui-icon-button {
+      padding: 0;
+    }
+  }
   .action-icon {
     width: var(--icon-size);
     height: var(--icon-size);
@@ -493,7 +510,7 @@
     border: 0;
   }
   .ui-surface.today-schedule-card {
-    padding-inline: var(--space-4);
+    padding: var(--space-3) var(--space-4) var(--space-2);
     border-radius: var(--radius-card);
   }
   .ui-surface.today-schedule-card[data-selected='true'] {
@@ -1105,5 +1122,13 @@
     .ui-time-wheel-number {
       transform: none !important;
     }
+  }
+}
+
+@layer components {
+  .time-unspecified {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.85em;
   }
 }

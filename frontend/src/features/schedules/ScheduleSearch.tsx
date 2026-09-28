@@ -1,3 +1,4 @@
+import { ScheduleTimeText } from './ScheduleTimeText';
 import { ScheduleCardActions } from '../shared/ScheduleCardActions';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
@@ -100,9 +101,9 @@ export function ScheduleSearch({
                   <a href={'#/schedules/' + item.id}>
                     <strong>{item.title || tr('Schedules.untitledSchedule')}</strong>
                     <span>
-                      {item.scheduled_date} {item.start_time} —{' '}
-                      {item.end_date !== item.scheduled_date ? item.end_date + ' ' : ''}
-                      {item.end_time}
+                      {item.scheduled_date}
+                      {item.end_date !== item.scheduled_date ? ' — ' + item.end_date : ''}{' '}
+                      <ScheduleTimeText start={item.start_time} end={item.end_time} />
                     </span>
                     <span>{statusLabel(item.status)}</span>
                     {item.notes && <span className="schedule-search-notes">{item.notes}</span>}

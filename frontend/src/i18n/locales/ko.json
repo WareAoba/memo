@@ -249,10 +249,6 @@
   "TaskExecution.executionMemo": "실행 메모",
   "TaskExecution.saveMemo": "메모 저장",
   "TaskExecution.start": "시작",
-  "TaskExecution.undoCompletion": "완료 취소",
-  "TaskExecution.completeTask": "태스크 완료",
-  "TaskExecution.undoSkip": "건너뜀 취소",
-  "TaskExecution.skip": "건너뛰기",
   "TaskExecution.runValue": "{{v1}} 실행",
   "TaskGroupPicker.expandAGroupToAddTasks": "그룹을 펼쳐 태스크를 추가하세요.",
   "TaskGroupPicker.ungrouped": "미분류",
@@ -625,5 +621,11 @@
   "Notifications.scheduled": "{{time}}에 다시 알림",
   "Notifications.resetDemo": "알림 예시 복원",
   "Notifications.hours_one": "{{count}}시간 뒤",
-  "Notifications.hours_other": "{{count}}시간 뒤"
+  "Notifications.hours_other": "{{count}}시간 뒤",
+  "DateTime.unspecified": "지정 없음",
+  "DateTime.from": "부터",
+  "DateTime.until": "까지",
+  "DateTime.clear": "시간 지정 해제",
+  "DateTime.startOnly": "{{time}}부터",
+  "DateTime.reminderNeedsTime": "시작 시간을 지정하면 리마인드를 설정할 수 있어요."
 }

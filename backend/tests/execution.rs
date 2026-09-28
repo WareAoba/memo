@@ -989,7 +989,7 @@ async fn reopen_and_delete_preserve_sources_and_isolate_other_schedules() {
 }
 
 #[tokio::test]
-async fn midnight_end_is_rejected_but_legacy_notes_can_still_be_edited() {
+async fn midnight_end_is_saved_and_notes_remain_editable() {
     let dir = tempfile::tempdir().unwrap();
     let pool = db::connect(&dir.path().join("midnight.sqlite3"))
         .await
@@ -1002,22 +1002,45 @@ async fn midnight_end_is_rejected_but_legacy_notes_can_still_be_edited() {
         request(&pool, "POST", "/api/schedules", input.clone())
             .await
             .0,
-        400
+        201
     );
     input["end_time"] = json!("00:05");
     let (_, schedule) = request(&pool, "POST", "/api/schedules", input).await;
     let path = schedule_path(&schedule);
+    for date in ["2028-02-29", "2028-03-01"] {
+        let (status, list) = request(
+            &pool,
+            "GET",
+            &format!("/api/schedules?date={date}"),
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200);
+        assert!(
+            list["items"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|item| item["id"] == schedule["id"])
+        );
+    }
+    assert_eq!(
+        request(
+            &pool,
+            "PATCH",
+            &path,
+            json!({"end_date":"2028-02-29", "end_time":"00:00"})
+        )
+        .await
+        .0,
+        400
+    );
     assert_eq!(
         request(&pool, "PATCH", &path, json!({"end_time":"00:00"}))
             .await
             .0,
-        400
+        200
     );
-    sqlx::query("UPDATE schedules SET end_time='00:00' WHERE id=?")
-        .bind(schedule["id"].as_str().unwrap())
-        .execute(&pool)
-        .await
-        .unwrap();
     assert_eq!(
         request(&pool, "PATCH", &path, json!({"notes":"preserved"}))
             .await

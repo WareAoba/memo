@@ -1,5 +1,3 @@
-import { useSettings } from '../settings/settingsContext';
-import { toTime } from './timeRange';
 import { DeleteButton } from '../shared/SwipeDelete';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
@@ -30,8 +28,9 @@ import { useEditorActive } from '../useEditorActive';
 import { Picker } from './Picker';
 import { TimeDial } from './TimeDial';
 import { TaskDirectory } from './TaskDirectory';
-import { DatePicker, TimePicker } from '../shared/DateTimePicker';
-import { dateInZone, nextDate } from './timeRange';
+import { ScheduleDateRange } from './ScheduleDateRange';
+import { ScheduleTimeText } from './ScheduleTimeText';
+import { dateInZone, nextDate, dateSpan, scheduleMinutes } from './timeRange';
 export function ScheduleEditor({
   embedded = false,
   initial,
@@ -56,7 +55,6 @@ export function ScheduleEditor({
   timeZone?: string;
 }) {
   useTranslation();
-  const step = useSettings().values.clock_step;
   const active = useEditorActive();
   const formId = useId();
   const mobile = useMobileLayout();
@@ -67,7 +65,7 @@ export function ScheduleEditor({
           scheduled_date: initial.scheduled_date,
           end_date: initial.end_date,
           start_time: initial.start_time,
-          end_time: initial.end_time === '00:00' ? toTime(step) : initial.end_time,
+          end_time: initial.end_time,
           time_zone: initial.time_zone,
           notes: initial.notes,
           color: initial.color ?? 'none',
@@ -90,7 +88,12 @@ export function ScheduleEditor({
         },
   );
   const [multiDay, setMultiDay] = useState(
-    Boolean(initial && initial.end_date > initial.scheduled_date),
+    Boolean(
+      initial &&
+      (initial.start_time && initial.end_time
+        ? scheduleMinutes(initial) > 1440
+        : initial.end_date > initial.scheduled_date),
+    ),
   );
   const draft = useScheduleTaskDraft();
   const { work, tasks, customize, move } = draft;
@@ -108,21 +111,24 @@ export function ScheduleEditor({
     setError('');
     setFields((f) => ({
       ...f,
-      end_date: checked ? nextDate(f.scheduled_date) : f.scheduled_date,
-      ...(!checked && f.end_time <= f.start_time ? { start_time: '', end_time: '' } : {}),
+      end_date:
+        checked || (f.start_time && f.end_time && f.end_time <= f.start_time)
+          ? nextDate(f.scheduled_date)
+          : f.scheduled_date,
     }));
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (busy || mutationBusy) return;
     setError('');
-    const endDate = multiDay ? fields.end_date : fields.scheduled_date;
+    const endDate = fields.end_date;
     if (
-      !fields.start_time ||
-      !fields.end_time ||
-      fields.end_time === '00:00' ||
+      (!fields.start_time && Boolean(fields.end_time)) ||
       endDate < fields.scheduled_date ||
-      (endDate === fields.scheduled_date && fields.end_time <= fields.start_time)
+      (fields.end_time &&
+        endDate === fields.scheduled_date &&
+        fields.end_time <= fields.start_time) ||
+      (!multiDay && fields.start_time && fields.end_time && scheduleMinutes(fields) > 1440)
     ) {
       setError('ScheduleEditor.theEndDateAndTimeMustBeAfterThe');
       return;
@@ -237,9 +243,9 @@ export function ScheduleEditor({
                     <DisclosureSummary>
                       <span>{tr('app.time')}</span>
                       <strong>
-                        {fields.start_time} — {fields.end_time}
+                        <ScheduleTimeText start={fields.start_time} end={fields.end_time} />
                       </strong>
-                      {multiDay && (
+                      {fields.end_date !== fields.scheduled_date && (
                         <span>
                           {fields.scheduled_date} → {fields.end_date}
                         </span>
@@ -248,51 +254,37 @@ export function ScheduleEditor({
                     <div className="schedule-panel-heading">
                       <h2>{multiDay ? tr('ScheduleEditor.dateAndTime') : tr('app.time')}</h2>
                     </div>
-                    {multiDay && (
-                      <DatePicker
-                        label={tr('ScheduleEditor.startDate')}
-                        value={fields.scheduled_date}
-                        onChange={(date) =>
-                          setFields({
-                            ...fields,
-                            scheduled_date: date,
-                            end_date: multiDay ? fields.end_date : date,
-                          })
-                        }
-                      />
-                    )}
-
                     {!multiDay && (
                       <TimeDial
                         start={fields.start_time}
                         end={fields.end_time}
-                        disabled={busy}
+                        daySpan={dateSpan(fields.scheduled_date, fields.end_date)}
+                        disabled={busy || mutationBusy}
                         onChange={(range) =>
-                          setFields({ ...fields, start_time: range.start, end_time: range.end })
+                          setFields({
+                            ...fields,
+                            reminder_enabled: Boolean(range.start) && fields.reminder_enabled,
+                            start_time: range.start,
+                            end_time: range.end,
+                            end_date: range.daySpan
+                              ? nextDate(fields.scheduled_date)
+                              : fields.scheduled_date,
+                          })
                         }
                       />
                     )}
                     {multiDay && (
-                      <div className="manual-time-range">
-                        <DatePicker
-                          label={tr('ScheduleEditor.endDate')}
-                          value={fields.end_date}
-                          onChange={(date) => setFields({ ...fields, end_date: date })}
-                        />
-                        <div className="schedule-times">
-                          <TimePicker
-                            label={tr('ScheduleEditor.startTime')}
-                            value={fields.start_time}
-                            onChange={(time) => setFields({ ...fields, start_time: time })}
-                          />
-                          <TimePicker
-                            label={tr('ScheduleEditor.endTime')}
-                            min="00:01"
-                            value={fields.end_time}
-                            onChange={(time) => setFields({ ...fields, end_time: time })}
-                          />
-                        </div>
-                      </div>
+                      <ScheduleDateRange
+                        value={fields}
+                        disabled={busy || mutationBusy}
+                        onChange={(range) =>
+                          setFields({
+                            ...fields,
+                            ...range,
+                            reminder_enabled: Boolean(range.start_time) && fields.reminder_enabled,
+                          })
+                        }
+                      />
                     )}
                     <label className="multi-day-toggle">
                       <Input
@@ -394,10 +386,11 @@ export function ScheduleEditor({
                 </div>
               )}
               <ReminderSettings
-                disabled={busy}
+                disabled={busy || !fields.start_time}
                 value={fields}
                 onChange={(reminder) => setFields({ ...fields, ...reminder })}
               />
+              {!fields.start_time && <p className="hint">{tr('DateTime.reminderNeedsTime')}</p>}
               <div className="schedule-notes">
                 <label>
                   {tr('ScheduleEditor.scheduleMemo')}
@@ -415,13 +408,13 @@ export function ScheduleEditor({
           <ModalActions>
             <div className="schedule-save">
               <span>
-                {multiDay
+                {fields.end_date !== fields.scheduled_date
                   ? `${fields.scheduled_date} → ${fields.end_date}`
                   : !initial && (
                       <time dateTime={fields.scheduled_date}>{fields.scheduled_date}</time>
                     )}
                 <strong>
-                  {fields.start_time} — {fields.end_time}
+                  <ScheduleTimeText start={fields.start_time} end={fields.end_time} />
                 </strong>
               </span>
               {initial && onDelete && (

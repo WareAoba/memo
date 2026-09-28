@@ -249,10 +249,6 @@
   "TaskExecution.executionMemo": "実行メモ",
   "TaskExecution.saveMemo": "メモを保存",
   "TaskExecution.start": "開始",
-  "TaskExecution.undoCompletion": "完了を取り消す",
-  "TaskExecution.completeTask": "タスクを完了",
-  "TaskExecution.undoSkip": "スキップを取り消す",
-  "TaskExecution.skip": "スキップ",
   "TaskExecution.runValue": "{{v1}}を実行",
   "TaskGroupPicker.expandAGroupToAddTasks": "グループを開いてタスクを追加してください。",
   "TaskGroupPicker.ungrouped": "未分類",
@@ -625,5 +621,11 @@
   "Notifications.scheduled": "{{time}}に再通知",
   "Notifications.resetDemo": "通知の例をリセット",
   "Notifications.hours_one": "{{count}}時間後",
-  "Notifications.hours_other": "{{count}}時間後"
+  "Notifications.hours_other": "{{count}}時間後",
+  "DateTime.unspecified": "指定なし",
+  "DateTime.from": "から",
+  "DateTime.until": "まで",
+  "DateTime.clear": "時刻を解除",
+  "DateTime.startOnly": "{{time}}から",
+  "DateTime.reminderNeedsTime": "開始時刻を指定するとリマインダーを設定できます。"
 }

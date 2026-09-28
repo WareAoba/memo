@@ -45,26 +45,34 @@ beforeEach(() => {
 afterEach(() => vi.resetAllMocks());
 it('starts without a time range and accepts the typed work without a use action', async () => {
   render(<ScheduleEditor />);
-  expect(screen.getByRole('button', { name: '시작 —' })).toBeVisible();
-  expect(screen.getByRole('button', { name: '종료 —' })).toBeVisible();
+  vi.mocked(saveSchedule).mockResolvedValue(saved);
+  expect(screen.getByRole('button', { name: '시작 시간' })).toBeVisible();
+  expect(screen.queryByRole('slider', { name: '종료 시간' })).not.toBeInTheDocument();
   fireEvent.change(screen.getByRole('textbox', { name: '워크 이름' }), {
     target: { value: '직접 입력' },
   });
   await waitFor(() => expect(screen.getByRole('button', { name: '스케줄 저장' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
-  expect(saveSchedule).not.toHaveBeenCalled();
-  expect(screen.getByRole('alert')).toHaveTextContent('종료 날짜와 시간');
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ start_time: '', end_time: '' }),
+      undefined,
+    ),
+  );
   expect(screen.queryByRole('button', { name: /사용/ })).not.toBeInTheDocument();
 });
 
 function setTestTimes() {
   // New schedules deliberately have no defaults; select the test's 09:00–10:00 range.
-  const end = screen.getByRole('slider', { name: '종료 시간', hidden: true });
   const start = screen.getByRole('slider', { name: '시작 시간', hidden: true });
-  for (let i = 0; i < 10; i++) fireEvent.keyDown(end, { key: 'PageUp' });
   for (let i = 0; i < 9; i++) fireEvent.keyDown(start, { key: 'PageUp' });
+  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간', hidden: true }), {
+    key: 'PageUp',
+  });
 }
 function pickTime(label: string, time: string) {
+  const picker = screen.getByRole('button', { name: label, hidden: true });
+  fireEvent.click(picker.closest('.time-endpoint-box')!.querySelector('.time-endpoint-value')!);
   fireEvent.click(screen.getByRole('button', { name: label }));
   const [hour, minute] = time.split(':');
   fireEvent.click(
@@ -208,18 +216,23 @@ it('choosing a work never adds tasks automatically', async () => {
     ),
   );
 });
-it('rejects reversed times without sending edits and preserves snapshot fields', async () => {
+it('swaps reversed dates and preserves snapshot fields', async () => {
   vi.mocked(saveSchedule).mockResolvedValue(saved);
   render(<ScheduleEditor initial={saved} />);
   fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 스케줄/ }));
   await pickDate('종료 날짜', '2026-09-23');
   pickTime('종료 시간', '08:00');
   fireEvent.submit(screen.getByRole('button', { name: '스케줄 저장' }).closest('form')!);
-  expect(await screen.findByText('종료 날짜와 시간은 시작보다 늦어야 합니다.')).toBeVisible();
-  expect(saveSchedule).not.toHaveBeenCalled();
-  await pickDate('종료 날짜', '2026-09-25');
-  pickTime('종료 시간', '11:00');
-  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduled_date: '2026-09-23',
+        end_date: '2026-09-24',
+        end_time: '08:00',
+      }),
+      's',
+    ),
+  );
   await waitFor(() => expect(saveSchedule).toHaveBeenCalled());
   expect(vi.mocked(saveSchedule).mock.calls[0]![0]).not.toHaveProperty('entity_id');
   expect(vi.mocked(saveSchedule).mock.calls[0]![0]).not.toHaveProperty('task_preset_ids');
@@ -247,8 +260,8 @@ it('uses the app zone without a zone input and saves an overnight date range', a
   await waitFor(() => expect(screen.getByRole('button', { name: '스케줄 저장' })).toBeEnabled());
   fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 스케줄/ }));
   expect(screen.queryByTestId('time-dial')).not.toBeInTheDocument();
-  await pickDate('시작 날짜', '2026-12-31');
   await pickDate('종료 날짜', '2027-01-02');
+  await pickDate('시작 날짜', '2026-12-31');
   pickTime('시작 시간', '23:30');
   pickTime('종료 시간', '01:05');
   fireEvent.click(screen.getByRole('button', { name: /스케줄 저장/ }));
@@ -265,14 +278,14 @@ it('uses the app zone without a zone input and saves an overnight date range', a
     ),
   );
 });
-it('returning from multiple days clears an invalid same-day range', () => {
+it('returning from multiple days preserves a valid overnight range', () => {
   render(
     <ScheduleEditor
-      initial={{ ...saved, end_date: '2026-09-25', start_time: '23:00', end_time: '01:00' }}
+      initial={{ ...saved, end_date: '2026-09-26', start_time: '23:00', end_time: '01:00' }}
     />,
   );
   expect(screen.queryByTestId('time-dial')).not.toBeInTheDocument();
-  expect(screen.getByLabelText('종료 날짜')).toHaveTextContent('2026-09-25');
+  expect(screen.getByLabelText('종료 날짜')).toHaveTextContent('2026-09-26');
   fireEvent.click(screen.getByRole('checkbox', { name: /여러 날에 걸친 스케줄/ }));
   expect(screen.queryByLabelText('종료 날짜')).not.toBeInTheDocument();
   expect(screen.getAllByRole('slider')).toHaveLength(2);
@@ -410,9 +423,12 @@ it('hides dates for single-day editing and restores them only while multi-day is
   expect(screen.queryByLabelText('종료 날짜')).not.toBeInTheDocument();
 });
 
-it('makes legacy midnight ends editable without saving them automatically', () => {
+it('reopens midnight ends on the clock without changing their value', () => {
   render(<ScheduleEditor initial={{ ...saved, end_date: '2026-09-25', end_time: '00:00' }} />);
-  expect(screen.getByRole('button', { name: '종료 시간' })).toHaveTextContent('00:05');
+  expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
+    'aria-valuetext',
+    '00:00',
+  );
   expect(saveSchedule).not.toHaveBeenCalled();
 });
 
@@ -550,6 +566,87 @@ it('blocks duplicate task rows without losing either row and saves after removal
     expect(saveSchedule).toHaveBeenCalledWith(
       expect.objectContaining({ task_preset_ids: ['name:읽기'] }),
       undefined,
+    ),
+  );
+});
+
+it('saves a clock range across the year boundary without enabling multi-day mode', async () => {
+  vi.mocked(saveSchedule).mockResolvedValue(saved);
+  render(
+    <ScheduleEditor
+      initial={{
+        ...saved,
+        scheduled_date: '2026-12-31',
+        end_date: '2026-12-31',
+        start_time: '23:00',
+        end_time: '23:55',
+      }}
+    />,
+  );
+  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간' }), { key: 'ArrowRight' });
+  expect(screen.getByRole('checkbox', { name: '여러 날에 걸친 스케줄' })).not.toBeChecked();
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduled_date: '2026-12-31',
+        end_date: '2027-01-01',
+        start_time: '23:00',
+        end_time: '00:00',
+      }),
+      's',
+    ),
+  );
+});
+
+it('groups each multi-day endpoint and swaps a start date later than the end', async () => {
+  render(<ScheduleEditor initial={{ ...saved, end_date: '2026-09-26' }} />);
+  expect(
+    within(screen.getByRole('group', { name: '시작' })).getByRole('button', { name: '시작 시간' }),
+  ).toBeVisible();
+  expect(
+    within(screen.getByRole('group', { name: '종료' })).getByRole('button', { name: '종료 날짜' }),
+  ).toBeVisible();
+  await pickDate('시작 날짜', '2026-09-28');
+  expect(screen.getByRole('button', { name: '시작 날짜' })).toHaveTextContent('2026-09-26');
+  expect(screen.getByRole('button', { name: '종료 날짜' })).toHaveTextContent('2026-09-28');
+});
+
+it('saves a start-only schedule and keeps reminders tied to a start time', async () => {
+  vi.mocked(saveSchedule).mockResolvedValue(saved);
+  render(<ScheduleEditor initial={{ ...saved, start_time: '', end_time: '' }} />);
+  expect(screen.getByRole('checkbox', { name: /리마인드/ })).toBeDisabled();
+  fireEvent.keyDown(screen.getByRole('slider', { name: '시작 시간' }), { key: 'PageUp' });
+  expect(screen.getByRole('button', { name: '시작 시간' })).toBeVisible();
+  expect(screen.getByRole('button', { name: '종료 시간' })).toBeVisible();
+  expect(screen.getByRole('checkbox', { name: /리마인드/ })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ start_time: '01:00', end_time: '' }),
+      's',
+    ),
+  );
+});
+
+it('shows both multi-day time inputs immediately and allows selecting the end first', async () => {
+  vi.mocked(saveSchedule).mockResolvedValue(saved);
+  render(
+    <ScheduleEditor initial={{ ...saved, end_date: '2026-09-26', start_time: '', end_time: '' }} />,
+  );
+  expect(
+    within(screen.getByRole('group', { name: '시작' })).getByRole('button', { name: '시작 시간' }),
+  ).toHaveTextContent('지정 없음');
+  expect(
+    within(screen.getByRole('group', { name: '종료' })).getByRole('button', { name: '종료 시간' }),
+  ).toHaveTextContent('지정 없음');
+  pickTime('종료 시간', '10:00');
+  pickTime('시작 시간', '09:00');
+  fireEvent.click(screen.getByRole('button', { name: '스케줄 저장' }));
+  await waitFor(() =>
+    expect(saveSchedule).toHaveBeenCalledWith(
+      expect.objectContaining({ start_time: '09:00', end_time: '10:00', end_date: '2026-09-26' }),
+      's',
     ),
   );
 });

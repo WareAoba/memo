@@ -11,7 +11,12 @@ import { Toast, ToastRegion } from './features/shared/Toast';
 import { NotificationDemo } from './features/schedules/NotificationDemo';
 import { ReminderSettings } from './features/schedules/ReminderSettings';
 import { ScheduleColorPicker } from './features/schedules/ScheduleColorPicker';
-import type { ScheduleColor } from './api/schedules';
+import type { ScheduleColor, ScheduleDetail } from './api/schedules';
+import { emptyFields } from './api/works';
+import { DeleteButton } from './features/shared/SwipeDelete';
+import { MemoButton } from './features/shared/MemoButton';
+import { TodayOverview } from './features/workspace/TodayOverview';
+import { TodayDial } from './features/workspace/TodayDial';
 import type { ReminderFields } from './api/reminderFields';
 import { createRoot } from 'react-dom/client';
 import { useState } from 'react';
@@ -36,9 +41,41 @@ import { HorizontalNavigation, HorizontalPage } from './features/shared/Horizont
 import { IconButton } from './features/shared/IconButton';
 import { DetailKindInput } from './features/works/DetailKindInput';
 import { PresetModal } from './features/shared/PresetModal';
-import { DatePicker, TimePicker } from './features/shared/DateTimePicker';
 import { TimeDial } from './features/schedules/TimeDial';
+import { dateSpan, nextDate } from './features/schedules/timeRange';
+import { ScheduleDateRange } from './features/schedules/ScheduleDateRange';
 import { TaskDirectory } from './features/schedules/TaskDirectory';
+
+const dialReferenceItems: ScheduleDetail[] = [
+  { name: '미완료', start: '02:00', end: '05:00', status: 'planned' },
+  { name: '진행 중', start: '10:00', end: '14:00', status: 'planned' },
+  { name: '완료', start: '16:00', end: '19:00', status: 'completed' },
+  { name: '예정', start: '20:00', end: '23:00', status: 'planned' },
+  { name: '2열 겹침', start: '11:00', end: '13:00', status: 'completed' },
+  { name: '3열 겹침', start: '12:00', end: '14:00', status: 'planned' },
+  { name: '자정 연속', start: '23:00', end: '02:00', status: 'planned' },
+  { name: '단발 미완료', start: '06:00', end: '', status: 'planned' },
+  { name: '단발 완료', start: '07:00', end: '', status: 'completed' },
+  { name: '단발 예정', start: '15:00', end: '', status: 'planned' },
+  { name: '호와 교차하는 막대', start: '04:00', end: '', status: 'completed' },
+  { name: '끝이 맞닿는 일정', start: '05:00', end: '06:00', status: 'planned' },
+  { name: '짧은 간격의 일정', start: '06:05', end: '06:30', status: 'completed' },
+].map((item, index) => ({
+  id: `reference-${index}`,
+  entity_id: '',
+  title: item.name,
+  scheduled_date: '2026-09-28',
+  end_date: item.name === '자정 연속' ? '2026-09-29' : '2026-09-28',
+  start_time: item.start,
+  end_time: item.end,
+  time_zone: 'Asia/Seoul',
+  status: item.status,
+  notes: '',
+  created_at: '',
+  updated_at: '',
+  entity_snapshot: { ...emptyFields, name: item.name },
+  tasks: [],
+}));
 
 export function DesignReference() {
   useTranslation();
@@ -57,11 +94,16 @@ export function DesignReference() {
   const [modal, setModal] = useState(false);
   const [group, setGroup] = useState('work');
   const [referenceTrack, setReferenceTrack] = useState('work');
-  const [referenceDate, setReferenceDate] = useState('2026-09-27');
-  const [referenceTime, setReferenceTime] = useState('');
-  const [referenceRange, setReferenceRange] = useState({ start: '', end: '' });
+  const [referenceMultiDay, setReferenceMultiDay] = useState(true);
+  const [referenceDates, setReferenceDates] = useState({
+    scheduled_date: '2026-09-27',
+    end_date: '2026-09-29',
+    start_time: '',
+    end_time: '',
+  });
   const [directory, setDirectory] = useState(false);
   const [referenceMemo, setReferenceMemo] = useState('');
+  const [referenceTaskDeleted, setReferenceTaskDeleted] = useState(false);
   return (
     <main className="design-reference">
       <div className="reference-row" role="group" aria-label={tr('Settings.theme')}>
@@ -177,21 +219,45 @@ export function DesignReference() {
         )}
       </Surface>
       <Surface as="section" id="date-time-reference">
-        <h2>{tr('ScheduleEditor.dateAndTime')}</h2>
-        <DatePicker
-          label={tr('ScheduleEditor.startDate')}
-          value={referenceDate}
-          onChange={setReferenceDate}
-        />
-        <TimePicker
-          label={tr('ScheduleEditor.startTime')}
-          value={referenceTime}
-          onChange={setReferenceTime}
-        />
-        <details className="schedule-time-disclosure" open>
-          <DisclosureSummary>{tr('app.time')}</DisclosureSummary>
-          <TimeDial {...referenceRange} onChange={setReferenceRange} />
-        </details>
+        <h2>{tr('ScheduleEditor.scheduleSpanningMultipleDays')}</h2>
+        <label className="multi-day-toggle">
+          <Input
+            type="checkbox"
+            checked={referenceMultiDay}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setReferenceMultiDay(checked);
+              setReferenceDates((value) => ({
+                ...value,
+                end_date:
+                  checked ||
+                  (value.start_time && value.end_time && value.end_time <= value.start_time)
+                    ? nextDate(value.scheduled_date)
+                    : value.scheduled_date,
+              }));
+            }}
+          />
+          {tr('ScheduleEditor.scheduleSpanningMultipleDays')}
+        </label>
+        {referenceMultiDay ? (
+          <ScheduleDateRange value={referenceDates} onChange={setReferenceDates} />
+        ) : (
+          <TimeDial
+            start={referenceDates.start_time}
+            end={referenceDates.end_time}
+            daySpan={dateSpan(referenceDates.scheduled_date, referenceDates.end_date)}
+            onChange={(range) =>
+              setReferenceDates({
+                ...referenceDates,
+                start_time: range.start,
+                end_time: range.end,
+                end_date: range.daySpan
+                  ? nextDate(referenceDates.scheduled_date)
+                  : referenceDates.scheduled_date,
+              })
+            }
+          />
+        )}
         <label>
           {tr('design-reference.memo')}
           <AutoTextarea
@@ -200,6 +266,79 @@ export function DesignReference() {
             onChange={(event) => setReferenceMemo(event.target.value)}
           />
         </label>
+      </Surface>
+      <Surface as="section" id="today-dial-reference">
+        <h2>당일 시계판 상태색</h2>
+        <TodayDial
+          today="2026-09-28"
+          timeZone="Asia/Seoul"
+          now={new Date('2026-09-28T03:00:00Z')}
+          items={dialReferenceItems}
+        />
+      </Surface>
+      <Surface as="section" id="today-overview-reference">
+        <h2>당일 요약 너비와 긴 제목</h2>
+        <TodayOverview
+          today="2026-09-28"
+          timeZone="Asia/Seoul"
+          items={dialReferenceItems.slice(0, 3).map((item) => ({
+            ...item,
+            entity_snapshot: {
+              ...item.entity_snapshot,
+              name: `${item.entity_snapshot.name} · 긴 스케줄 제목이 여러 줄로 끝없이 늘어나지 않는 요약 예시`,
+            },
+          }))}
+          error=""
+          locked={true}
+          onFinish={async () => {}}
+          onEditing={() => {}}
+          mutate={async () => {}}
+        />
+      </Surface>
+      <Surface as="section" id="task-actions-reference">
+        <h2>태스크 행 동작</h2>
+        <p>행에 마우스를 올리거나 Tab으로 이동하세요. 터치 화면은 44px, 데스크톱은 32px입니다.</p>
+        {referenceTaskDeleted ? (
+          <Button onClick={() => setReferenceTaskDeleted(false)}>예시 복원</Button>
+        ) : (
+          <div className="today-task-card memo-preview">
+            <div className="today-task-heading">
+              <label>
+                <Input type="checkbox" className="task-check" />
+                태스크 예시
+              </label>
+              <div className="preview-actions task-hover-actions">
+                <DeleteButton
+                  label="태스크 예시"
+                  onDelete={async () => setReferenceTaskDeleted(true)}
+                />
+                <MemoButton
+                  label="태스크 예시"
+                  value={referenceMemo}
+                  onSave={async (value) => setReferenceMemo(value)}
+                />
+                <Button variant="ghost" onClick={() => setModal(true)}>
+                  수정
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="today-task-card memo-preview">
+          <div className="today-task-heading">
+            <label>
+              <Input type="checkbox" className="task-check" disabled />
+              사용 불가 예시
+            </label>
+            <div className="preview-actions task-hover-actions">
+              <DeleteButton label="사용 불가 예시" disabled onDelete={async () => {}} />
+              <MemoButton label="사용 불가 예시" value="" disabled onSave={async () => {}} />
+              <Button variant="ghost" disabled>
+                수정
+              </Button>
+            </div>
+          </div>
+        </div>
       </Surface>
       <Surface as="section" id="completion-reference">
         <h2>완료 체크</h2>

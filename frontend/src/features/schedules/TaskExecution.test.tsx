@@ -131,7 +131,6 @@ it('preserves all draft inputs after failure, saves fields independently, accept
   render(<Harness />);
   fireEvent.change(screen.getByLabelText('측정 · 필수 (kg)'), { target: { value: '0.00' } });
   fireEvent.change(screen.getByLabelText('기록 · 필수'), { target: { value: 'unsaved' } });
-  expect(screen.getByRole('button', { name: '태스크 완료' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: '측정 저장' }));
   expect(await screen.findByText('저장 실패')).toBeVisible();
   expect(screen.getByLabelText('측정 · 필수 (kg)')).toHaveValue(0);
@@ -145,35 +144,31 @@ it('preserves all draft inputs after failure, saves fields independently, accept
   ).not.toBeInTheDocument();
   expect(updateItem).toHaveBeenLastCalledWith('i', 0);
   expect(screen.getByRole('button', { name: '측정 저장' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: '태스크 완료' })).toBeDisabled();
   expect(screen.getByLabelText('기록 · 필수')).toHaveValue('unsaved');
 });
-it('saves notes and retries rejected completion without inventing a completed state', async () => {
-  const notes = { ...schedule, tasks: [{ ...schedule.tasks[0]!, execution_notes: 'memo' }] };
-  vi.mocked(updateTask)
-    .mockResolvedValueOnce(notes)
-    .mockRejectedValueOnce(new Error('필수 항목을 모두 입력한 뒤 완료해 주세요.'))
-    .mockResolvedValueOnce({
-      ...notes,
-      status: 'completed',
-      tasks: [{ ...notes.tasks[0]!, status: 'completed' }],
+it.each(['pending', 'in_progress', 'skipped', 'completed'])(
+  'edits notes without exposing task status actions (%s)',
+  async (status) => {
+    const task = { ...schedule.tasks[0]!, status };
+    vi.mocked(updateTask).mockResolvedValue({
+      ...schedule,
+      tasks: [{ ...task, execution_notes: 'memo' }],
     });
-  render(<Harness />);
-  fireEvent.change(screen.getByLabelText('실행 메모'), { target: { value: 'memo' } });
-  fireEvent.blur(screen.getByLabelText('실행 메모'));
-  await act(async () => {
-    await Promise.resolve();
-  });
-  expect(
-    screen.queryByText(/^(메모를 저장했습니다\.|저장했습니다\.|자동 저장)$/),
-  ).not.toBeInTheDocument();
-  expect(updateTask).toHaveBeenCalledWith('t', { execution_notes: 'memo' });
-  fireEvent.click(screen.getByRole('button', { name: '태스크 완료' }));
-  expect(await screen.findByText('필수 항목을 모두 입력한 뒤 완료해 주세요.')).toBeVisible();
-  expect(screen.queryByRole('button', { name: '완료 취소' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: '태스크 완료' }));
-  expect(await screen.findByRole('button', { name: '완료 취소' })).toBeVisible();
-});
+    const mutate = async (op: () => Promise<ScheduleDetail>) => {
+      await op();
+    };
+    render(<TaskExecution task={task} locked={false} busy={false} mutate={mutate} />);
+    for (const name of ['시작', '태스크 완료', '완료 취소', '건너뛰기', '건너뜀 취소']) {
+      expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    }
+    fireEvent.change(screen.getByLabelText('실행 메모'), { target: { value: 'memo' } });
+    fireEvent.blur(screen.getByLabelText('실행 메모'));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(updateTask).toHaveBeenCalledWith('t', { execution_notes: 'memo' });
+  },
+);
 it('locks execution controls for cancelled schedules', () => {
   render(<Harness locked />);
   for (const button of within(screen.getByRole('region', { name: 'Task 실행' })).getAllByRole(

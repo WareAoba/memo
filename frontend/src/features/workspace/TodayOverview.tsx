@@ -1,3 +1,4 @@
+import { ScheduleTimeText } from '../schedules/ScheduleTimeText';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tr } from '../../i18n';
@@ -73,9 +74,9 @@ export function TodayOverview({
                     aria-hidden="true"
                   />
                   <span className="schedule-completion-description">
-                    <strong>{item.entity_snapshot.name}</strong>
+                    <strong title={item.entity_snapshot.name}>{item.entity_snapshot.name}</strong>
                     <span>
-                      {item.start_time}–{item.end_time}
+                      <ScheduleTimeText start={item.start_time} end={item.end_time} />
                       {appearance.state !== 'completed' && <> · {appearance.label}</>}
                     </span>
                   </span>

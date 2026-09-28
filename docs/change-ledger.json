@@ -932,6 +932,238 @@
         "frontend/src/features/shared/anchoredPopover.test.ts": "6005570499ebc4efa84f4a7438f817fc6ca806bc7d6a6a3d20ea2c38ee7732a3",
         "frontend/src/features/shared/anchoredPopover.ts": "3304713382a89b3381a6dcda06ac9e881fa748faa2cc80e396d058563cc79fb1"
       }
+    },
+    {
+      "record": "docs/changes/2026-09-28-macos-development-setup.md",
+      "recordHash": "2ba3b798debec3763541b15c3c8946f7fae047d3a110caad6f116008dbc67b1a",
+      "files": {
+        ".nvmrc": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53",
+        "README.md": "919018b9a13a8b211892ca18078d3e4a100a56242c1f19dacd76d274b1f07ea7",
+        "docs/CHANGES.md": "a875a2ee1700703a69eb9f16c8b1959d81b7c0aaad1ea154adbe95d1042813a3",
+        "docs/CODE_MAP.md": "e7ad99f7bce7c07016938b560af7f1329f0c6acd541c58ebb36f223c788db97c",
+        "docs/changes/2026-09-28-macos-development-setup.md": "2ba3b798debec3763541b15c3c8946f7fae047d3a110caad6f116008dbc67b1a",
+        "rust-toolchain.toml": "474342a18df37f923f59df43b1b90e6c0b0d6758612462bbc0dadbe37fe2cadf"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-overnight-schedules.md",
+      "recordHash": "e44d90f3f2e2db53cd16baa679fad88697b2f2f05c8145f9de3202dfec843949",
+      "files": {
+        "SPEC.md": "8d2988bf65d76ec0e3aa2ccf380d2e58759b4a2ff9cc037b83f0a8e5306983d9",
+        "backend/src/services/schedules.rs": "9e7afb4f269eae8ca92af81502647719e846054879f42c0ae6b3320469d66c17",
+        "backend/tests/execution.rs": "5290e25dd7cb60d2a08bf69f297e97e49a33655cc012d03b815d8d3766d91d85",
+        "docs/CHANGES.md": "66a6a38d16d7d6201ed379cb07172af3008eb575f3c33b0952fbbda506f3eb70",
+        "docs/CODE_MAP.md": "5c912b9eb9aa3fa6c108f1eaa0d146033d6e388470942bf0f9f94062a299901c",
+        "docs/DESIGN_SYSTEM.md": "959a86f194173ff3c18834b8290c331f4006a69ebb29f62bf839ffd15369ea67",
+        "docs/STATUS.md": "90bbe6d774a679f1d0d5187e0826c60fb1a2fcda26c51cc571e6571973f66761",
+        "docs/changes/2026-09-28-overnight-schedules.md": "e44d90f3f2e2db53cd16baa679fad88697b2f2f05c8145f9de3202dfec843949",
+        "frontend/src/App.test.tsx": "b76a457b5c12924a8a44e5f70ba45306747bc99e2f48563d604bfe6e93467c7b",
+        "frontend/src/design-reference.tsx": "e885880372fe14c8b786bbf7b0795c3d2d8ebb41098978c34778e33cc5cf5aa5",
+        "frontend/src/design-system.css": "92538e68b487aa13012c8433ea66c45811d8fb573d2c3785e91c4e7cb27db1d1",
+        "frontend/src/features/schedules/ScheduleEditor.tsx": "91331305259bf7d8500131a0e16eef0324d6e4d0ca4b6ad66fa6631aa9f5497b",
+        "frontend/src/features/schedules/Schedules.test.tsx": "e1c0ab144c8e307b2a468f3bab977d0f6cbb720c97017d7cd82431c592d09b7b",
+        "frontend/src/features/schedules/TimeDial.test.tsx": "2bb6d80bcef74db918a73fa5d81fabd42d1d5ae585add1389abbcbacd9175e23",
+        "frontend/src/features/schedules/TimeDial.tsx": "fc66df1c98072d4bb5841de7f7050206b0a1581bcae7b33b1369522959cb4272",
+        "frontend/src/features/schedules/schedules.css": "fc2f0e958f3d3fcee884faf0a295618f59d35c871f0369a76856ba6f10478d3c",
+        "frontend/src/features/schedules/timeRange.ts": "0cfd291d694763f45784cbd59edfecc4cf724887fef274552f7cf28016527c62",
+        "frontend/src/features/settings/Settings.test.tsx": "d54849ff6e6c427cce8cabda8d4af068b58060f07fca691465e6b0a4fb9d38e7",
+        "frontend/src/features/shared/DateTimePicker.tsx": "cb9dba808c45c3c748a175fb9a30b57b384e87f25fb7d16fa4c92d72cbf2d711",
+        "frontend/src/features/workspace/calendarLayout.test.ts": "386af6321765d18747ee78feb6c429542815f015b0eb321e5134fb993bed5bc8"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-optional-schedule-times.md",
+      "recordHash": "521302963db9823c70b18b78a29d7cca3121d94c3d997645b1ad57b359cc37c1",
+      "files": {
+        "SPEC.md": "b529f200e183668cd7026ff26f779f539909037622cb73499bdd1f1bcc2ab899",
+        "backend/migrations/202609280001_optional_schedule_times.sql": "a726197d496013a8f44f95a1e4dee281004da0d07829a715ee391e63d6d08524",
+        "backend/src/services/schedules.rs": "521d320bda01bdcf01819c3b9afe0a23ea4efed2de8810ff6e566f2387827b3a",
+        "backend/tests/schedules.rs": "830d085ece615d8605422cc38ce984e5b60ce2536bb39e33665258231eaf5d84",
+        "docs/CHANGES.md": "db3a22c6e26e2613412c1a0bc6da2b07f750c4df31d413e6199ae5bfe55aa1b8",
+        "docs/CODE_MAP.md": "73684bdb3d519e948d2108c39b0cd1776859078188acfb33021b616e3b206135",
+        "docs/DESIGN_SYSTEM.md": "ad4842353c06325d1e546c68a282630a593748d0e7025bc3389be72ae7086ef3",
+        "docs/STATUS.md": "f7f3a4beea52c58150886d7a372ded92095cf6e582e5c3a6fe8fc27a08573818",
+        "docs/changes/2026-09-28-optional-schedule-times.md": "521302963db9823c70b18b78a29d7cca3121d94c3d997645b1ad57b359cc37c1",
+        "frontend/src/App.test.tsx": "b19c2a16ac736cd8cf23010a1c7218bbe798f27de3ebd15a980033dd655eca69",
+        "frontend/src/design-reference.tsx": "70474cec18666fe7541a64ad581a1f2e18f1344d252b1b1bfaa09cd60419e0ec",
+        "frontend/src/design-system.css": "8016e0ea12f5f8e6ca5a18c4718491ca64d45d663368ee25763211ba000a4f45",
+        "frontend/src/features/schedules/ReminderSettings.tsx": "6bcef23d4ff5c84c881ac981f9324bb2bdfc187ffac63ed44552cd56df83b954",
+        "frontend/src/features/schedules/ScheduleDateRange.tsx": "3a3a92fd33095b934afcf2512100abe88c5867d13bc1cef3c49e14c779ec209f",
+        "frontend/src/features/schedules/ScheduleEditor.tsx": "8eee020341a4272bc724fe6a2064ef5913811decdced957900910c2394c01243",
+        "frontend/src/features/schedules/ScheduleSearch.tsx": "d2c93ee0cd2e5c2ae6df964021d345b740fbec15fa54ad39417f929c194cfef0",
+        "frontend/src/features/schedules/ScheduleTimeText.tsx": "1859a9bd315bdef1169cfedd4658a4120171c6af8290c6605542224cb966d9e6",
+        "frontend/src/features/schedules/Schedules.test.tsx": "47af97fc4907f30dcaa172ea4551330a345c9826d821ad7188f6d61e9f2213c5",
+        "frontend/src/features/schedules/TimeDial.test.tsx": "6efd9c1b6f29985572bf425da60f24844a0ced24fa0cc7d8ac42f22c5ed8418d",
+        "frontend/src/features/schedules/TimeDial.tsx": "fb58de4475869ee8afe293d5b9ae43c18e495951cbf347957930e91785157fa7",
+        "frontend/src/features/schedules/TimeEndpoint.test.tsx": "051c3f020ddbddd5561cff50cafc9c4f0c1d720fd2b3eb23a9710602902a2dab",
+        "frontend/src/features/schedules/TimeEndpoint.tsx": "969acf4f1c103cda059ba5da08f0da7385e06602788069715cb0ff00a55987a9",
+        "frontend/src/features/schedules/schedules.css": "26f8e1af35c618a4d55832402ae29d006f14d8e5f23aaa4bd578692db435b9d1",
+        "frontend/src/features/shared/DateTimePicker.tsx": "8af24ed1cd038d8fcee0709f805bd716f71ad7f6a455948b50df802af81c0b62",
+        "frontend/src/features/workspace/SavedScheduleCard.tsx": "14fecbe29addb2f2241e06da99003852731ba25179d6bf2b995e9d0c264c5800",
+        "frontend/src/features/workspace/Today.rendering.test.tsx": "4c87231eeac4a0b1b1c5c085b93f9862634c04fb75d94689e4301d3c36c3bf60",
+        "frontend/src/features/workspace/TodayDial.test.tsx": "4b414cfa9a5aeaa8730f25ed8244a680e820cd22a0650516ca9ad5048f59f608",
+        "frontend/src/features/workspace/TodayDial.tsx": "9ca666415f84311c4dadfc913338cd399d12c92c5d728ca2d31fa788e53459c4",
+        "frontend/src/features/workspace/TodayOverview.tsx": "452ff2f19174c71f0c27b5e505068dbedaa2a0436d47ad33ff16afe9a766ca93",
+        "frontend/src/features/workspace/TodayScheduleCard.tsx": "079ee4e9241db208e9bcf679cdb51a2b82078bf6fd01193246adfb845dc5a56f",
+        "frontend/src/features/workspace/scheduleAppearance.test.ts": "fdf4bda33d28f901575dbc975af0d939c15497cc03e81c3a0291d65ce854ada3",
+        "frontend/src/features/workspace/scheduleAppearance.ts": "4c43119199b6b57ae7678f9a78c54f22fef84235cf75631f3a7a03f60c88eb77",
+        "frontend/src/i18n/locales/en.json": "ed4c6fe93cb1c0d24508bebf48040e9b4a78cff2a5240d389a69fddb6c3ec006",
+        "frontend/src/i18n/locales/ja.json": "f89a4376e54d0c633b8423fe2adc7077732723dd45d394f76d9dd44418ee5653",
+        "frontend/src/i18n/locales/ko.json": "f0d23d9555b367baa87fef25671aef91eb802a20fdb39bb82484aff03ea25b79"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-time-endpoint-layout.md",
+      "recordHash": "18944437d4abf344a8632d6e368e73a61bbae1f52b718427dabcc8add6abe14d",
+      "files": {
+        "SPEC.md": "7cf367dae418068a18789f104caf0c93526dfbd76701b631a9a3d6c6138da410",
+        "docs/CHANGES.md": "246af61cae58c2e904a210366eaebd8643f42c73d1a8d2660120c38133b1c20d",
+        "docs/DESIGN_SYSTEM.md": "f28b420df00f82c6313e9b90fa84ccb606ce28c168cba2ae4ad5a8a5d90a4b81",
+        "docs/STATUS.md": "f9a039cc033afa742c894221191efeed37fc867761c1d0ea278829023d078f41",
+        "docs/changes/2026-09-28-time-endpoint-layout.md": "18944437d4abf344a8632d6e368e73a61bbae1f52b718427dabcc8add6abe14d",
+        "frontend/src/App.test.tsx": "6e2f33c6380e29614a9f2485ad7f3659125daf107baef6ae44600c2e163d61f0",
+        "frontend/src/design-reference.tsx": "63e18e27e98a40fcbeced1f51c98c93c421577cfe0bae74ca3727bf2035dc42f",
+        "frontend/src/features/schedules/ScheduleDateRange.tsx": "aa29b7aa3a602671be871c873f23958deb97a9098b84ab6cfe3eded6efe98b6b",
+        "frontend/src/features/schedules/Schedules.test.tsx": "733db04e24b7dd1b4fb0ce29dc8285264c82d1f0e0f09063260d47f6261003f5",
+        "frontend/src/features/schedules/TimeDial.test.tsx": "411e5b80fe101cb30286ee4ac2f0d1496a8f521b608eb69fd6322854c1ec5127",
+        "frontend/src/features/schedules/TimeEndpoint.test.tsx": "09e2769586e8f6be5041c8985d8279756ca68ba167cacbcf69070aa4a80b17d7",
+        "frontend/src/features/schedules/TimeEndpoint.tsx": "1e816be905af7e768c7398764306aec4f64d9ea661d97946cc1dcdf8bdcbb841",
+        "frontend/src/features/schedules/schedules.css": "5f450146856e67f3ad7c4610a17edfd173cbeca2481166ae032b50376520a634",
+        "frontend/src/features/shared/DateTimePicker.tsx": "c3b720fd9c00bff1c1181ea0d58d68f3c6cbc3aba0294b5ecb605b715133e3c2"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-multi-day-controls.md",
+      "recordHash": "64e817ef8beef241424087602e37098f68a9ef7430e006e7c66826708b70f02d",
+      "files": {
+        "SPEC.md": "288e0634b5a285f38444ae87ed012c0009c9fa5e685be9ce239d2a186f5c5117",
+        "docs/CHANGES.md": "fa798ae10167a22aa0b46e213c0e71f4453cceaa256af75dfb74e8502f3270e5",
+        "docs/DESIGN_SYSTEM.md": "f17bf14ec00fc8a11e6e434feef173ace5ca9cae1c321f9b952d9f66b7ba441f",
+        "docs/STATUS.md": "550496356376a44f5454745385d7e4096df2ee4130f940e948650ef33295507f",
+        "docs/changes/2026-09-28-multi-day-controls.md": "64e817ef8beef241424087602e37098f68a9ef7430e006e7c66826708b70f02d",
+        "frontend/src/design-reference.tsx": "c45b95db936805719a6102b9b7a4603beab0758a3e33269440d743496e1f7273",
+        "frontend/src/features/schedules/ScheduleDateRange.tsx": "1b84ba7ee7c1535f7e1c98eb5865135d27057da4c01ec750bf736fdf55133681",
+        "frontend/src/features/schedules/Schedules.test.tsx": "466545ecdbfaa0dd40034cc93785b37eadf6bbc68ea932b6a80d00d00b47200e"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-today-status-feedback.md",
+      "recordHash": "8ed5f09bdfa5a4d322d16a4e1f66d0ce70050ff743467c346fba217430901be9",
+      "files": {
+        "SPEC.md": "d026199919f382499d8c5875ac572430d21403d5136eb573615c0bda0fb753ea",
+        "docs/CHANGES.md": "ad6b25671a08637ae1c1f9f81e1821bb086f5a8a4fdbfb18e705e1b90be60faf",
+        "docs/DESIGN_SYSTEM.md": "b6a98afda55c0c6c09a32c781940f1d98d8df0493537eb0d954ae2b63be4d871",
+        "docs/STATUS.md": "6f3a62d6ae5bb63470e7ef16e9dff8e03dc6df586bd91af0c67b470dc0312aa3",
+        "docs/TASK_CUSTOMIZATION.md": "ce5c3540d9756a6ba345486c578b03a4140c748d83a1215adab2a9bea46b23b5",
+        "docs/changes/2026-09-28-today-status-feedback.md": "8ed5f09bdfa5a4d322d16a4e1f66d0ce70050ff743467c346fba217430901be9",
+        "frontend/src/design-reference.tsx": "881a0ca478f52a91d2e7ac93d364920f7b2aab2207e0f3d3f3f4ab02c5a21a49",
+        "frontend/src/design-system.css": "302b4ce80d6835c7afa074dad3a70823aa03d77fa060b3fa117cf3d94cc94fdd",
+        "frontend/src/features/workspace/Today.test.tsx": "49ca8e5e2cdc03b35a7238086a262b9b60e3f1cfcc803ce25b8eebc5742471ac",
+        "frontend/src/features/workspace/TodayDial.test.tsx": "4043006fc745899b8eedcb5f23158924b43f943fec5062655dfb83d756206f31",
+        "frontend/src/features/workspace/TodayDial.tsx": "5d61a15af20061be3c7308b9fb019f493fe70d693329cf40865e524ce6febea5",
+        "frontend/src/features/workspace/TodayScheduleCard.tsx": "6a9761809d8edc0c974cba3a9c0a4d09f8c7185ff8a707b1ba98d949cea973cd",
+        "frontend/src/features/workspace/scheduleAppearance.test.ts": "b3a8c4cdf8b2a4f211430c774b91890b0bcae1fe8c3ee78e15a52c7f0296b4fe",
+        "frontend/src/features/workspace/scheduleAppearance.ts": "71e66ab8313b14a72a518fcffc1b672026def858f33cf5073e4697d29482317c",
+        "frontend/src/styles/today.css": "4d565c8ed114a653c10271ec95a754a1f709592cfb83788d56db2e8dc9fc2c31",
+        "frontend/src/tokens.css": "dfa43384adb28eba7c8de568c44b8008557eb0d4f0cba2655569d5c8d08a0328"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-today-overlap-task-actions.md",
+      "recordHash": "7fb2df313fb61f7a82209d16926489e51ce5e8724d927563ce7d85cb1553d028",
+      "files": {
+        "SPEC.md": "0877603d3f5895dd42105145e31be8cf124c1915dac310cad8577958c148868b",
+        "docs/CHANGES.md": "01a4b0d1bfa3acf0660f006ffbc09e4f08eb6c0c25f1d4500e19d023086f7723",
+        "docs/CODE_MAP.md": "834f1b73822af572e50df76c5b5f6640ec08c45aa53ea74550e427bf6406131a",
+        "docs/DESIGN_SYSTEM.md": "cae4f25abd8a84a809ed01eca6426489e025914e1d89c3defb99930a389189d7",
+        "docs/STATUS.md": "cd92dc00ab62f54ed1733701849e86433bd5c9db240ac14d508b3324fee0f5cb",
+        "docs/TASK_CUSTOMIZATION.md": "d9c8f9c860c92e18770dce7cd8e15e384c3961216de5d5ebc2171f4483550c7c",
+        "docs/changes/2026-09-28-today-overlap-task-actions.md": "7fb2df313fb61f7a82209d16926489e51ce5e8724d927563ce7d85cb1553d028",
+        "frontend/src/design-reference.tsx": "44347ce89bf3a53b98e2fe3b0fc106699f73d413236f621f74ef45adf6b6f6e6",
+        "frontend/src/design-system.css": "fa2b581d976c1e111ca23a3663a6dff3ecce05162817058dc271168f4fa70de4",
+        "frontend/src/features/schedules/TaskExecution.test.tsx": "9c7040e4ff9be4edae36dea4085bc816eba4cb5785eda3ed05011fc51a8b7a35",
+        "frontend/src/features/schedules/TaskExecution.tsx": "d992e477326bc55d395e3a8b1754cbe9f0398562420b767116e1bc122cd67144",
+        "frontend/src/features/shared/ActionIcon.tsx": "930b267b4684a4f202ead995708e42b2dbbf6661e9ebb35c714b2fcaec39af52",
+        "frontend/src/features/workspace/Today.test.tsx": "e107b596b0a20d3f786f5d46088bb627ef289ef81431ce520911360884bf5ab1",
+        "frontend/src/features/workspace/TodayDial.test.tsx": "b4ba15ea5db23aca670f1895b923f3b0dbc345e11dee6af5329ff513311431de",
+        "frontend/src/features/workspace/TodayDial.tsx": "14dc84c4b436e28c885d0fbeb094a5f329331164317b9c35415e4e57288d0f59",
+        "frontend/src/features/workspace/scheduleAppearance.test.ts": "949e71c3110c3e1cdfaf95a866618f4c18cf5f87b461c19991fac21b80d307ce",
+        "frontend/src/features/workspace/scheduleAppearance.ts": "ccdb08a30206f6ba377bb8a4fc6cbf4d452894ffce0e8d03cbe5c75d74183fb4",
+        "frontend/src/features/workspace/todayDialLayout.test.ts": "715eddc0bba3bcd55ebfd4891469e56c4e69ff9c63894a42feb8c79f27fd81f4",
+        "frontend/src/features/workspace/todayDialLayout.ts": "f04ec25d84a063145bc1017c7f09913c39f297584e63fd7f69dbc128fe5d8ea2",
+        "frontend/src/i18n/locales/en.json": "85f794e78867467aa15e3ecad8c5612c06a3b3b9893d65fa4675821f252b01bf",
+        "frontend/src/i18n/locales/ja.json": "17408a9570dcee9d877b8d8c52c6f01f882bdeca49549b0c30136ec71d117355",
+        "frontend/src/i18n/locales/ko.json": "d087434bd4bed370840f6981480ae99834ec1805cd54bb984caa5d83d3441c18",
+        "frontend/src/review20260925.test.tsx": "363b1a797811ca23c09c843977ee98438cf24aae8e3d8738cf1264af113ea47c"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-today-fixed-arcs-responsive.md",
+      "recordHash": "501c04819b7fe73c9e75b93c0905e76c873406dfe092a6125a38b4e603b0afa2",
+      "files": {
+        "SPEC.md": "bd8d4ad0b501bd488ecfe716864c46e2b474d5404e9dc9f9bb9ed1152bccd23b",
+        "docs/CHANGES.md": "ec318759ac47c745b7e39638b5e9bb4d93989053c5aab56958f7659690152b63",
+        "docs/CODE_MAP.md": "432c31f17a87876a58d7adbccc2251db58b8ed36ceb5a17e52a4eb5cb76874ea",
+        "docs/DESIGN_SYSTEM.md": "68d7dd7eb91db4c4904e938bc2a2a661927ce992a3ac5230dbc225875f121256",
+        "docs/STATUS.md": "5662e8618547293bb2700cb8270a0b61fdf4b9639e944a827703bd1452c48039",
+        "docs/changes/2026-09-28-today-fixed-arcs-responsive.md": "501c04819b7fe73c9e75b93c0905e76c873406dfe092a6125a38b4e603b0afa2",
+        "frontend/src/design-reference.tsx": "e4ce9c653ad71c774d8e3e33870f1c4c0dc5a86e8ce38840506c3f4ecbf0df7e",
+        "frontend/src/features/workspace/TodayDial.test.tsx": "0b53fbbc339cde58b8dc15ad7d6cd90e2d4ead9f8f59aac8b324a12561fbdf97",
+        "frontend/src/features/workspace/TodayDial.tsx": "78971b66bac25aaf62e014713d34221844289168073f6390dd534bbe694764df",
+        "frontend/src/features/workspace/TodayOverview.tsx": "f98fcd45afc757ee9b06c4ed44a1732ed9e859f6c19ee2aeaf8e5df2eb3f0be1",
+        "frontend/src/features/workspace/todayDialLayout.test.ts": "1c7fc883455ea5cefad47ca9c5adfc760c6797a3d9b8d9c253687663052699d4",
+        "frontend/src/features/workspace/todayDialLayout.ts": "8ab6c3300846bb3843ecb7e352dae49cc61a2ac06b7878b4247abd9995a88067",
+        "frontend/src/styles/today.css": "4ca83398ada0b36db4fa8bfa823cc289f0ae340132de5b69dfbc0302057c8596"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-today-transparent-boundaries.md",
+      "recordHash": "e9bc2c5f290e0f2c8443e13d48adc6eba868f5d60e2d592ceb87c36a5c8c8b31",
+      "files": {
+        "SPEC.md": "b280820ffa2bce3d5c5ecfd08291731ed9f7c50bdda3dab6b5450fd25c281324",
+        "docs/CHANGES.md": "cf6116694a94991ec58fd5081ff70cfefcf294699fad7a0ad5c7e5c2baf430ce",
+        "docs/CODE_MAP.md": "f0cecd3cd19a21c3b1d5bf52906adc61e9a65e8b2bf016dde7b42bac6ffd45b5",
+        "docs/DESIGN_SYSTEM.md": "838f6bdc1af9c163be1c711cf6b3ca0ef7a7726ccf341c815b593f3d5a923e4d",
+        "docs/STATUS.md": "464e2a159c85e5cf0032c9dcd5632aa22ecad5919e013462b9fb908f3c7ebbe1",
+        "docs/changes/2026-09-28-today-transparent-boundaries.md": "e9bc2c5f290e0f2c8443e13d48adc6eba868f5d60e2d592ceb87c36a5c8c8b31",
+        "frontend/src/design-reference.tsx": "fcc5b52b282d1783d1d557db5449a0f3d71175f225c09093a3ffd7e69c301315",
+        "frontend/src/features/workspace/TodayDial.test.tsx": "448bd71c8418110b52674a9948aaf5c8a7253049da235696c0410dff0e169689",
+        "frontend/src/features/workspace/TodayDial.tsx": "3c81802945e6116d64520d3c9529a18d115cf7121eef3e3f5c49af853386ed72",
+        "frontend/src/features/workspace/TodayDialSeparation.tsx": "3058cc00a812a78f78d2306eb41c7a69219bc53bc437df8f6b1fe7b5e62bb826",
+        "frontend/src/features/workspace/TodayDialStroke.tsx": "e2e2f5a3bf883460e321a803514d13a2435f1296bda12458e04c36a4fa070342",
+        "frontend/src/features/workspace/todayDialLayout.test.ts": "f5c3e145d1274e242cf854358077db77badb3299925560520f206648a023950e",
+        "frontend/src/features/workspace/todayDialLayout.ts": "680a57e88c6343c2ef81406aed0ed17d0d37f52f90354ba6eae9bdcb6b1c49fa"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-today-marker-blur-layers.md",
+      "recordHash": "ce8c4a085db44730e751f1e8aac6900872971dec080a84b546a83727447f7b3c",
+      "files": {
+        "SPEC.md": "6fbdd6e121dd37e61a0a5398a0dc25b7e5425c1b7e0e88c1845af1ba27ac9c5a",
+        "docs/CHANGES.md": "8ca0f8420defeef4f0ffa565f36fa409a6d50259aa76da0210f4b854d7eb4d57",
+        "docs/DESIGN_SYSTEM.md": "5da102b6eb1d724ff2429511eafaf4b44ab0b596712d939484e0bcff5f4276aa",
+        "docs/STATUS.md": "d90f5855001a96a96e46a6ecfc7e730126fbf9bc582c42bf98a76f3f2ef49eaa",
+        "docs/changes/2026-09-28-today-marker-blur-layers.md": "ce8c4a085db44730e751f1e8aac6900872971dec080a84b546a83727447f7b3c",
+        "frontend/src/features/workspace/TodayDial.test.tsx": "17660858463d6923e3beee4e4db25e4b9dbb592d10732ae8e2be4d6e6a350571",
+        "frontend/src/features/workspace/TodayDial.tsx": "6e70784ef30b3fb98bea92f3e1aba3523c90628283d7ccf2c1e99d4a24e5e2e5",
+        "frontend/src/features/workspace/TodayDialSeparation.tsx": "42513b33aaa3e389a187665a41f6c8010925daa52e47285ebca83d82c279acfa"
+      }
+    },
+    {
+      "record": "docs/changes/2026-09-28-today-fixed-midnight-fade.md",
+      "recordHash": "8d987f9eef1e6b6fd2f527eb0bbce585490302f7d069a030dfe325e42139bcd8",
+      "files": {
+        "SPEC.md": "89adad7eb44b6dd67989e65229ff197faf9b2cd560b12a16987a38a5a136ab1e",
+        "docs/CHANGES.md": "6b481eb1b0a9d8c88749034ba145b1689d853f3c647f4836fed3b7a4fc9c5833",
+        "docs/DESIGN_SYSTEM.md": "829d43d680c350ffde17b41f233f34e8daa282f9d39b51863e38ae8e983f5f99",
+        "docs/STATUS.md": "c3cc0acfb79a1ff4d23048442971d98d53d96453a47b00e8d8f53e0d13a4e92c",
+        "docs/changes/2026-09-28-today-fixed-midnight-fade.md": "8d987f9eef1e6b6fd2f527eb0bbce585490302f7d069a030dfe325e42139bcd8",
+        "frontend/src/features/workspace/TodayDial.test.tsx": "1a823be0f7643a5187f32e8433a23c8401c69a077208bb29219d8ca29a6a5d63",
+        "frontend/src/features/workspace/TodayDial.tsx": "297b34eb7cb77d8ce496ab8dba3cb90cb4c4ec9807bad527815a60f64658f5cb",
+        "frontend/src/features/workspace/todayDialLayout.test.ts": "a039d7840aab10392a1d7df7c6acafdf46b33b341a8d4f8958da6431496a8ecc",
+        "frontend/src/features/workspace/todayDialLayout.ts": "5ba01ca31b301aed239e33730401ea7b59aa92af2e5e4d5595da7ee3b9985aaa",
+        "frontend/src/styles/today.css": "d26755521f241138362a338b635be653100604a2fb21c1fca446186771ad785d"
+      }
     }
   ]
 }

@@ -18,7 +18,6 @@ import {
 } from '../../api/schedules';
 import { ErrorBox } from '../shared/ErrorBox';
 import { message } from '../shared/form';
-import { statusLabel } from '../workspace/progress';
 
 function inputValue(item: ExecutionItem): string | boolean {
   if (item.definition.item_type === 'checkbox') return item.value_boolean === true;
@@ -48,17 +47,7 @@ export function TaskExecution({
   const [parameters, setParameters] = useState(
     task.parameter_values ?? parameterDefaults(template),
   );
-  const [memoPending, setMemoPending] = useState(false);
   const [error, setError] = useState('');
-  const dirty =
-    (allowRename &&
-      (name !== template ||
-        taskParameters(name).some(
-          ({ key, defaultValue }) =>
-            (parameters[key] ?? defaultValue) !== (task.parameter_values?.[key] ?? defaultValue),
-        ))) ||
-    memoPending ||
-    task.items.some((i) => draft[i.id] !== inputValue(i));
   async function run(operation: () => Promise<ScheduleDetail>) {
     setError('');
     try {
@@ -99,9 +88,6 @@ export function TaskExecution({
         )}
         {!allowRename && <h2>{task.name_snapshot}</h2>}
       </div>
-      {(task.status === 'in_progress' || task.status === 'skipped') && (
-        <p>{statusLabel(task.status)}</p>
-      )}
       {task.default_notes_snapshot && (
         <p className="preserve-lines">{task.default_notes_snapshot}</p>
       )}
@@ -211,51 +197,12 @@ export function TaskExecution({
             </Button>
           </form>
         ))}
-        <div className="work-task-actions">
-          <Button
-            variant="secondary"
-            disabled={dirty || task.status === 'in_progress'}
-            onClick={() => void run(() => updateTask(task.id, { status: 'in_progress' }))}
-          >
-            <ActionIcon name="play" />
-            {tr('TaskExecution.start')}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={dirty}
-            onClick={() =>
-              void run(() =>
-                updateTask(task.id, {
-                  status: task.status === 'completed' ? 'pending' : 'completed',
-                }),
-              )
-            }
-          >
-            <ActionIcon name="check" />
-            {task.status === 'completed'
-              ? tr('TaskExecution.undoCompletion')
-              : tr('TaskExecution.completeTask')}
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={dirty}
-            onClick={() =>
-              void run(() =>
-                updateTask(task.id, { status: task.status === 'skipped' ? 'pending' : 'skipped' }),
-              )
-            }
-          >
-            <ActionIcon name="skip" />
-            {task.status === 'skipped' ? tr('TaskExecution.undoSkip') : tr('TaskExecution.skip')}
-          </Button>
-        </div>
       </fieldset>
       <MemoEditor
         draftKey={'execution:' + task.id}
         value={task.execution_notes}
         label={tr('TaskExecution.executionMemo')}
         disabled={busy || locked}
-        onPendingChange={setMemoPending}
         onSave={async (execution_notes) => {
           await mutate(() => updateTask(task.id, { execution_notes }));
         }}

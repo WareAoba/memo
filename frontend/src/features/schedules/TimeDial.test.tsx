@@ -4,20 +4,18 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { TimeDial } from './TimeDial';
 import { changeRange, dateInZone, nextDate, pointToMinutes } from './timeRange';
 function Dial() {
-  const [range, setRange] = useState({ start: '09:00', end: '10:00' });
+  const [range, setRange] = useState({ start: '09:00', end: '10:00', daySpan: 0 });
   return <TimeDial {...range} onChange={setRange} />;
 }
 afterEach(() => vi.restoreAllMocks());
-it('keeps endpoints independent for a multi-day schedule and displays the full duration', () => {
+it('keeps the clock across midnight and caps its duration at 24 hours', () => {
   const onChange = vi.fn();
-  render(
-    <TimeDial start="23:30" end="01:05" independentEndpoints daySpan={2} onChange={onChange} />,
-  );
-  fireEvent.keyDown(screen.getByRole('slider', { name: '시작 시간' }), { key: 'ArrowRight' });
-  expect(onChange).toHaveBeenLastCalledWith({ start: '23:35', end: '01:05' });
-  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간' }), { key: 'ArrowLeft' });
-  expect(onChange).toHaveBeenLastCalledWith({ start: '23:30', end: '01:00' });
-  expect(screen.getByText(/25시간/)).toHaveTextContent('35분');
+  render(<TimeDial start="23:30" end="01:05" daySpan={1} onChange={onChange} />);
+  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간' }), { key: 'Home' });
+  expect(onChange).toHaveBeenLastCalledWith({ start: '23:30', end: '00:00', daySpan: 1 });
+  expect(screen.getByText(/1시간/)).toHaveTextContent('35분');
+  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간' }), { key: 'End' });
+  expect(onChange).toHaveBeenLastCalledWith({ start: '23:30', end: '23:30', daySpan: 1 });
 });
 it('maps all four daylight positions and snaps to five minutes', () => {
   expect(pointToMinutes(0, -100)).toBe(0);
@@ -27,10 +25,27 @@ it('maps all four daylight positions and snaps to five minutes', () => {
   const angle = (367 / 1440) * Math.PI * 2;
   expect(pointToMinutes(Math.sin(angle) * 100, -Math.cos(angle) * 100)).toBe(365);
 });
-it('keeps a positive same-day interval at the edges and when crossing handles', () => {
-  expect(changeRange('09:00', '10:00', 'start', 1080)).toEqual({ start: '10:00', end: '18:00' });
-  expect(changeRange('09:00', '10:00', 'end', 0)).toEqual({ start: '00:00', end: '09:00' });
-  expect(changeRange('09:00', '10:00', 'start', 1440)).toEqual({ start: '10:00', end: '23:55' });
+it('blocks crossing handles while preserving the fixed endpoint', () => {
+  expect(changeRange('09:00', '10:00', 'start', 1080)).toEqual({
+    start: '09:59',
+    end: '10:00',
+    daySpan: 0,
+  });
+  expect(changeRange('09:00', '10:00', 'end', 0)).toEqual({
+    start: '09:00',
+    end: '09:01',
+    daySpan: 0,
+  });
+  expect(changeRange('23:00', '01:00', 'end', 3000, 5, 1)).toEqual({
+    start: '23:00',
+    end: '23:00',
+    daySpan: 1,
+  });
+  expect(changeRange('23:00', '01:00', 'start', 0, 5, 1)).toEqual({
+    start: '01:00',
+    end: '01:00',
+    daySpan: 1,
+  });
 });
 it('offers keyboard changes and spoken time values for both handles', () => {
   render(<Dial />);
@@ -109,57 +124,33 @@ it('supports tap selection, pointer capture, dragging outside the face, and canc
   });
   move(720);
   move(1085);
-  move(1200);
   expect(screen.getByRole('slider', { name: '시작 시간' })).toHaveAttribute(
     'aria-valuetext',
-    '18:00',
+    '17:59',
   );
   expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
     'aria-valuetext',
-    '20:00',
+    '18:00',
   );
+  fireEvent.pointerUp(face);
+  fireEvent.pointerDown(screen.getByRole('slider', { name: '종료 시간' }), {
+    clientX: 40,
+    clientY: 180,
+  });
   move(1435);
   move(5);
-  move(60);
+  expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
+    'aria-valuetext',
+    '00:05',
+  );
+  expect(screen.getByRole('slider', { name: '시작 시간' })).toHaveAttribute(
+    'aria-valuetext',
+    '17:59',
+  );
+  move(1435);
   expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
     'aria-valuetext',
     '23:55',
-  );
-  expect(screen.getByRole('slider', { name: '시작 시간' })).toHaveAttribute(
-    'aria-valuetext',
-    '18:00',
-  );
-  // Repeated rotations at midnight must not accumulate invisible movement.
-  for (let lap = 0; lap < 3; lap++) {
-    for (const minute of [360, 720, 1080, 1435, 5, 60]) move(minute);
-  }
-  move(55);
-  expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
-    'aria-valuetext',
-    '23:50',
-  );
-  move(1430);
-  expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
-    'aria-valuetext',
-    '22:45',
-  );
-  move(1080);
-  move(1000);
-  move(600);
-  move(5);
-  move(1435);
-  expect(screen.getByRole('slider', { name: '시작 시간' })).toHaveAttribute(
-    'aria-valuetext',
-    '00:00',
-  );
-  expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
-    'aria-valuetext',
-    '18:00',
-  );
-  move(10);
-  expect(screen.getByRole('slider', { name: '시작 시간' })).toHaveAttribute(
-    'aria-valuetext',
-    '00:15',
   );
   fireEvent.pointerUp(face);
   expect(capture).toHaveBeenCalled();
@@ -177,25 +168,69 @@ it('uses app time zone and crosses leap-day/year boundaries', () => {
   expect(nextDate('2026-12-31')).toBe('2027-01-01');
 });
 
-it('does not allow a midnight end handle on multi-day schedules', () => {
-  const change = vi.fn();
-  render(<TimeDial start="23:00" end="00:05" independentEndpoints daySpan={1} onChange={change} />);
-  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간' }), { key: 'Home' });
-  expect(change).toHaveBeenLastCalledWith({ start: '23:00', end: '00:05' });
-  fireEvent.keyDown(screen.getByRole('slider', { name: '시작 시간' }), { key: 'Home' });
-  expect(change).toHaveBeenLastCalledWith({ start: '00:00', end: '00:05' });
-});
-
 it('adjusts the focused time with visible arrow buttons', () => {
   const onChange = vi.fn();
   render(<TimeDial start="09:00" end="10:00" onChange={onChange} />);
   expect(screen.queryByRole('button', { name: '시간 늘리기' })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: /시작 09:00/ }));
+  fireEvent.click(screen.getByRole('button', { name: '시작 시간' }));
   const selectedBox = screen
-    .getByRole('button', { name: /시작 09:00/ })
+    .getByRole('button', { name: '시작 시간' })
     .closest('.time-endpoint-box');
   expect(selectedBox).toHaveAttribute('data-active', 'true');
   expect(selectedBox).toContainElement(screen.getByRole('button', { name: '시간 늘리기' }));
   fireEvent.click(screen.getByRole('button', { name: '시간 늘리기' }));
-  expect(onChange).toHaveBeenLastCalledWith({ start: '09:05', end: '10:00' });
+  expect(onChange).toHaveBeenLastCalledWith({ start: '09:05', end: '10:00', daySpan: 0 });
+});
+
+it('blocks wheel values crossing the fixed endpoint', () => {
+  render(<Dial />);
+  fireEvent.click(screen.getByRole('button', { name: '시작 시간' }));
+  fireEvent.click(screen.getByRole('button', { name: '시작 시간' }));
+  fireEvent.keyDown(screen.getByRole('listbox', { name: '시' }), { key: 'End' });
+  expect(screen.getByRole('button', { name: '적용' })).toBeDisabled();
+  fireEvent.keyDown(screen.getByRole('listbox', { name: '시' }), { key: 'Home' });
+  expect(screen.getByRole('button', { name: '적용' })).toBeEnabled();
+});
+
+it('rolls the end wheel forward through midnight and back without changing the start', () => {
+  function Overnight() {
+    const [range, setRange] = useState({ start: '23:00', end: '23:55', daySpan: 0 });
+    return <TimeDial {...range} onChange={setRange} />;
+  }
+  render(<Overnight />);
+  fireEvent.click(screen.getByRole('button', { name: '종료 시간' }));
+  fireEvent.click(screen.getByRole('button', { name: '종료 시간' }));
+  fireEvent.keyDown(screen.getByRole('listbox', { name: '시' }), { key: 'Home' });
+  fireEvent.keyDown(screen.getByRole('listbox', { name: '분' }), { key: 'Home' });
+  expect(screen.getByRole('button', { name: '적용' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: '적용' }));
+  expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
+    'aria-valuenow',
+    '1440',
+  );
+  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간' }), { key: 'ArrowLeft' });
+  expect(screen.getByRole('slider', { name: '종료 시간' })).toHaveAttribute(
+    'aria-valuenow',
+    '1435',
+  );
+  expect(screen.getByRole('slider', { name: '시작 시간' })).toHaveAttribute(
+    'aria-valuetext',
+    '23:00',
+  );
+});
+
+it('starts with one dial and clearing the start also clears the end', () => {
+  function Empty() {
+    const [range, setRange] = useState({ start: '', end: '', daySpan: 0 });
+    return <TimeDial {...range} onChange={setRange} />;
+  }
+  render(<Empty />);
+  expect(screen.getAllByRole('slider')).toHaveLength(1);
+  expect(screen.getByRole('button', { name: '시작 시간' })).toBeVisible();
+  fireEvent.keyDown(screen.getByRole('slider', { name: '시작 시간' }), { key: 'PageUp' });
+  fireEvent.keyDown(screen.getByRole('slider', { name: '종료 시간' }), { key: 'PageUp' });
+  fireEvent.click(screen.getByRole('button', { name: '시작 시간' }));
+  fireEvent.click(screen.getByRole('button', { name: '시간 지정 해제' }));
+  expect(screen.getAllByRole('slider')).toHaveLength(1);
+  expect(screen.getByRole('slider')).toHaveAttribute('aria-valuetext', '지정 없음');
 });

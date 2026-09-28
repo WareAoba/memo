@@ -121,7 +121,7 @@ it('hot-loads remote changes on focus and changes keyboard clock steps', async (
   await waitFor(() => expect(screen.getByLabelText('시간대')).toHaveValue('Pacific/Honolulu'));
   await waitFor(() => expect(document.documentElement.dataset.motion).toBe('none'));
   fireEvent.keyDown(screen.getByRole('slider', { name: '시작 시간' }), { key: 'ArrowRight' });
-  expect(clockChange).toHaveBeenLastCalledWith({ start: '09:15', end: '10:00' });
+  expect(clockChange).toHaveBeenLastCalledWith({ start: '09:15', end: '10:00', daySpan: 0 });
   expect(screen.getByText((_, el) => el?.className === 'dial-hint')).toHaveTextContent(
     '손잡이를 드래그하거나 방향키로 15분씩 조정하세요.',
   );

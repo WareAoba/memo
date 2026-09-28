@@ -56,13 +56,49 @@ it('darkens green with completed tasks without counting skipped tasks as complet
   );
   expect(partial.state).toBe('overdue');
   expect(partial.ratio).toBe(0.5);
-  expect(partial.green).toContain('hsl(140 32% 71%)');
+  expect(partial.green).toContain('hsl(140 var(--progress-saturation) 71%)');
   const done = scheduleAppearance({ ...schedule, status: 'completed', tasks: [task] }, now);
-  expect(done.color).toContain('hsl(140 32% 56%)');
+  expect(done.color).toContain('hsl(140 var(--progress-saturation) 56%)');
   expect(
     scheduleAppearance(
       { ...schedule, status: 'completed', tasks: [task, { ...task, status: 'skipped' }] },
       now,
     ).ratio,
   ).toBe(0.5);
+});
+
+it('leaves untimed schedules pending and marks start-only schedules overdue after their instant', () => {
+  const now = new Date('2026-09-25T12:00:00Z');
+  expect(scheduleAppearance({ ...schedule, start_time: '', end_time: '' }, now).state).toBe(
+    'upcoming',
+  );
+  expect(scheduleAppearance({ ...schedule, end_time: '' }, now).state).toBe('overdue');
+  expect(
+    scheduleAppearance({ ...schedule, start_time: '', end_time: '', status: 'completed' }, now)
+      .state,
+  ).toBe('completed');
+});
+
+it.each(['2026-09-23T23:59:00Z', '2026-09-24T00:30:00Z', '2026-09-24T01:00:00Z'])(
+  'prioritizes completion and restores time state on reopen at %s',
+  (instant) => {
+    const now = new Date(instant);
+    const done = scheduleAppearance({ ...schedule, status: 'completed' }, now);
+    expect(done.state).toBe('completed');
+    expect(done.color).toBe(done.green);
+    expect(scheduleAppearance(schedule, now).state).not.toBe('completed');
+    expect(scheduleAppearance({ ...schedule, status: 'cancelled' }, now).state).toBe('cancelled');
+  },
+);
+
+it.each([
+  ['2026-09-23T23:59:00Z', 'upcoming'],
+  ['2026-09-24T00:00:00Z', 'overdue'],
+  ['2026-09-24T00:01:00Z', 'overdue'],
+])('uses the schedule timezone for a single marker at %s', (instant, state) => {
+  const single = { ...schedule, end_time: '' };
+  expect(scheduleAppearance(single, new Date(instant)).state).toBe(state);
+  expect(scheduleAppearance({ ...single, status: 'completed' }, new Date(instant)).state).toBe(
+    'completed',
+  );
 });

@@ -11,9 +11,33 @@
 
 ## 필요 도구
 
-- Rust 1.94 이상과 rustfmt/clippy. Windows는 MSVC C++ build tools 필요
-- Node.js 24 LTS와 npm
-- Docker Engine/Desktop 및 Compose v2 (`--wait` 지원)
+- Rust 1.94.0과 rustfmt/clippy (`rust-toolchain.toml`로 선택). Windows는 MSVC C++ build tools 필요
+- Node.js 24 LTS와 npm (`.nvmrc`)
+- Docker 개발을 선택할 때만 Docker Engine/Desktop 및 Compose v2 (`--wait` 지원)
+
+### macOS 개발 환경
+
+Xcode Command Line Tools, nvm, rustup이 필요합니다. Command Line Tools가 없으면
+`xcode-select --install`로 설치합니다. nvm과 rustup이 설치된 터미널에서 저장소 루트로 이동한 뒤 실행합니다.
+
+```sh
+nvm install
+nvm use
+rustup show
+npm --prefix frontend ci
+npm run check
+```
+
+rustup은 이 저장소의 `rust-toolchain.toml`에 지정된 Rust와 rustfmt/clippy를 선택합니다.
+새 터미널에서도 저장소 루트에서 `nvm use`로 Node 버전을 맞춥니다.
+이후 아래 로컬 개발 명령을 터미널 두 개에서 실행합니다. 네이티브 실행에는 Docker나 별도 SQLite 서버가 필요하지 않습니다.
+Apple Silicon에서는 arm64 Node/Rust를 사용하며 Rosetta는 필요하지 않습니다.
+저장소가 Documents 폴더 안에 있으면 실행 앱의 macOS 폴더 접근 허용이 필요할 수 있습니다.
+Vite가 시작 메시지 없이 대기하면 해당 앱의 접근 요청 창을 확인합니다.
+
+Windows의 `node_modules`나 `backend/target`을 복사하지 말고 맥에서 다시 설치·빌드합니다.
+기존 기록·사진이 필요하면 서버를 종료한 상태에서 Windows의 Git 제외 `data/` 전체와 필요한 `.env`를 별도로 옮깁니다.
+Git clone만으로는 기존 데이터가 이동하지 않습니다. 데이터 보존 절차는 [백업 안내](docs/BACKUP.md)를 확인합니다.
 
 ## 로컬 개발
 
